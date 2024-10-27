@@ -377,7 +377,8 @@ typedef enum IMDType_t {
   IMD_TIME,
   IMD_BOX,
   IMD_VELOCITIES,
-  IMD_FORCES
+  IMD_FORCES,
+  IMD_WAIT,
 } IMDType;          /**< IMD command message type enumerations */
 
 typedef struct {
@@ -460,7 +461,6 @@ MPI_Datatype MPI_CommData;
 FixIMD::FixIMD(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
-  fprintf(screen, "FixIMD() call.\n");
 
   if (narg < 4)
     error->all(FLERR,"Illegal fix imd command");
@@ -585,7 +585,6 @@ FixIMD::FixIMD(LAMMPS *lmp, int narg, char **arg) :
   if (imdsinfo->forces) {
     msglen += 3*4*num_coords+IMDHEADERSIZE;
   }
-  fprintf(screen, "num_coods: %d\n", num_coords);
   msgdata = new char[msglen];
 
   if (me == 0) {
@@ -639,7 +638,6 @@ FixIMD::FixIMD(LAMMPS *lmp, int narg, char **arg) :
  *********************************/
 FixIMD::~FixIMD()
 {
-fprintf(screen, "destructor called\n");
 #if defined(LAMMPS_ASYNC_IMD)
   if (me == 0) {
     pthread_mutex_lock(&write_mutex);
@@ -654,7 +652,6 @@ fprintf(screen, "destructor called\n");
     pthread_cond_destroy(&write_cond);
   }
 #endif
-  fprintf(screen, "destructor startinng\n");
   auto hashtable = (taginthash_t *)idmap;
   memory->destroy(coord_data);
   memory->destroy(vel_data);
@@ -673,7 +670,6 @@ fprintf(screen, "destructor called\n");
   imdsock_destroy(localsock);
   clientsock=nullptr;
   localsock=nullptr;
-  fprintf(screen, "destructor done\n");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -699,7 +695,6 @@ void FixIMD::init()
    new connection was made, 0 if not. */
 int FixIMD::reconnect()
 {
-  fprintf(screen, "reconnect() call.\n");
   /* set up IMD communication, but only if needed. */
   imd_inactive = 0;
   imd_terminate = 0;
@@ -942,8 +937,6 @@ void FixIMD::ioworker()
  * Send coodinates, energies, and add IMD forces to atoms. */
 void FixIMD::post_force(int /*vflag*/)
 {
-  // NOTE: removeme
-  fprintf(screen, "post_force() %ld\n", update->ntimestep);
   fflush(screen);
   if (imd_version == 2) {
     handle_step_v2();
@@ -963,7 +956,6 @@ void FixIMD::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 
 void FixIMD::end_of_step()
 { 
-  fprintf(screen, "end_of_step() call.\n");
   if (imd_version == 3 && update->ntimestep % imd_trate == 0) {
     handle_output_v3();
   }
@@ -977,8 +969,6 @@ double FixIMD::memory_usage()
 }
 
 void FixIMD::handle_step_v2() {
-
-  fprintf(screen, "handle_step_v2() call.\n");
 
   /* check for reconnect */
   if (imd_inactive) {
@@ -997,8 +987,6 @@ void FixIMD::handle_step_v2() {
   int nlocal = atom->nlocal;
   int *mask  = atom->mask;
   struct commdata *buf;
-
-  fprintf(screen, "finsihed setting vars.\n");
 
   if (me == 0) {
     /* process all pending incoming data. */
@@ -1094,8 +1082,6 @@ void FixIMD::handle_step_v2() {
     }
   }
 
-  fprintf(screen, "finished receiving commands.\n");
-
   /* update all tasks with current settings. */
   int old_imd_forces = imd_forces;
   MPI_Bcast(&imd_trate, 1, MPI_INT, 0, world);
@@ -1116,8 +1102,6 @@ void FixIMD::handle_step_v2() {
     }
     MPI_Bcast(recv_force_buf, imd_forces*size_one, MPI_BYTE, 0, world);
   }
-
-  fprintf(screen, "finished updating tasks.\n");
 
   /* Check if we need to communicate coordinates to the client.
    * Tuning imd_trate allows to keep the overhead for IMD low
@@ -1165,24 +1149,17 @@ void FixIMD::handle_step_v2() {
   int tmp, ndata;
   buf = static_cast<struct commdata *>(coord_data);
 
-  fprintf(screen, "finished growing buffs.\n");
-
   if (me == 0) {
-    fprintf(screen, "entering root-only\n");
     MPI_Status status;
     MPI_Request request;
     /* collect data into new array. we bypass the IMD API to save
      * us one extra copy of the data. */
-    fprintf(screen, "filling coordheader\n");
     imd_fill_header((IMDheader *)msgdata, IMD_FCOORDS, num_coords);
-    fprintf(screen, "coord header filled\n");
     /* array pointer, to the offset where we receive the coordinates. */
-    auto recvcoord = (float *) (msgdata+IMDHEADERSIZE);
-    fprintf(screen, "buf recast\n");
+    auto recvcoord = (float *) (msgdata+IMDHEADERSIZE); 
 
     /* add local data */
     if (imdsinfo->unwrap) {
-      fprintf(screen, "adding local data\n");
       double xprd = domain->xprd;
       double yprd = domain->yprd;
       double zprd = domain->zprd;
@@ -1222,7 +1199,6 @@ void FixIMD::handle_step_v2() {
         }
       }
     }
-    fprintf(screen, "local data added\n");
     /* loop over procs to receive remote data */
     for (i=1; i < comm->nprocs; ++i) {
       MPI_Irecv(coord_data, maxbuf, MPI_BYTE, i, 0, world, &request);
@@ -1240,7 +1216,6 @@ void FixIMD::handle_step_v2() {
         }
       }
     }
-    fprintf(screen, "remote data added\n");
     /* done collecting frame data now communicate with IMD client. */
 
 #if defined(LAMMPS_ASYNC_IMD)
@@ -1251,12 +1226,9 @@ void FixIMD::handle_step_v2() {
     pthread_mutex_unlock(&write_mutex);
 #else
     /* send coordinate data, if client is able to accept */
-    fprintf(screen, "sending data\n");
-    fprintf(screen, "num_coords is %i\n", num_coords);
     if (clientsock && imdsock_selwrite(clientsock,0)) {
       imd_writen(clientsock, msgdata, msglen);
     }
-    fprintf(screen, "data sent\n");
 #endif
 
   } else {
@@ -1304,14 +1276,12 @@ void FixIMD::handle_step_v2() {
     /* blocking receive to wait until it is our turn to send data. */
     MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
     MPI_Rsend(coord_data, nme*size_one, MPI_BYTE, 0, 0, world);
-    fprintf(screen, "entering non-root-only\n");
   }
 
 }
 
 void FixIMD::handle_client_input_v3() {
   // IMDV3
-  fprintf(screen, "handle_client_input_v3() call.\n");
 
   /* check for reconnect */
   if (imd_inactive) {
@@ -1424,6 +1394,16 @@ void FixIMD::handle_client_input_v3() {
           }
           delete[] imd_tags;
           delete[] imd_fdat;
+          break;
+        }
+        case IMD_WAIT: {
+          /* Change IMD waiting behavior mid-session */
+          if (length) {
+            nowait_flag = 0;
+          }
+          else {
+            nowait_flag = 1;
+          }
           break;
         }
 
