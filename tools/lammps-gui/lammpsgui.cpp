@@ -69,18 +69,13 @@
 static const QString blank(" ");
 static constexpr int BUFLEN = 256;
 
-LammpsGui::LammpsGui(QWidget *parent, const char *filename) :
+LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
     QMainWindow(parent), ui(new Ui::LammpsGui), highlighter(nullptr), capturer(nullptr),
     status(nullptr), logwindow(nullptr), imagewindow(nullptr), chartwindow(nullptr),
     slideshow(nullptr), logupdater(nullptr), dirstatus(nullptr), progress(nullptr),
     prefdialog(nullptr), lammpsstatus(nullptr), varwindow(nullptr), wizard(nullptr),
     runner(nullptr), is_running(false), run_counter(0)
 {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-    // register QList<QString> only needed for Qt5
-    qRegisterMetaTypeStreamOperators<QList<QString>>("QList<QString>");
-#endif
-
     docver = "";
     ui->setupUi(this);
     this->setCentralWidget(ui->textEdit);
@@ -97,22 +92,28 @@ LammpsGui::LammpsGui(QWidget *parent, const char *filename) :
     QSettings settings;
 
 #if defined(LAMMPS_GUI_USE_PLUGIN)
-    plugin_path.clear();
-    std::string deffile = settings.value("plugin_path", "liblammps.so").toString().toStdString();
-    for (const char *libfile : {deffile.c_str(), "./liblammps.so", "liblammps.dylib",
-                                "./liblammps.dylib", "liblammps.dll"}) {
-        if (lammps.load_lib(libfile)) {
-            auto canonical = QFileInfo(libfile).canonicalFilePath();
-            plugin_path    = canonical.toStdString();
-            settings.setValue("plugin_path", canonical);
-            break;
+    plugin_path =
+        QFileInfo(settings.value("plugin_path", "liblammps.so").toString()).canonicalFilePath();
+    if (!lammps.load_lib(plugin_path.toStdString().c_str())) {
+        // fall back to defaults
+        for (const char *libfile :
+             {"./liblammps.so", "liblammps.dylib", "./liblammps.dylib", "liblammps.dll"}) {
+            if (lammps.load_lib(libfile)) {
+                plugin_path = QFileInfo(libfile).canonicalFilePath();
+                settings.setValue("plugin_path", plugin_path);
+                break;
+            } else {
+                plugin_path.clear();
+            }
         }
     }
 
-    if (plugin_path.empty()) {
+    if (plugin_path.isEmpty()) {
         // none of the plugin paths could load, remove key
         settings.remove("plugin_path");
-        QMessageBox::critical(this, "Error", "Cannot open LAMMPS shared library file");
+        QMessageBox::critical(this, "Error",
+                              "Cannot open LAMMPS shared library file.\n"
+                              "Use -p command line flag to specify a path to the library.");
         exit(1);
     }
 #endif
@@ -281,7 +282,7 @@ LammpsGui::LammpsGui(QWidget *parent, const char *filename) :
     dirstatus->show();
     ui->statusbar->addWidget(progress);
 
-    if (filename) {
+    if (filename.size() > 0) {
         open_file(filename);
     } else {
         setWindowTitle("LAMMPS-GUI - Editor - *unknown*");
@@ -505,7 +506,7 @@ void LammpsGui::start_exe()
 void LammpsGui::update_recents(const QString &filename)
 {
     QSettings settings;
-    recent = settings.value("recent").value<QList<QString>>();
+    if (settings.contains("recent")) recent = settings.value("recent").value<QList<QString>>();
 
     for (int i = 0; i < recent.size(); ++i) {
         QFileInfo fi(recent[i]);
@@ -517,7 +518,10 @@ void LammpsGui::update_recents(const QString &filename)
 
     if (!filename.isEmpty() && !recent.contains(filename)) recent.prepend(filename);
     if (recent.size() > 5) recent.removeLast();
-    settings.setValue("recent", QVariant::fromValue(recent));
+    if (recent.size() > 0)
+        settings.setValue("recent", QVariant::fromValue(recent));
+    else
+        settings.remove("recent");
 
     ui->action_1->setVisible(false);
     if ((recent.size() > 0) && !recent[0].isEmpty()) {
@@ -984,6 +988,7 @@ void LammpsGui::logupdate()
     if (logwindow) {
         const auto text = capturer->GetChunk();
         if (text.size() > 0) {
+            logwindow->moveCursor(QTextCursor::End);
             logwindow->insertPlainText(text.c_str());
             logwindow->moveCursor(QTextCursor::End);
             logwindow->textCursor().deleteChar();
@@ -1438,9 +1443,9 @@ void LammpsGui::about()
         version += " using dark theme\n";
     if (lammps.has_plugin()) {
         version += "LAMMPS library loaded as plugin";
-        if (!plugin_path.empty()) {
+        if (!plugin_path.isEmpty()) {
             version += " from file ";
-            version += plugin_path;
+            version += plugin_path.toStdString();
         }
     } else {
         version += "LAMMPS library linked to executable";
@@ -2012,8 +2017,8 @@ bool LammpsGui::eventFilter(QObject *watched, QEvent *event)
 }
 
 // LAMMPS geturl command with current location of the input and solution files on the web
-static const QString geturl = "geturl https://raw.githubusercontent.com/akohlmey/"
-                              "lammps-tutorials-inputs/main/tutorial%1/%2 output %2 verify no";
+static const QString geturl = "geturl https://raw.githubusercontent.com/lammpstutorials/"
+    "lammpstutorials-article/refs/heads/main/files/tutorial%1/%2 output %2 verify no";
 
 void LammpsGui::setup_tutorial(int tutno, const QString &dir, bool purgedir, bool getsolution)
 {
