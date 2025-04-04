@@ -46,7 +46,7 @@ using namespace LAMMPS_NS;
 /* ---------------------------------------------------------------------- */
 
 PairMLIAP::PairMLIAP(LAMMPS *lmp) :
-    Pair(lmp), map(nullptr), model(nullptr), descriptor(nullptr), data(nullptr)
+    Pair(lmp), model(nullptr), descriptor(nullptr), data(nullptr)
 {
   single_enable = 0;
   restartinfo = 0;
@@ -54,8 +54,6 @@ PairMLIAP::PairMLIAP(LAMMPS *lmp) :
   manybody_flag = 1;
   is_child = false;
   centroidstressflag = CENTROID_NOTAVAIL;
-  model=nullptr;
-  descriptor=nullptr;
 }
 
 /* ---------------------------------------------------------------------- */
