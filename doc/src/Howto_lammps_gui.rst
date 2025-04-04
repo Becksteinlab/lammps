@@ -64,13 +64,18 @@ simple LAMMPS simulations.  It is very suitable for tutorials on LAMMPS
 since you only need to learn how to use a single program for most tasks
 and thus time can be saved and people can focus on learning LAMMPS.
 The tutorials at https://lammpstutorials.github.io/ are specifically
-updated for use with LAMMPS-GUI.
+updated for use with LAMMPS-GUI and can their tutorial materials can
+be downloaded and loaded directly from the GUI.
 
 Another design goal is to keep the barrier low when replacing part of
 the functionality of LAMMPS-GUI with external tools.  That said, LAMMPS-GUI
 has some unique functionality that is not found elsewhere:
 
 - auto-adapting to features available in the integrated LAMMPS library
+- auto-completion for LAMMPS commands and options
+- context-sensitive online help
+- start and stop of simulations via mouse or keyboard
+- monitoring of simulation progress
 - interactive visualization using the :doc:`dump image <dump_image>`
   command with the option to copy-paste the resulting settings
 - automatic slide show generation from dump image out at runtime
@@ -715,6 +720,19 @@ output, charts, slide show, variables, or snapshot images.  The
 default settings for their visibility can be changed in the
 *Preferences* dialog.
 
+Tutorials
+^^^^^^^^^
+
+The *Tutorials* menu is to support the set of LAMMPS tutorials for
+beginners and intermediate LAMMPS users documented in (:ref:`Gravelle1
+<Gravelle1>`).  From the drop down menu you can select which of the eight
+currently available tutorial sessions you want to start and then will be
+taken to a 'wizard' dialog where you can choose in which folder you want
+to work, whether you want that folder to be cleared, and also whether
+you want to download the solutions files (can be large).  The dialog
+will then start downloading the files requested and load the first input
+file for the selected session into LAMMPS-GUI.
+
 About
 ^^^^^
 
@@ -843,6 +861,11 @@ General Settings:
   the plots in the *Charts* window in milliseconds.  The default is to
   redraw the plots every 500 milliseconds.  This is just for the drawing,
   data collection is managed with the previous setting.
+- *HTTPS proxy setting:* Allows to enter a URL for an HTTPS proxy.  This
+  may be needed when the LAMMPS input contains :doc:`geturl commands <geturl>`
+  or for downloading tutorial files from the *Tutorials* menu.  If the
+  ``https_proxy`` environment variable was set externally, its value is
+  displayed but cannot be changed.
 
 Accelerators:
 ^^^^^^^^^^^^^
@@ -971,10 +994,21 @@ available (On macOS use the Command key instead of Ctrl/Control).
      - Ctrl+Shift+T
      - LAMMPS Tutorial
 
-Further editing keybindings `are documented with the Qt documentation
+Further keybindings of the editor window `are documented with the Qt
+documentation
 <https://doc.qt.io/qt-5/qplaintextedit.html#editing-key-bindings>`_.  In
 case of conflicts the list above takes precedence.
 
 All other windows only support a subset of keyboard shortcuts listed
 above.  Typically, the shortcuts `Ctrl-/` (Stop Run), `Ctrl-W` (Close
 Window), and `Ctrl-Q` (Quit Application) are supported.
+
+-------------
+
+.. _Gravelle1:
+
+**(Gravelle1)** Gravelle, Gissinger, Kohlmeyer, `arXiv:2503.14020 \[physics.comp-ph\] <https://doi.org/10.48550/arXiv.2503.14020>`_ (2025)
+
+.. _Gravelle2:
+
+**(Gravelle2)** Gravelle https://lammpstutorials.github.io/
