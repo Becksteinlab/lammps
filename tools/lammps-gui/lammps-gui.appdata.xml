@@ -73,7 +73,7 @@
         Double-click on highlighted URL opens it in web browser. Also available via context menu.
       </description>
     </release>
-     <release version="1.6.12" timestamp="1734890080">
+    <release version="1.6.12" timestamp="1734890080">
       <description>
         Update Tutorial menu entries to cover all 8 tutorials
         Highlight warnings and error messages in Output window
