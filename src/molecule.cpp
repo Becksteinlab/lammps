@@ -953,7 +953,7 @@ void Molecule::diameters(char *line)
     if (count[i] == 0)
       error->all(FLERR, "Atom {} missing in Diameters section of molecule file", i + 1);
     if (radius[i] < 0.0)
-      error->all(FLERR, "Invalid atom diameter {} for atom {} in molecule file", radius[i], i + 1);
+      error->all(FLERR, "Invalid atom diameter {} for atom {} in molecule file", radius[i] * 2.0 / sizescale, i + 1);
   }
 }
 
@@ -1021,7 +1021,7 @@ void Molecule::masses(char *line)
     if (count[i] == 0)
       error->all(FLERR, "Atom {} missing in Masses section of molecule file", i + 1);
     if (rmass[i] <= 0.0)
-      error->all(FLERR, "Invalid atom mass {} for atom {} in molecule file", radius[i], i + 1);
+      error->all(FLERR, "Invalid atom mass {} for atom {} in molecule file", rmass[i] / sizescale / sizescale / sizescale, i + 1);
   }
 }
 
