@@ -431,6 +431,7 @@ void Molecule::read(int flag)
   // read header lines
   // skip blank lines or lines that start with "#"
   // stop when read an unrecognized line
+  bool has_atoms = false;
 
   while (true) {
 
@@ -450,6 +451,7 @@ void Molecule::read(int flag)
       if (values.matches("^\\s*\\d+\\s+atoms")) {
         natoms = values.next_int();
         nwant = 2;
+        has_atoms = true;
       } else if (values.matches("^\\s*\\d+\\s+bonds")) {
         nbonds = values.next_int();
         nwant = 2;
@@ -497,7 +499,7 @@ void Molecule::read(int flag)
         itensor[3] *= scale5;
         itensor[4] *= scale5;
         itensor[5] *= scale5;
-      } else if (values.matches("^\\s*\\d+\\s+\\f+\\s+body")) {
+      } else if (values.matches("^\\s*\\d+\\s+\\d+\\s+body")) {
         bodyflag = 1;
         avec_body = dynamic_cast<AtomVecBody *>(atom->style_match("body"));
         if (!avec_body) error->all(FLERR, "Molecule file requires atom style body");
@@ -519,6 +521,7 @@ void Molecule::read(int flag)
 
   // error checks
 
+  if (!has_atoms) error->all(FLERR, "Required \"atoms\" header keyword not found in molecule file");
   if (natoms < 1) error->all(FLERR, "No atoms or invalid atom count in molecule file");
   if (nbonds < 0) error->all(FLERR, "Invalid bond count in molecule file");
   if (nangles < 0) error->all(FLERR, "Invalid angle count in molecule file");
@@ -598,16 +601,12 @@ void Molecule::read(int flag)
       angles(flag, line);
     } else if (keyword == "Dihedrals") {
       if (ndihedrals == 0)
-        error->all(FLERR,
-                   "Found Dihedrals section "
-                   "but no ndihedrals setting in header");
+        error->all(FLERR, "Found Dihedrals section but no ndihedrals setting in header");
       dihedralflag = tag_require = 1;
       dihedrals(flag, line);
     } else if (keyword == "Impropers") {
       if (nimpropers == 0)
-        error->all(FLERR,
-                   "Found Impropers section "
-                   "but no nimpropers setting in header");
+        error->all(FLERR, "Found Impropers section but no nimpropers setting in header");
       improperflag = tag_require = 1;
       impropers(flag, line);
 
@@ -1634,16 +1633,22 @@ void Molecule::shakeflag_read(char *line)
 
       if (values.count() != 2) error->all(FLERR, "Invalid Shake Flags section in molecule file");
 
-      values.next_int();
-      shake_flag[i] = values.next_int();
+      int iatom = values.next_int() - 1;
+      if (iatom < 0 || iatom >= natoms)
+        error->all(FLERR, "Invalid atom index in Shake Flags section of molecule file");
+      count[iatom]++;
+      shake_flag[iatom] = values.next_int();
     }
   } catch (TokenizerException &e) {
     error->all(FLERR, "Invalid Shake Flags section in molecule file: {}", e.what());
   }
 
-  for (int i = 0; i < natoms; i++)
+  for (int i = 0; i < natoms; i++) {
     if (shake_flag[i] < 0 || shake_flag[i] > 4)
       error->all(FLERR, "Invalid shake flag in molecule file");
+    if (count[i] == 0)
+      error->all(FLERR, "Atom {} missing in Shake Flags section of molecule file", i + 1);
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -1653,60 +1658,65 @@ void Molecule::shakeflag_read(char *line)
 void Molecule::shakeatom_read(char *line)
 {
   int nmatch = 0, nwant = 0;
+  for (int i = 0; i < natoms; i++) count[i] = 0;
   try {
     for (int i = 0; i < natoms; i++) {
       readline(line);
 
       ValueTokenizer values(utils::trim_comment(line));
       nmatch = values.count();
+      int iatom = values.next_int() - 1;
+      if ((iatom < 0) || (iatom >= natoms))
+        throw TokenizerException(fmt::format("Invalid atom-id {} in Shake Atoms section of "
+                                             "molecule file", iatom + 1), "");
 
-      switch (shake_flag[i]) {
+      switch (shake_flag[iatom]) {
         case 1:
-          values.next_int();
-          shake_atom[i][0] = values.next_tagint();
-          shake_atom[i][1] = values.next_tagint();
-          shake_atom[i][2] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_tagint();
+          shake_atom[iatom][1] = values.next_tagint();
+          shake_atom[iatom][2] = values.next_tagint();
           nwant = 4;
           break;
 
         case 2:
-          values.next_int();
-          shake_atom[i][0] = values.next_tagint();
-          shake_atom[i][1] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_tagint();
+          shake_atom[iatom][1] = values.next_tagint();
           nwant = 3;
           break;
 
         case 3:
-          values.next_int();
-          shake_atom[i][0] = values.next_tagint();
-          shake_atom[i][1] = values.next_tagint();
-          shake_atom[i][2] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_tagint();
+          shake_atom[iatom][1] = values.next_tagint();
+          shake_atom[iatom][2] = values.next_tagint();
           nwant = 4;
           break;
 
         case 4:
-          values.next_int();
-          shake_atom[i][0] = values.next_tagint();
-          shake_atom[i][1] = values.next_tagint();
-          shake_atom[i][2] = values.next_tagint();
-          shake_atom[i][3] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_tagint();
+          shake_atom[iatom][1] = values.next_tagint();
+          shake_atom[iatom][2] = values.next_tagint();
+          shake_atom[iatom][3] = values.next_tagint();
           nwant = 5;
           break;
 
         case 0:
-          values.next_int();
           nwant = 1;
           break;
 
         default:
-          error->all(FLERR, "Invalid shake atom in molecule file");
+        throw TokenizerException(
+          fmt::format("Unexpected Shake flag {} for atom {} in Shake flags "
+                      "section of molecule file", shake_flag[iatom], iatom + 1), "");
       }
 
-      if (nmatch != nwant) error->all(FLERR, "Invalid shake atom in molecule file");
+      if (nmatch != nwant)
+        throw TokenizerException(
+          fmt::format("Unexpected number of atom-ids ({} vs {}) for atom {} in Shake Atoms "
+                      "section of molecule file", nmatch, nwant, iatom + 1), "");
+      count[iatom]++;
     }
-
   } catch (TokenizerException &e) {
-    error->all(FLERR, "Invalid shake atom in molecule file: {}", e.what());
+    error->all(FLERR, "Invalid Shake Atoms section in molecule file: {}", e.what());
   }
 
   for (int i = 0; i < natoms; i++) {
@@ -1715,6 +1725,8 @@ void Molecule::shakeatom_read(char *line)
     for (int j = 0; j < m; j++)
       if (shake_atom[i][j] <= 0 || shake_atom[i][j] > natoms)
         error->all(FLERR, "Invalid shake atom in molecule file");
+    if (count[i] == 0)
+      error->all(FLERR, "Atom {} missing in Shake Atoms section of molecule file", i + 1);
   }
 }
 
@@ -1725,6 +1737,7 @@ void Molecule::shakeatom_read(char *line)
 void Molecule::shaketype_read(char *line)
 {
   int nmatch = 0, nwant = 0;
+  for (int i = 0; i < natoms; i++) count[i] = 0;
   for (int i = 0; i < natoms; i++) {
     readline(line);
     auto values = Tokenizer(utils::trim(line)).as_vector();
@@ -1735,22 +1748,25 @@ void Molecule::shaketype_read(char *line)
         break;
       }
     }
+    int iatom = utils::inumeric(FLERR, values[0], false, lmp) - 1;
+    if ((iatom < 0) || (iatom >= natoms))
+      error->all(FLERR, "Invalid atom-id {} in Skake Bond Types section of molecule file", iatom + 1);
     char *subst;
-    switch (shake_flag[i]) {
+    switch (shake_flag[iatom]) {
       case 1:
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         subst = utils::expand_type(FLERR, values[2], Atom::BOND, lmp);
         if (subst) values[2] = subst;
-        shake_type[i][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         subst = utils::expand_type(FLERR, values[3], Atom::ANGLE, lmp);
         if (subst) values[3] = subst;
-        shake_type[i][2] = utils::inumeric(FLERR, values[3], false, lmp) + ((subst) ? 0 : aoffset);
+        shake_type[iatom][2] = utils::inumeric(FLERR, values[3], false, lmp) + ((subst) ? 0 : aoffset);
         delete[] subst;
 
         nwant = 4;
@@ -1759,7 +1775,7 @@ void Molecule::shaketype_read(char *line)
       case 2:
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         nwant = 2;
@@ -1768,12 +1784,12 @@ void Molecule::shaketype_read(char *line)
       case 3:
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         nwant = 3;
@@ -1782,17 +1798,17 @@ void Molecule::shaketype_read(char *line)
       case 4:
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
         if (subst) values[1] = subst;
-        shake_type[i][2] = utils::inumeric(FLERR, values[3], false, lmp) + ((subst) ? 0 : boffset);
+        shake_type[iatom][2] = utils::inumeric(FLERR, values[3], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
         nwant = 4;
@@ -1806,6 +1822,7 @@ void Molecule::shaketype_read(char *line)
         error->all(FLERR, "Invalid shake type values in molecule file");
     }
     if (nmatch != nwant) error->all(FLERR, "Invalid shake type data in molecule file");
+    count[iatom]++;
   }
 
   for (int i = 0; i < natoms; i++) {
@@ -1815,6 +1832,8 @@ void Molecule::shaketype_read(char *line)
       if (shake_type[i][j] <= 0) error->all(FLERR, "Invalid shake bond type in molecule file");
     if (shake_flag[i] == 1)
       if (shake_type[i][2] <= 0) error->all(FLERR, "Invalid shake angle type in molecule file");
+    if (count[i] == 0)
+      error->all(FLERR, "Atom {} missing in Shake Bond Types section of molecule file", i + 1);
   }
 }
 
