@@ -1787,8 +1787,8 @@ void Molecule::shaketype_read(char *line)
         shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
-        subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
-        if (subst) values[1] = subst;
+        subst = utils::expand_type(FLERR, values[2], Atom::BOND, lmp);
+        if (subst) values[2] = subst;
         shake_type[iatom][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
@@ -1801,13 +1801,13 @@ void Molecule::shaketype_read(char *line)
         shake_type[iatom][0] = utils::inumeric(FLERR, values[1], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
-        subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
-        if (subst) values[1] = subst;
+        subst = utils::expand_type(FLERR, values[2], Atom::BOND, lmp);
+        if (subst) values[2] = subst;
         shake_type[iatom][1] = utils::inumeric(FLERR, values[2], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
-        subst = utils::expand_type(FLERR, values[1], Atom::BOND, lmp);
-        if (subst) values[1] = subst;
+        subst = utils::expand_type(FLERR, values[3], Atom::BOND, lmp);
+        if (subst) values[3] = subst;
         shake_type[iatom][2] = utils::inumeric(FLERR, values[3], false, lmp) + ((subst) ? 0 : boffset);
         delete[] subst;
 
