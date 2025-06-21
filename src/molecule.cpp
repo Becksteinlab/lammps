@@ -839,7 +839,7 @@ void Molecule::molecules(char *line)
       if (iatom < 0 || iatom >= natoms)
         error->all(FLERR, "Invalid atom index in Molecules section of molecule file");
       count[iatom]++;
-      molecule[iatom] = values.next_tagint();
+      molecule[iatom] = values.next_int();
       // molecule[iatom] += moffset; // placeholder for possible molecule offset
     }
   } catch (TokenizerException &e) {
@@ -1045,7 +1045,7 @@ void Molecule::bonds(int flag, char *line)
 {
   const std::string location = "Bonds section of molecule file";
   int itype;
-  tagint m, atom1, atom2;
+  int m, atom1, atom2;
   std::string typestr;
   int newton_bond = force->newton_bond;
 
@@ -1131,7 +1131,7 @@ void Molecule::angles(int flag, char *line)
 {
   const std::string location = "Angles section of molecule file";
   int itype;
-  tagint m, atom1, atom2, atom3;
+  int m, atom1, atom2, atom3;
   std::string typestr;
   int newton_bond = force->newton_bond;
 
@@ -1232,7 +1232,7 @@ void Molecule::dihedrals(int flag, char *line)
 {
   const std::string location = "Dihedrals section of molecule file";
   int itype;
-  tagint m, atom1, atom2, atom3, atom4;
+  int m, atom1, atom2, atom3, atom4;
   std::string typestr;
   int newton_bond = force->newton_bond;
 
@@ -1347,7 +1347,7 @@ void Molecule::impropers(int flag, char *line)
 {
   const std::string location = "Impropers section of molecule file";
   int itype;
-  tagint m, atom1, atom2, atom3, atom4;
+  int m, atom1, atom2, atom3, atom4;
   std::string typestr;
   int newton_bond = force->newton_bond;
 
@@ -1544,13 +1544,13 @@ void Molecule::special_read(char *line)
 void Molecule::special_generate()
 {
   int newton_bond = force->newton_bond;
-  tagint atom1, atom2;
+  int atom1, atom2;
 
   // temporary array for special atoms
 
-  tagint **tmpspecial;
+  int **tmpspecial;
   memory->create(tmpspecial, natoms, atom->maxspecial, "molecule:tmpspecial");
-  memset(&tmpspecial[0][0], 0, sizeof(tagint) * natoms * atom->maxspecial);
+  memset(&tmpspecial[0][0], 0, sizeof(int) * natoms * atom->maxspecial);
 
   for (int i = 0; i < natoms; i++) count[i] = 0;
 
@@ -1694,30 +1694,30 @@ void Molecule::shakeatom_read(char *line)
 
       switch (shake_flag[iatom]) {
         case 1:
-          shake_atom[iatom][0] = values.next_tagint();
-          shake_atom[iatom][1] = values.next_tagint();
-          shake_atom[iatom][2] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_int();
+          shake_atom[iatom][1] = values.next_int();
+          shake_atom[iatom][2] = values.next_int();
           nwant = 4;
           break;
 
         case 2:
-          shake_atom[iatom][0] = values.next_tagint();
-          shake_atom[iatom][1] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_int();
+          shake_atom[iatom][1] = values.next_int();
           nwant = 3;
           break;
 
         case 3:
-          shake_atom[iatom][0] = values.next_tagint();
-          shake_atom[iatom][1] = values.next_tagint();
-          shake_atom[iatom][2] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_int();
+          shake_atom[iatom][1] = values.next_int();
+          shake_atom[iatom][2] = values.next_int();
           nwant = 4;
           break;
 
         case 4:
-          shake_atom[iatom][0] = values.next_tagint();
-          shake_atom[iatom][1] = values.next_tagint();
-          shake_atom[iatom][2] = values.next_tagint();
-          shake_atom[iatom][3] = values.next_tagint();
+          shake_atom[iatom][0] = values.next_int();
+          shake_atom[iatom][1] = values.next_int();
+          shake_atom[iatom][2] = values.next_int();
+          shake_atom[iatom][3] = values.next_int();
           nwant = 5;
           break;
 
