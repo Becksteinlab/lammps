@@ -1521,19 +1521,24 @@ void Molecule::special_read(char *line)
 
       int iatom = values.next_int() - 1;
       if (iatom < 0 || iatom >= natoms)
-        error->all(FLERR, "Invalid atom index in Special Bonds section of molecule file");
+        error->all(FLERR, "Invalid atom index {} in Special Bonds section of molecule file", iatom);
 
       for (int m = 1; m < nwords; m++) {
-        int ival = values.next_int();
+        int ival = values.next_tagint();
         if ((ival <= 0) || (ival > natoms) || (ival == iatom + 1))
           error->all(FLERR, "Invalid atom index {} in Special Bonds section of molecule file",
                      ival);
         special[iatom][m - 1] = ival;
       }
+      count[iatom]++;
     }
   } catch (TokenizerException &e) {
     error->all(FLERR, "Invalid line in Special Bonds section of molecule file: {}\n{}", e.what(),
                line);
+  }
+  for (int i = 0; i < natoms; i++) {
+    if (count[i] == 0)
+      error->all(FLERR, "Atom {} missing in Special Bonds section of molecule file", i + 1);
   }
 }
 
