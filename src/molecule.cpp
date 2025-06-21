@@ -1508,6 +1508,7 @@ void Molecule::nspecial_read(int flag, char *line)
 
 void Molecule::special_read(char *line)
 {
+  for (int i = 0; i < natoms; ++i) count[i] = 0;
   try {
     for (int i = 0; i < natoms; i++) {
       readline(line);
@@ -1518,12 +1519,16 @@ void Molecule::special_read(char *line)
       if (nwords != nspecial[i][2] + 1)
         error->all(FLERR, "Molecule file special list does not match special count");
 
-      values.next_int();    // ignore
+      int iatom = values.next_int() - 1;
+      if (iatom < 0 || iatom >= natoms)
+        error->all(FLERR, "Invalid atom index in Special Bonds section of molecule file");
 
       for (int m = 1; m < nwords; m++) {
-        special[i][m - 1] = values.next_tagint();
-        if (special[i][m - 1] <= 0 || special[i][m - 1] > natoms || special[i][m - 1] == i + 1)
-          error->all(FLERR, "Invalid atom index in Special Bonds section of molecule file");
+        int ival = values.next_int();
+        if ((ival <= 0) || (ival > natoms) || (ival == iatom + 1))
+          error->all(FLERR, "Invalid atom index {} in Special Bonds section of molecule file",
+                     ival);
+        special[iatom][m - 1] = ival;
       }
     }
   } catch (TokenizerException &e) {
