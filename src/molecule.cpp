@@ -1461,30 +1461,44 @@ void Molecule::nspecial_read(int flag, char *line)
 {
   if (flag == 0) maxspecial = 0;
 
+  for (int i = 0; i < natoms; ++i) count[i] = 0;
   for (int i = 0; i < natoms; i++) {
     readline(line);
 
-    int c1, c2, c3;
+    int c0, c1, c2, c3;
 
     try {
       ValueTokenizer values(utils::trim_comment(line));
       if (values.count() != 4)
         error->all(FLERR, "Invalid line in Special Bond Counts section of molecule file: {}", line);
-      values.next_int();
-      c1 = values.next_tagint();
-      c2 = values.next_tagint();
-      c3 = values.next_tagint();
+      c0 = values.next_int();
+      c1 = values.next_int();
+      c2 = values.next_int();
+      c3 = values.next_int();
     } catch (TokenizerException &e) {
       error->all(FLERR, "Invalid line in Special Bond Counts section of molecule file: {}\n{}",
                  e.what(), line);
     }
 
     if (flag) {
+      int iatom = c0 - 1;
+      if (iatom < 0 || iatom >= natoms)
+        error->all(FLERR, "Invalid atom index in Special Bond Counts section of molecule file");
+      count[iatom]++;
       nspecial[i][0] = c1;
       nspecial[i][1] = c1 + c2;
       nspecial[i][2] = c1 + c2 + c3;
-    } else
+    } else {
       maxspecial = MAX(maxspecial, c1 + c2 + c3);
+    }
+  }
+
+  // check
+  if (flag) {
+    for (int i = 0; i < natoms; i++) {
+      if (count[i] == 0)
+        error->all(FLERR, "Atom {} missing in Special Bond Counts section of molecule file", i + 1);
+    }
   }
 }
 
@@ -1494,6 +1508,7 @@ void Molecule::nspecial_read(int flag, char *line)
 
 void Molecule::special_read(char *line)
 {
+  for (int i = 0; i < natoms; ++i) count[i] = 0;
   try {
     for (int i = 0; i < natoms; i++) {
       readline(line);
@@ -1504,17 +1519,26 @@ void Molecule::special_read(char *line)
       if (nwords != nspecial[i][2] + 1)
         error->all(FLERR, "Molecule file special list does not match special count");
 
-      values.next_int();    // ignore
+      int iatom = values.next_int() - 1;
+      if (iatom < 0 || iatom >= natoms)
+        error->all(FLERR, "Invalid atom index {} in Special Bonds section of molecule file", iatom);
 
       for (int m = 1; m < nwords; m++) {
-        special[i][m - 1] = values.next_tagint();
-        if (special[i][m - 1] <= 0 || special[i][m - 1] > natoms || special[i][m - 1] == i + 1)
-          error->all(FLERR, "Invalid atom index in Special Bonds section of molecule file");
+        int ival = values.next_tagint();
+        if ((ival <= 0) || (ival > natoms) || (ival == iatom + 1))
+          error->all(FLERR, "Invalid atom index {} in Special Bonds section of molecule file",
+                     ival);
+        special[iatom][m - 1] = ival;
       }
+      count[iatom]++;
     }
   } catch (TokenizerException &e) {
     error->all(FLERR, "Invalid line in Special Bonds section of molecule file: {}\n{}", e.what(),
                line);
+  }
+  for (int i = 0; i < natoms; i++) {
+    if (count[i] == 0)
+      error->all(FLERR, "Atom {} missing in Special Bonds section of molecule file", i + 1);
   }
 }
 
