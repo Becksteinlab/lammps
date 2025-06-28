@@ -122,7 +122,7 @@ ComputeXRD::ComputeXRD(LAMMPS *lmp, int narg, char **arg) :
 
     } else if (strcmp(arg[iarg],"LP") == 0) {
       if (iarg+2 > narg) error->all(FLERR,"Illegal Compute XRD Command");
-      LP = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      LP = utils::inumeric(FLERR,arg[iarg+1],false,lmp);
 
       if (LP != 1 && LP != 0)
          error->all(FLERR,"Compute XRD: LP must have value of 0 or 1");

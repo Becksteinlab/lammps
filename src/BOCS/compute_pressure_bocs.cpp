@@ -202,7 +202,7 @@ double ComputePressureBocs::get_cg_p_corr(int N_basis, double *phi_coeff,
    Find the relevant index position if using a spline basis set
 ------------------------------------------------------------------------- */
 
-double ComputePressureBocs::find_index(double * grid, double value)
+int ComputePressureBocs::find_index(double * grid, double value)
 {
   int i;
   double spacing = fabs(grid[1]-grid[0]);

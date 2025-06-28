@@ -96,7 +96,7 @@ FixQEqReaxFF::FixQEqReaxFF(LAMMPS *lmp, int narg, char **arg) :
     else if (strcmp(arg[iarg],"maxiter") == 0) {
       if (iarg+1 > narg-1)
         error->all(FLERR,"Illegal fix {} command", style);
-      imax = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      imax = utils::inumeric(FLERR,arg[iarg+1],false,lmp);
       iarg++;
     } else error->all(FLERR,"Illegal fix {} command", style);
     iarg++;

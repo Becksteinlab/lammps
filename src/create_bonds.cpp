@@ -241,7 +241,7 @@ void CreateBonds::many()
   int *num_bond = atom->num_bond;
   int **bond_type = atom->bond_type;
   tagint **bond_atom = atom->bond_atom;
-  double newton_bond = force->newton_bond;
+  int newton_bond = force->newton_bond;
   int nlocal = atom->nlocal;
 
   int i, j, ii, jj, inum, jnum, flag;

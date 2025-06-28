@@ -416,7 +416,7 @@ void FixACKS2ReaxFF::compute_X()
   int jnum;
   int i, j, ii, jj, flag;
   double dx, dy, dz, r_sqr;
-  const double SMALL = 0.0001;
+  constexpr double SMALL = 0.0001;
 
   int *type = atom->type;
   tagint *tag = atom->tag;
