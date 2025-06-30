@@ -40,6 +40,13 @@ else()
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   )
   get_newest_file(${CMAKE_BINARY_DIR}/lammps-user-pace-* lib-pace)
+
+  # fixup yaml-cpp/emitterutils.cpp for GCC 15+ until patch is applied
+  file(READ ${lib-pace}/yaml-cpp/src/emitterutils.cpp yaml_emitterutils)
+  string(REPLACE "#include <sstream>" "#include <sstream>\n#include <cinttypes>" yaml_tmp_emitterutils "${yaml_emitterutils}")
+  string(REPLACE "#include <cinttypes>\n#include <cinttypes>" "#include <cinttypes>" yaml_emitterutils "${yaml_tmp_emitterutils}")
+  file(WRITE ${lib-pace}/yaml-cpp/src/emitterutils.cpp "${yaml_emitterutils}")
+
 endif()
 
 add_subdirectory(${lib-pace} build-pace)
