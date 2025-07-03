@@ -445,7 +445,7 @@ bool ChartWindow::eventFilter(QObject *watched, QEvent *event)
 ChartViewer::ChartViewer(const QString &title, int _index, QWidget *parent) :
     QChartView(parent), last_step(-1), index(_index), window(10), order(4), chart(new QChart),
     series(new QLineSeries), smooth(nullptr), xaxis(new QValueAxis), yaxis(new QValueAxis),
-    do_raw(true), do_smooth(true)
+    do_raw(true), do_smooth(false)
 {
     chart->legend()->hide();
     chart->addAxis(xaxis, Qt::AlignBottom);
@@ -961,6 +961,9 @@ float_vect sg_smooth(const float_vect &v, const int width, const int deg)
         // now loop over rest of data. reusing the "symmetric" coefficients.
         const double scale = 1.0 / double(window);
         const float_vect c2(window, scale);
+#if defined(_OPENMP)
+#pragma omp parallel for schedule(static)
+#endif
         for (std::size_t i = 0; i <= (v.size() - window); ++i) {
             for (int j = 0; j < window; ++j) {
                 res[i + width] += c2[j] * v[i + j];
