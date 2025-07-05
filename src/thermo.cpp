@@ -56,7 +56,7 @@ using namespace MathExtra;
 
 // CUSTOMIZATION: add a new keyword by adding it to this list:
 
-// step, elapsed, elaplong, dt, time, cpu, tpcpu, spcpu, cpuremain, part, timeremain
+// step, elapsed, elaplong, dt, time, cpu, tpcpu, spcpu, cpuuse, cpuremain, part, timeremain
 // atoms, temp, press, pe, ke, etotal
 // evdwl, ecoul, epair, ebond, eangle, edihed, eimp, emol, elong, etail
 // enthalpy, ecouple, econserve
@@ -866,6 +866,8 @@ void Thermo::parse_fields(const std::string &str)
       addfield("T/CPU", &Thermo::compute_tpcpu, FLOAT);
     } else if (word == "spcpu") {
       addfield("S/CPU", &Thermo::compute_spcpu, FLOAT);
+    } else if (word == "cpuuse") {
+      addfield("%CPU", &Thermo::compute_cpuuse, FLOAT);
     } else if (word == "cpuremain") {
       addfield("CPULeft", &Thermo::compute_cpuremain, FLOAT);
     } else if (word == "part") {
@@ -1348,6 +1350,11 @@ int Thermo::evaluate_keyword(const std::string &word, double *answer)
       error->all(FLERR, "The variable thermo keyword spcpu cannot be used between runs");
     compute_spcpu();
 
+  } else if (word == "cpuuse") {
+    if (update->whichflag == 0)
+      error->all(FLERR, "The variable thermo keyword cpuuse cannot be used between runs");
+    compute_cpuuse();
+
   } else if (word == "cpuremain") {
     if (update->whichflag == 0)
       error->all(FLERR, "The variable thermo keyword cpuremain cannot be used between runs");
@@ -1816,6 +1823,16 @@ void Thermo::compute_spcpu()
   last_cpu2 = new_cpu;
   last_step = new_step;
   last_spcpu = dvalue;
+}
+
+/* ---------------------------------------------------------------------- */
+
+void Thermo::compute_cpuuse()
+{
+  if (firststep == 0)
+    dvalue = 0.0;
+  else
+    dvalue = 100.0 * timer->cpu(Timer::TOTAL) / (timer->elapsed(Timer::TOTAL) + 1.0e-100);
 }
 
 /* ---------------------------------------------------------------------- */
