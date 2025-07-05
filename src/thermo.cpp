@@ -1765,9 +1765,13 @@ void Thermo::compute_tpcpu()
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;
+    // if evaluated on the same step already used cached value
+  } else if (last_time == new_time) {
+    dvalue = last_tpcpu;
+    return;
   } else {
     new_cpu = timer->elapsed(Timer::TOTAL);
-    double cpu_diff = new_cpu - last_tpcpu;
+    double cpu_diff = new_cpu - last_cpu1;
     double time_diff = new_time - last_time;
     if (time_diff > 0.0 && cpu_diff > 0.0)
       dvalue = time_diff / cpu_diff;
@@ -1776,7 +1780,8 @@ void Thermo::compute_tpcpu()
   }
 
   last_time = new_time;
-  last_tpcpu = new_cpu;
+  last_cpu1 = new_cpu;
+  last_tpcpu = dvalue;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1784,23 +1789,28 @@ void Thermo::compute_tpcpu()
 void Thermo::compute_spcpu()
 {
   double new_cpu;
-  int new_step = update->ntimestep;
+  bigint new_step = update->ntimestep;
 
   if (firststep == 0) {
     new_cpu = 0.0;
     dvalue = 0.0;
+    // if evaluated on the same step already used cached value
+  } else if (last_step == new_step) {
+    dvalue = last_spcpu;
+    return;
   } else {
     new_cpu = timer->elapsed(Timer::TOTAL);
-    double cpu_diff = new_cpu - last_spcpu;
-    int step_diff = new_step - last_step;
+    double cpu_diff = new_cpu - last_cpu2;
+    auto step_diff = double(new_step - last_step);
     if (cpu_diff > 0.0)
       dvalue = step_diff / cpu_diff;
     else
       dvalue = 0.0;
   }
 
+  last_cpu2 = new_cpu;
   last_step = new_step;
-  last_spcpu = new_cpu;
+  last_spcpu = dvalue;
 }
 
 /* ---------------------------------------------------------------------- */
