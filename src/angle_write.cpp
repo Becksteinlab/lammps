@@ -221,5 +221,6 @@ void AngleWrite::command(int narg, char **arg)
     delete writer;
     fclose(fp);
   }
-  MPI_Comm_free(&singlecomm);
+  if (singlecomm != MPI_COMM_NULL)
+    MPI_Comm_free(&singlecomm);
 }
