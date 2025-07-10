@@ -40,6 +40,7 @@ enum { NOMSG = 0, YESMSG = 1 };
 FixHalt::FixHalt(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), idvar(nullptr), dlimit_path(nullptr)
 {
+  triggered = false;
   if (narg < 7) utils::missing_cmd_args(FLERR, "fix halt", error);
   nevery = utils::inumeric(FLERR, arg[3], false, lmp);
   if (nevery <= 0) error->all(FLERR, "Illegal fix halt command: nevery must be > 0");
@@ -238,6 +239,7 @@ void FixHalt::end_of_step()
     error->all(FLERR, message);
   } else if ((eflag == SOFT) || (eflag == CONTINUE)) {
     if ((comm->me == 0) && (msgflag == YESMSG)) error->message(FLERR, message);
+    triggered = true;
     timer->force_timeout();
   }
 }
@@ -249,8 +251,9 @@ void FixHalt::end_of_step()
 void FixHalt::post_run()
 {
   // continue halt -> subsequent runs are allowed
+  // but only reset the timer timeout, if *we* forced the timeout
 
-  if (eflag == CONTINUE) timer->reset_timeout();
+  if (triggered && (eflag == CONTINUE)) timer->reset_timeout();
 }
 
 /* ----------------------------------------------------------------------
