@@ -151,7 +151,6 @@ FixPressLangevin::FixPressLangevin(LAMMPS *lmp, int narg, char **arg) :
       iarg += 4;
     } else if (strcmp(arg[iarg], "x") == 0) {
       if (iarg + 4 > narg) utils::missing_cmd_args(FLERR, "fix press/langevin tri", error);
-      if (iarg + 4 > narg) error->all(FLERR, "Illegal fix press/langevin command");
       p_start[0] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       p_stop[0] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       p_period[0] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
@@ -173,7 +172,7 @@ FixPressLangevin::FixPressLangevin(LAMMPS *lmp, int narg, char **arg) :
       iarg += 4;
       if (dimension == 2)
         error->all(FLERR, "Fix press/langevin z option not allowed for a 2d simulation");
-    } else if (strcmp(arg[iarg], "xy") == 0) {
+    } else if (strcmp(arg[iarg], "yz") == 0) {
       if (iarg + 4 > narg) utils::missing_cmd_args(FLERR, "fix press/langevin yz", error);
       p_start[3] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       p_stop[3] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
@@ -193,14 +192,13 @@ FixPressLangevin::FixPressLangevin(LAMMPS *lmp, int narg, char **arg) :
       if (dimension == 2)
         error->all(FLERR, "Fix press/langevin zz option not allowed for a 2d simulation");
 
-    } else if (strcmp(arg[iarg], "yz") == 0) {
+    } else if (strcmp(arg[iarg], "xy") == 0) {
       if (iarg + 4 > narg) utils::missing_cmd_args(FLERR, "fix press/langevin xy", error);
       p_start[5] = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       p_stop[5] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
       p_period[5] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
       p_flag[5] = 1;
       iarg += 4;
-      if (dimension == 2) error->all(FLERR, "Invalid fix {} command for a 2d simulation", style);
 
     } else if (strcmp(arg[iarg], "flip") == 0) {
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix press/langevin flip", error);
@@ -241,7 +239,7 @@ FixPressLangevin::FixPressLangevin(LAMMPS *lmp, int narg, char **arg) :
       if (iarg + 4 > narg) utils::missing_cmd_args(FLERR, "fix press/langevin temp", error);
       t_start = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
       t_stop = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
-      seed = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
+      seed = utils::inumeric(FLERR, arg[iarg + 3], false, lmp);
       if (seed <= 0) error->all(FLERR, "Fix press/langevin temp seed must be > 0");
       iarg += 4;
     }

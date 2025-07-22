@@ -80,7 +80,6 @@ FixAveTime::FixAveTime(LAMMPS *lmp, int narg, char **arg) :
   int expand = 0;
   char **earg;
   nvalues = utils::expand_args(FLERR,nvalues,&arg[6],mode,earg,lmp);
-  key2col.clear();
 
   if (earg != &arg[6]) expand = 1;
   arg = earg;
@@ -94,10 +93,9 @@ FixAveTime::FixAveTime(LAMMPS *lmp, int narg, char **arg) :
     value_t val;
     val.keyword = arg[i];
     val.which = argi.get_type();
-    key2col[arg[i]] = i;
 
     if ((val.which == ArgInfo::NONE) || (val.which == ArgInfo::UNKNOWN) || (argi.get_dim() > 1))
-      error->all(FLERR,"Invalid fix ave/time argument: {}", arg[i]);
+      error->all(FLERR, "Invalid fix ave/time argument: {}", arg[i]);
 
     val.argindex = argi.get_index1();
     val.varlen = 0;
@@ -258,7 +256,8 @@ FixAveTime::FixAveTime(LAMMPS *lmp, int narg, char **arg) :
       fprintf(fp,"\n");
     }
     if (yaml_flag) fputs("---\n",fp);
-    if (ferror(fp)) error->one(FLERR,"Error writing file header: {}", utils::getsyserror());
+    if (ferror(fp))
+      error->one(FLERR,"Error writing fix ave/time ID {} file header: {}",id,utils::getsyserror());
     filepos = platform::ftell(fp);
   }
 
@@ -979,34 +978,6 @@ double FixAveTime::compute_array(int i, int j)
   if (i >= nrows) return 0.0;
   if (norm) return array_total[i][j]/norm;
   return 0.0;
-}
-
-/* ----------------------------------------------------------------------
-   modify settings
-------------------------------------------------------------------------- */
-
-int FixAveTime::modify_param(int narg, char **arg)
-{
-  if (strcmp(arg[0], "colname") == 0) {
-    if (narg < 3) utils::missing_cmd_args(FLERR, "fix_modify colname", error);
-    int icol = -1;
-    if (utils::is_integer(arg[1])) {
-      icol = utils::inumeric(FLERR, arg[1], false, lmp);
-      if (icol < 0) icol = values.size() + icol + 1;
-      icol--;
-    } else {
-      try {
-        icol = key2col.at(arg[1]);
-      } catch (std::out_of_range &) {
-        icol = -1;
-      }
-    }
-    if ((icol < 0) || (icol >= (int) values.size()))
-      error->all(FLERR, "Thermo_modify colname column {} invalid", arg[1]);
-    values[icol].keyword = arg[2];
-    return 3;
-  }
-  return 0;
 }
 
 /* ----------------------------------------------------------------------

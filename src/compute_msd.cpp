@@ -140,6 +140,11 @@ void ComputeMSD::init()
 
 void ComputeMSD::compute_vector()
 {
+  // check that nmsd is unchanged
+
+  int newnmsd = group->count(igroup);
+  if (newnmsd != nmsd) error->all(FLERR, "Number of atoms in compute msd group must not change.");
+
   invoked_vector = update->ntimestep;
 
   // cm = current center of mass
