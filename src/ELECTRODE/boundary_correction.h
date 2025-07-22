@@ -12,7 +12,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing authors: Ludwig Ahrens-Iwers (TUHH), Shern Tee (UQ), Robert Meißner (TUHH)
+   Contributing authors: Ludwig Ahrens-Iwers (TUHH), Shern Tee (UQ), Robert Meissner (TUHH)
 ------------------------------------------------------------------------- */
 
 #ifndef LMP_BOUNDARY_CORRECTION_H
@@ -25,10 +25,11 @@ namespace LAMMPS_NS {
 class BoundaryCorrection : protected Pointers {
  public:
   BoundaryCorrection(LAMMPS *);
-  ~BoundaryCorrection() override {};
-  virtual void vector_corr(double *, int, int, bool){};
-  virtual void matrix_corr(bigint *, double **){};
-  virtual void compute_corr(double, int, int, double &, double *){};
+  ~BoundaryCorrection() override = default;
+
+  virtual void vector_corr(double *, int, int, bool) {};
+  virtual void matrix_corr(bigint *, double **) {};
+  virtual void compute_corr(double, int, int, double &, double *) {};
 
  protected:
   double get_volume();

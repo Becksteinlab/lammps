@@ -68,6 +68,10 @@ if (test $1 = "COLLOID") then
   depend OPENMP
 fi
 
+if (test $1 = "COLVARS") then
+  depend KOKKOS
+fi
+
 if (test $1 = "DIELECTRIC") then
   depend OPENMP
 fi
@@ -146,6 +150,7 @@ fi
 
 if (test $1 = "MC") then
   depend MISC
+  depend VORONOI
 fi
 
 if (test $1 = "MEAM") then
@@ -176,6 +181,7 @@ if (test $1 = "PHONON") then
 fi
 
 if (test $1 = "RIGID") then
+  depend MC
   depend KOKKOS
   depend OPENMP
   depend DPD-SMOOTH

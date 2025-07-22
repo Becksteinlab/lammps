@@ -56,6 +56,7 @@ class RandPoolWrap : protected Pointers {
 
     RandWrap rand_wrap;
 
+#ifndef LMP_KOKKOS_GPU
     typedef Kokkos::Experimental::UniqueToken<
       LMPHostType, Kokkos::Experimental::UniqueTokenScope::Global> unique_token_type;
 

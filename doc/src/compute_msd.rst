@@ -49,8 +49,6 @@ proportional to the diffusion coefficient of the diffusing atoms.
 The displacement of an atom is from its reference position. This is
 normally the original position at the time
 the compute command was issued, unless the *average* keyword is set to *yes*\ .
-The value of the displacement will be
-0.0 for atoms not in the specified compute group.
 
 If the *com* option is set to *yes* then the effect of any drift in
 the center-of-mass of the group of atoms is subtracted out before the
@@ -119,7 +117,9 @@ for example, :doc:`fix deposit <fix_deposit>` or
 Related commands
 """"""""""""""""
 
-:doc:`compute msd/nongauss <compute_msd_nongauss>`, :doc:`compute displace_atom <compute_displace_atom>`, :doc:`fix store/state <fix_store_state>`, :doc:`compute msd/chunk <compute_msd_chunk>`
+:doc:`compute msd/nongauss <compute_msd_nongauss>`,
+:doc:`compute displace_atom <compute_displace_atom>`, :doc:`fix store/state <fix_store_state>`,
+:doc:`compute msd/chunk <compute_msd_chunk>`
 
 Default
 """""""

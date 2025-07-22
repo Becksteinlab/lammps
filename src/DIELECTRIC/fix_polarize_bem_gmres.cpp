@@ -210,7 +210,7 @@ void FixPolarizeBEMGMRES::init()
 
   if (randomized) {
 
-    auto random = new RanPark(lmp, seed_charge + comm->me);
+    auto *random = new RanPark(lmp, seed_charge + comm->me);
     for (i = 0; i < 100; i++) random->uniform();
     double sum, tmp = 0;
     for (i = 0; i < nlocal; i++) {
