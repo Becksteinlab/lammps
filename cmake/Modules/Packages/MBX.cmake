@@ -82,7 +82,6 @@ if(DOWNLOAD_MBX)
     CONFIGURE_COMMAND autoreconf -fi && <SOURCE_DIR>/configure 
                                             --prefix=<INSTALL_DIR>
                                             ${MBX_CONFIG_MPI}
-                                            --disable-optimization # TODO Remove before accepting PR
                                             CXX=${MBX_CONFIG_CXX}
                                             CC=${MBX_CONFIG_CC}
                                             CPPFLAGS=${MBX_CONFIG_CPPFLAGS}
