@@ -275,6 +275,11 @@ whether an extra library is needed to build and use the package:
      - :doc:`pair_style tersoff <pair_tersoff>`
      - shear
      - no
+   * - :ref: `MBX <PKG-MBX>`
+     - `MB-nrg potentials <https://mbxsimulations.com/>`
+     - :doc:`fix mbx <fix_mbx>` :doc:`pair_mbx <pair_mbx>`
+     - ``PACKAGES/mbx``
+     - no
    * - :ref:`MC <PKG-MC>`
      - Monte Carlo options
      - :doc:`fix gcmc <fix_gcmc>`

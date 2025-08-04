@@ -73,6 +73,7 @@ gives those details.
    * :ref:`MACHDYN <PKG-MACHDYN>`
    * :ref:`MANIFOLD <PKG-MANIFOLD>`
    * :ref:`MANYBODY <PKG-MANYBODY>`
+   * :ref:`MBX <PKG-MBX>`
    * :ref:`MC <PKG-MC>`
    * :ref:`MDI <PKG-MDI>`
    * :ref:`MEAM <PKG-MEAM>`
@@ -1568,6 +1569,22 @@ A variety of many-body and bond-order potentials.  These include
 * ``examples/streitz``
 * ``examples/vashishta``
 * bench/in.eam
+
+----------
+
+.. _PKG-MBX:
+
+MBX Package
+----------
+
+**Contents**
+
+
+**Supporting info:**
+* ``src/MBX``: filenames -> commands
+* :doc:`pair_style mbx <pair_mbx>`
+* :doc:`fix mbx <fix_mbx>`
+* https://mbxsimulations.com/
 
 ----------
 
