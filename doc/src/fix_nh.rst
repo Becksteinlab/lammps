@@ -713,10 +713,10 @@ Related commands
 Default
 """""""
 
-The keyword defaults are tchain = 3, pchain = 3, mtk = yes, tloop = 1,
-ploop = 1, nreset = 0, drag = 0.0, dilate = all, couple = none,
-flip = yes, scaleyz = scalexz = scalexy = yes if periodic in second
-dimension and not coupled to barostat, otherwise no.
+The keyword defaults are tchain = 3, pchain = 3, mtk = yes, tloop = 1, ploop =
+1, nreset = 0, drag = 0.0, dilate = all, couple = none, flip = yes, isochoric =
+no, scaleyz = scalexz = scalexy = yes if periodic in second dimension and not
+coupled to barostat, otherwise no.
 
 ----------
 
