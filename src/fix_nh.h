@@ -120,6 +120,7 @@ class FixNH : public Fix {
   int scalexz;     // 1 if xz scaled with lz
   int scalexy;     // 1 if xy scaled with ly
   int flipflag;    // 1 if box flips are invoked as needed
+  int isochoric    // 1 if isochoric NPT simulation
 
   int pre_exchange_flag;    // set if pre_exchange needed for box flips
 
