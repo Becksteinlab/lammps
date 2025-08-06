@@ -71,6 +71,7 @@ Syntax
        *scaleyz* value = *yes* or *no* = scale yz with lz
        *scalexz* value = *yes* or *no* = scale xz with lz
        *flip* value = *yes* or *no* = allow or disallow box flips when it becomes highly skewed
+       *isochoric* value = *yes* or *no* = perform NPT simulation at constant volume
        *fixedpoint* values = x y z
          x,y,z = perform barostat dilation/contraction around this point (distance units)
        *update* value = *dipole* or *dipole/dlm*
@@ -374,6 +375,19 @@ efficiently, due to the large volume of communication needed to
 acquire ghost atoms around a processor's irregular-shaped subdomain.
 For extreme values of tilt, LAMMPS may also lose atoms and generate an
 error.
+
+The *isochoric* keyword allows to maintain constant volume during NPT
+simulations. This means that the dimensions not coupled to a barostat are used
+to compensate the strain induced on barostated dimensions. If one dimension is
+coupled to a barostat, then the remaining dimensions are scaled by the same
+multiplicative factor so that the volume stays constant. If two dimensions are
+coupled to barostats, then the remaining dimension is scaled so that the volume
+stays constant. It is not possible to use this keyword if all the dimensions
+are coupled to barostats or if none if them is coupled to barostats. In the
+case of 2d simulations, only x and y dimensions can be used to maintain a
+constant surface. If you want to perform strain with constant volume, the
+:doc:`fix deform <fix_deform>` command using *volume* keyword is more likely to
+suit your needs.
 
 The *fixedpoint* keyword specifies the fixed point for barostat volume
 changes. By default, it is the center of the box.  Whatever point is
