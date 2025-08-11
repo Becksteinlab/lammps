@@ -67,12 +67,11 @@ out to us at `https://groups.google.com/g/mbx-users <https://groups.google.com/g
 See ``examples/PACKAGES/mbx`` for complete examples of how to use
 this fix command.
 
-
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
-same simulation, one can use :doc:`pair_style hybrid/overlay <pair_hybrid_overlay>`
+same simulation, one can use :doc:`pair_style hybrid/overlay <pair_hybrid>`
 to combine the MB-nrg molecules with other pair styles, such as
-:doc:`lj/cut <pair_lj_cut>`. Do note that all electrostatics must be computed within MBX, so the
-coul/exclude pair_style must be applied on the non-MB-nrg molecules.
+:doc:`lj/cut <pair_lj>`. Do note that all electrostatics must be computed within MBX, so the
+:doc:`coul/exclude <pair_coul>` pair_style must be applied on the non-MB-nrg molecules.
 See  ``examples/PACKAGES/mbx`` for a complete hybrid example. 
 
 Restrictions
@@ -95,10 +94,9 @@ LAMMPS such as using `coul/cut` or `coul/long`.
 Related commands
 """"""""""""""""
 
-:doc:`pair mbx <pair_mbx>`
-:doc:`pair_style hybrid/overlay <pair_hybrid_overlay>`
-:doc:`coul/exclude <pair_coul_exclude>`
-
+:doc:`pair mbx <pair_mbx>`,
+:doc:`pair hybrid/overlay <pair_hybrid>`,
+:doc:`pair coul/exclude <pair_coul>`
 
 -----------
 
