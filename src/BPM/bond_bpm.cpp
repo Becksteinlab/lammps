@@ -417,17 +417,21 @@ void BondBPM::read_restart(FILE *fp)
   MPI_Bcast(&break_flag, 1, MPI_INT, 0, world);
 }
 
-/* ---------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   delete and process a given bond
+------------------------------------------------------------------------- */
 
 void BondBPM::process_broken(int i, int j)
 {
   if (!break_flag) error->one(FLERR, "BPM bond broke with break no option");
 
   int nlocal = atom->nlocal;
-  if (fix_store_local) {
-    // If newton off, bond can break on two procs so only record if proc owns lower tag
-    //    (BPM bond styles should sort so i -> atom with lower tag)
-    if (force->newton_bond || (i < nlocal)) {
+  // Only performed once per bond
+  //   If newton off, bond can break on two procs so only record if proc owns lower tag
+  //    (BPM bond styles should sort so i -> atom with lower tag)
+  if (force->newton_bond || (i < nlocal)) {
+    nbroken += 1;
+    if (fix_store_local) {
       for (int n = 0; n < nvalues; n++) (this->*pack_choice[n])(n, i, j);
       fix_store_local->add_data(output_data, i, j);
     }
@@ -486,6 +490,65 @@ void BondBPM::process_broken(int i, int j)
       }
     }
   }
+}
+
+/* ----------------------------------------------------------------------
+   copy bondstore array data into atom arrays for a new bond
+------------------------------------------------------------------------- */
+
+void BondBPM::process_new(int n, int i, int j)
+{
+  int m, a;
+  tagint *tag = atom->tag;
+  int *num_bond = atom->num_bond;
+  tagint **bond_atom = atom->bond_atom;
+  double **bondstore = fix_bond_history->bondstore;
+
+  if (i < atom->nlocal)
+    for (m = 0; m < num_bond[i]; m++)
+      if (bond_atom[i][m] == tag[j])
+        for (a = 0; a < nhistory; a++)
+          fix_bond_history->update_atom_value(i, m, a, bondstore[n][a]);
+
+  if (j < atom->nlocal)
+    for (m = 0; m < num_bond[j]; m++)
+      if (bond_atom[j][m] == tag[i])
+        for (a = 0; a < nhistory; a++)
+          fix_bond_history->update_atom_value(j, m, a, bondstore[n][a]);
+}
+
+/* ----------------------------------------------------------------------
+   standard processes performed prior to substyle's compute method
+------------------------------------------------------------------------- */
+
+void BondBPM::pre_compute()
+{
+  if (!fix_bond_history->stored_flag) {
+    fix_bond_history->stored_flag = true;
+
+    // Calculate substyle-specific bond history data  and save to atom arrays
+    store_data();
+
+    // Rebuild bondstore array
+    fix_bond_history->post_neighbor();
+  }
+
+  if (hybrid_flag) fix_bond_history->compress_history();
+
+  nbroken = 0;
+}
+
+/* ----------------------------------------------------------------------
+   standard processes performed after substyle's compute method
+------------------------------------------------------------------------- */
+
+void BondBPM::post_compute()
+{
+  if (hybrid_flag) fix_bond_history->uncompress_history();
+
+  int nbroken_total;
+  MPI_Allreduce(&nbroken, &nbroken_total, 1, MPI_INT,MPI_SUM, world);
+  atom->nbonds -= nbroken_total;
 }
 
 /* ----------------------------------------------------------------------
