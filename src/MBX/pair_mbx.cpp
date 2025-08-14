@@ -245,10 +245,10 @@ void PairMBX::compute(int eflag, int vflag)
     pvector[3] = mbx_e4b;
     pvector[4] = mbx_disp;
     pvector[5] = mbx_buck;
-    pvector[6] = mbx_ele;
-    pvector[7] = mbx_total_energy;
-    pvector[8] = ptr_mbx_local->GetPermanentElectrostaticEnergy();
-    pvector[9] = ptr_mbx_local->GetInducedElectrostaticEnergy();
+    pvector[6] = ptr_mbx_local->GetPermanentElectrostaticEnergy();
+    pvector[7] = ptr_mbx_local->GetInducedElectrostaticEnergy();
+    pvector[8] = mbx_ele;
+    pvector[9] = mbx_total_energy;
 
     
     // // for debugging
