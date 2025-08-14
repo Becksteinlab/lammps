@@ -108,6 +108,7 @@ PairPACEAPIP::PairPACEAPIP(LAMMPS *lmp) : Pair(lmp)
 
   // start of adaptive-precision modifications by DI
   lambda_thermostat = true;
+  lambda_la = true;
 
   n_computations_accumulated = 0;
   time_wall_accumulated = 0;
@@ -190,6 +191,8 @@ void PairPACEAPIP::compute(int eflag, int vflag)
     f_dyn_lambda = atom->apip_f_dyn_lambda;
     e_ref = get_e_ref_ptr();
     lambda_const = atom->apip_lambda_const;
+  } else if (lambda_la) {
+    e_ref = get_e_ref_ptr();
   }
   int n_computations = 0;
   // end of adaptive-precision modifications by DI
@@ -333,7 +336,7 @@ void PairPACEAPIP::compute(int eflag, int vflag)
 
     // tally energy contribution
     // start of adaptive-precision modifications by DI
-    if (eflag_either || lambda_thermostat) {
+    if (eflag_either || e_ref) {
       // The potential energy needs to be stored to apply the
       // energy correction with the local thermostat.
       if (e_ref) e_ref[i] = scale[itype][itype] * aceimpl->ace->e_atom;
@@ -528,6 +531,12 @@ double PairPACEAPIP::init_one(int i, int j)
 // written by DI. This function is required for the adaptive-precision.
 void PairPACEAPIP::setup()
 {
+  if (modify->get_fix_by_style("^lambda/la/apip$").size() == 0) { // TODO update name
+    lambda_la = false;
+  } else {
+    lambda_la = true;
+  }
+
   if (modify->get_fix_by_style("^lambda_thermostat/apip$").size() == 0) {
     lambda_thermostat = false;
   } else {

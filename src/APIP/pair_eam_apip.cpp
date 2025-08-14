@@ -70,6 +70,7 @@ PairEAMAPIP::PairEAMAPIP(LAMMPS *lmp) : Pair(lmp)
   time_wall_accumulated = 0;
 
   lambda_thermostat = true;
+  lambda_la = true;
 }
 
 /* ----------------------------------------------------------------------
@@ -180,6 +181,8 @@ void PairEAMAPIP::compute(int eflag, int vflag)
     f_dyn_lambda = atom->apip_f_dyn_lambda;
     e_simple = atom->apip_e_fast;
     lambda_const = atom->apip_lambda_const;
+  } else if (lambda_la) {
+    e_simple = atom->apip_e_fast;
   }
   int *type = atom->type;
   int nlocal = atom->nlocal;
@@ -565,6 +568,12 @@ double PairEAMAPIP::init_one(int i, int j)
 
 void PairEAMAPIP::setup()
 {
+  if (modify->get_fix_by_style("^lambda/la/apip$").size() == 0) { // TODO update name
+    lambda_la = false;
+  } else {
+    lambda_la = true;
+  }
+
   if (modify->get_fix_by_style("^lambda_thermostat/apip$").size() == 0) {
     lambda_thermostat = false;
   } else {
