@@ -22,14 +22,12 @@
 #include "error.h"
 #include "fix_store_atom.h"
 #include "force.h"
-#include "group.h"
 #include "memory.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
 #include "modify.h"
 #include "pair.h"
-#include "update.h"
 
 #include <algorithm>
 
@@ -81,6 +79,8 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
     nnn = utils::inumeric(FLERR, arg[7], false, lmp);
   csp_cutsq = pow(utils::numeric(FLERR, arg[8], false, lmp), 2);
   cutsq_combined = csp_cutsq > cut_hi_sq ? csp_cutsq : cut_hi_sq;
+
+  // TODO change arg parsing to make const default
 
   if (strcmp(arg[9], "dyn_csp_ngh") == 0)
     const_ngh_flag = false;
@@ -173,7 +173,6 @@ void FixLambdaLACSPAPIP::init()
     error->all(FLERR, "fix lambda/la/csp/apip requires atom IDs");
 
   // only one fix lambda/la/csp/apip
-  // TOOD update names
   int count = 0;
   for (int i = 0; i < modify->nfix; i++) {
     if (strcmp(modify->fix[i]->style, "lambda/la/csp/apip") == 0) count++;
@@ -301,8 +300,8 @@ void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
       memory->destroy(distsq);
       memory->destroy(nearest);
       maxneigh = jnum;
-      memory->create(distsq, maxneigh, "centro/atom:distsq");
-      memory->create(nearest, maxneigh, "centro/atom:nearest");
+      memory->create(distsq, maxneigh, "lambda:la:csp:apip:distsq");
+      memory->create(nearest, maxneigh, "lambda:la:csp:apip:nearest");
     }
 
     // loop over list of all neighbors within force cutoff
@@ -424,7 +423,7 @@ void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
     csp_avg[i] /= csp_norm[i];
     lambda[i] = switching_function_poly(csp_avg[i]);
 
-    // TOOD consider lambda_non_group here
+    // TODO consider lambda_non_group here
   }
 
   delete[] pairs_value;
@@ -582,7 +581,7 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
     csp_avg[i] /= csp_norm[i];
     lambda[i] = switching_function_poly(csp_avg[i]);
 
-    // TOOD consider lambda_non_group here
+    // TODO consider lambda_non_group here
   }
 }
 

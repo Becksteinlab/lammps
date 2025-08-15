@@ -14,30 +14,18 @@
 #include "pair_la_csp_apip.h"
 
 #include "atom.h"
-#include "atom_vec_apip.h"
 #include "comm.h"
 #include "error.h"
 #include "fix.h"
 #include "force.h"
-#include "math_const.h"
 #include "memory.h"
 #include "modify.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
 #include "pair_hybrid.h"
-#include "update.h"
-
-#include <exception>
-
-#include "ace-evaluator/ace_c_basis.h"
-#include "ace-evaluator/ace_evaluator.h"
-#include "ace-evaluator/ace_recursive.h"
-#include "ace-evaluator/ace_version.h"
-#include "ace/ace_b_basis.h"
 
 using namespace LAMMPS_NS;
-using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 PairLACSPAPIP::PairLACSPAPIP(LAMMPS *lmp) : Pair(lmp), fix_la_csp(nullptr),
