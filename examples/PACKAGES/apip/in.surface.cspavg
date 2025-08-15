@@ -1,0 +1,72 @@
+##################################################
+# parameters of the adaptive-precision potential #
+##################################################
+# We couple an EAM potential with an ACE potential.
+variable	eamfs_file string "Cu_300K_Immel_2023.eam.fs"
+variable	ace_file1 string "Cu-1.yace"
+variable	ace_file2 string "../../../potentials/Cu-PBE-core-rep.ace"
+# The csp is used as detection mechanism for atoms of interest.
+variable	cspavg_lattice string "fcc"
+variable	cspavg_cutoff equal 8.0
+# Thresholds between which the switching parameter changes from 1 to 0 based on cspavg.
+variable	cspavg_csp_lo equal 0.5
+variable	cspavg_csp_hi equal 0.6
+# This range determines where the weighting function changes from 1 to 0.
+variable	cspavg_r_lo equal 4.0
+variable	cspavg_r_hi equal 8.0
+
+
+#log		log.surface.cspavg
+
+## basic stuff
+units		metal
+atom_style	apip/la # own atom style required for APIP
+timestep	0.001
+
+# copper surfaces at room temperature
+#lattice		fcc 3.615
+#region		box block 0 10 0 10 0 25 units lattice
+#region		del block 0 10 0 10 10 15 units lattice
+#create_box	1 box
+#create_atoms	1 box
+#mass		1 63.546
+#delete_atoms	region del
+#displace_atoms	all random 0.028 0.028 0.028 42 units lattice
+#velocity	all create 300.0 42
+#write_data	data.surface.cspavg
+read_data	data.surface.cspavg
+
+
+fix		nve all nve
+
+fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
+
+pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
+pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
+pair_coeff	* * pace/apip ${ace_file2} Cu
+pair_coeff	* * zero
+pair_coeff	* * la/csp/apip
+
+compute		lambda all property/atom apip_lambda
+compute		csp all property/atom apip_la_inp
+compute		csp_norm all property/atom apip_la_norm
+compute		csp_avg all property/atom apip_la_avg
+
+
+# get statistics about lambda
+variable	flag_simple atom c_lambda==1
+variable	flag_switch atom c_lambda<1&&c_lambda>0
+variable	flag_complex atom c_lambda==0
+compute		lambda_types all reduce sum v_flag_simple v_flag_switch v_flag_complex c_csp c_csp_avg
+
+
+thermo_style	custom step temp etotal c_lambda_types[*] fnorm fmax f_lambda_cspavg
+thermo		1
+
+#dump		1 all custom 10 /tmp/dump.surface.cspavg.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
+
+
+run		100
+
+# dump atoms
+#write_dump	all custom /tmp/dump.surface.cspavg.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
