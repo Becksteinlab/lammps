@@ -60,6 +60,7 @@
         Reset minor version number for upcoming stable release and tutorial session.
         Refactor chartviewer title line to have two rows and add display of units and normalization
         Replace rubberband-zoom feature and button to reset zoom with two range sliders
+        Update minimum required LAMMPS version.
       </description>
     </release>
     <release version="1.6.15" timestamp="1751751132">
