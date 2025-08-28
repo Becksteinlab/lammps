@@ -1811,7 +1811,7 @@ QWizardPage *LammpsGui::tutorial_intro(const int ntutorial, const QString &infot
     page->setPixmap(QWizard::WatermarkPixmap,
                     QPixmap(QString(":/icons/tutorial%1-logo.png").arg(ntutorial)));
 
-    // TBD TODO: update URL to published tutorial DOI
+    // TBD: TODO: update URL to published tutorial DOI
     auto *label = new QLabel(
         QString("<p>This dialog will help you to select and populate a folder with materials "
                 "required to work through tutorial ") +
@@ -2075,9 +2075,7 @@ void LammpsGui::start_tutorial8()
 
 void LammpsGui::howto()
 {
-    if (docver.isEmpty()) setDocver();
-    QDesktopServices::openUrl(
-        QUrl(QString("https://docs.lammps.org%1Howto_lammps_gui.html").arg(docver)));
+    QDesktopServices::openUrl(QUrl("https://lammps-gui.lammps.org/"));
 }
 
 void LammpsGui::defaults()
@@ -2278,8 +2276,11 @@ void LammpsGui::start_lammps()
     lammps.open(narg, args);
     lammpsstatus->show();
 
-    // Must have a LAMMPS version that is at least the 22 July 2025 release of LAMMPS
-    // since we used features only available with this release.
+    // Must have a LAMMPS version that was released after the 22 July 2025 version
+    /*
+     .. versionchanged:: TBD
+        must update this check before next feature release
+    */
     if (lammps.version() < 20250722) {
         QMessageBox::critical(this, "Incompatible LAMMPS Version",
                               "LAMMPS-GUI version " LAMMPS_GUI_VERSION " requires\n"

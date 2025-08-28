@@ -66,13 +66,11 @@ int LammpsWrapper::extract_setting(const char *keyword)
 void *LammpsWrapper::extract_global(const char *keyword)
 {
     void *val = nullptr;
-    if (lammps_handle) {
 #if defined(LAMMPS_GUI_USE_PLUGIN)
-        val = ((liblammpsplugin_t *)plugin_handle)->extract_global(lammps_handle, keyword);
+    val = ((liblammpsplugin_t *)plugin_handle)->extract_global(lammps_handle, keyword);
 #else
-        val = lammps_extract_global(lammps_handle, keyword);
+    val = lammps_extract_global(lammps_handle, keyword);
 #endif
-    }
     return val;
 }
 
@@ -130,6 +128,19 @@ int LammpsWrapper::id_count(const char *idtype)
         val = ((liblammpsplugin_t *)plugin_handle)->id_count(lammps_handle, idtype);
 #else
         val = lammps_id_count(lammps_handle, idtype);
+#endif
+    }
+    return val;
+}
+
+int LammpsWrapper::has_id(const char *idtype, const char *id)
+{
+    int val = 0;
+    if (lammps_handle) {
+#if defined(LAMMPS_GUI_USE_PLUGIN)
+        val = ((liblammpsplugin_t *)plugin_handle)->has_id(lammps_handle, idtype, id);
+#else
+        val = lammps_has_id(lammps_handle, idtype, id);
 #endif
     }
     return val;
