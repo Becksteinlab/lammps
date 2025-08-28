@@ -51,6 +51,9 @@ PairMBX::PairMBX(LAMMPS *lmp) : Pair(lmp)
   respa_enable = 1;
   restartinfo = 0;
   no_virial_fdotr_compute = 1;
+  one_coeff = 1;
+  // manybody_flag = 1; // TODO: check if manybody_flag is compatible with MBX
+
 
   mbx_total_energy = 0;
 
@@ -317,15 +320,16 @@ void PairMBX::settings(int narg, char **arg)
 
 void PairMBX::coeff(int narg, char **arg)
 {
-  if (narg < 4 || narg > 5) error->all(FLERR, "Incorrect args for pair coefficients");
+  if (narg < 2 || narg > 5) error->all(FLERR, "Incorrect args for pair coefficients");
   if (!allocated) allocate();
 
   int ilo, ihi, jlo, jhi;
   utils::bounds(FLERR, arg[0], 1, atom->ntypes, ilo, ihi, error);
   utils::bounds(FLERR, arg[1], 1, atom->ntypes, jlo, jhi, error);
 
-  double epsilon_one = utils::numeric(FLERR, arg[2], false, lmp);
-  double sigma_one = utils::numeric(FLERR, arg[3], false, lmp);
+  // unused coeff values
+  // double epsilon_one = utils::numeric(FLERR, arg[2], false, lmp);
+  // double sigma_one = utils::numeric(FLERR, arg[3], false, lmp);
 
   double cut_one = cut_global;
   if (narg == 5) cut_one = utils::numeric(FLERR, arg[4], false, lmp);

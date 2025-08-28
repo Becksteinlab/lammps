@@ -207,7 +207,7 @@ pair_coeff      11      12    lj/cut    0.052705    2.879271
 pair_coeff      11      13    lj/cut    0.000000    0.000000
 
 #MBX-water
-pair_coeff      * * mbx  0.0 0.0
+pair_coeff      * * mbx
 
 #coul exclude
 pair_coeff      1*11 1*11 coul/exclude
