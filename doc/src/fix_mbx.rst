@@ -44,7 +44,7 @@ Examples
     # For a system involving water (atom types O=1, H=2)
     processors      * * * map xyz
     pair_style      mbx 9.0
-    pair_coeff      * * 0.0 0.0
+    pair_coeff      * *
     compute         mbx all pair mbx
     fix             mbx_fix all mbx 1 h2o 1 2 3 1 2 2 json mbx.json
 
@@ -53,14 +53,14 @@ Examples
     # water (atom types O=3, H=4)
     processors      * * * map xyz
     pair_style      mbx 9.0
-    pair_coeff      * * 0.0 0.0
+    pair_coeff      * *
     compute         mbx all pair mbx
     fix             mbx_fix all mbx 2 ch4 1 2 5 1 2 2 2 2 h2o 3 4 3 3 4 4 json mbx.json
 
     # For a system involving water (atom types 0=12, H=13) in a hybrid simulation
     processors * * * map xyz
     pair_style      hybrid/overlay mbx 9.0 lj/cut 9.0 coul/exclude 9.0
-    pair_coeff      * * mbx  0.0 0.0
+    pair_coeff      * * mbx
     pair_coeff      1*11 1*11 coul/exclude
     compute         mbx all pair mbx
     fix             mbx_fix all mbx 2 dp1 1 11 1 1 h2o 12 13 3 12 13 13 json mbx.json
@@ -70,6 +70,14 @@ See ``examples/PACKAGES/mbx`` for additional examples of how to use MBX in LAMMP
 
 Description
 """""""""""
+
+The MBX (Many-Body eXpansion) software is a C++ library that provides access
+to many-body energy (MB-nrg) potential energy functions, such as the MB-pol
+water model. Developed over the past decade, these potential energy functions
+integrate physics-based and machine-learned many-body terms
+trained on electronic structure data calculated at the “gold
+standard” coupled-cluster level of theory.:ref:`(Gupta) <Gupta>`
+
 
 This fix instructs LAMMPS to call the `MBX library <_mbxwebsite>`_
 in order to simulate MB-nrg models such as MB-pol. This fix must be
@@ -92,6 +100,19 @@ to combine the MB-nrg molecules with other pair styles, such as
 :doc:`lj/cut <pair_lj>`. Do note that all electrostatics must be computed within MBX, so the
 :doc:`coul/exclude <pair_coul>` pair_style must be applied on the non-MB-nrg molecules.
 See  ``examples/PACKAGES/mbx`` for a complete hybrid example.
+
+
+
+
+
+The *json* argument specifies the name of the MBX JSON configuration file to use, such as `mbx.json`.
+If this file is not provided, the fix will attempt to use a default configuration.
+
+The *print/dipoles* argument enables the printing of dipole moments as part of the fix variable output.
+This is useful for performing vibrational spectroscopy calculations such as IR, Raman, and Sum-Frequency Generation (SFG).
+
+The *print/settings* argument will print the MBX settings to the LAMMPS logfile at the start of the simulation.
+This is used for debugging and ensuring that the correct settings are being applied.
 
 Restrictions
 """"""""""""
@@ -122,5 +143,9 @@ Related commands
 .. _Riera:
 
 **(Riera)** M. Riera, C. Knight, E. Bull-Vulpe, X. Zhu, H. Agnew, D. Smith, A. Simmonett, F. Paesani, J. Chem. Phys. 159, 054802 (2023)
+
+.. _Gupta:
+
+**(Gupta)** S. Gupta, E. Bull-Vulpe, H. Agnew, S. Iyer, X. Zhu, R. Zhou, C. Knight, F. Paesani, J. Chem. Theory Comput. 21, 1938 (2025)
 
 .. _mbxwebsite: https://mbxsimulations.com

@@ -10,7 +10,7 @@ Syntax
 
     pair_style mbx cutoff
 
-* cutoff = real-space cutoff for MBX. 9.0 is usually a safe value.
+* cutoff = real-space cutoff for MBX. 9.0 Angstroms is usually a safe value.
 
 
 Examples
@@ -71,6 +71,9 @@ to combine the MB-nrg molecules with other pair styles, such as
 :doc:`coul/exclude <pair_coul>` pair_style must be applied on the non-MB-nrg molecules.
 See  ``examples/PACKAGES/mbx`` for a complete hybrid example.
 
+
+Since MBX is a many-body method, it is internally parameterized and does not require explicit
+specification of all pairwise interactions. 
 
 Restrictions
 """"""""""""
