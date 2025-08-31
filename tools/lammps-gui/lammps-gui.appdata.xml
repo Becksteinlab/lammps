@@ -61,6 +61,8 @@
         Add action to editor context menu to open the Commands_all.html manual page
         Change color selections for dump image to text fields with completion and validation.
         Update minimum required LAMMPS version.
+        Fix frozen cursor on drag-n-drop bug   
+        Implement drag and drop of text blocks
       </description>
     </release>
     <release version="1.7.0" timestamp="1751978344">
