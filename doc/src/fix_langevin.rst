@@ -241,7 +241,7 @@ to zero by subtracting off an equal part of it from each atom in the
 group.  As a result, the center-of-mass of a system with zero initial
 momentum will not drift over time.
 
-.. deprecated:: TDB
+.. deprecated:: 12Jun2025
 
 The *gjf* keyword in fix langevin is deprecated and will be removed
 soon.  The GJF functionality has been moved to its own fix style

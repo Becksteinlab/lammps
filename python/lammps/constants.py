@@ -54,6 +54,7 @@ LMP_VAR_STRING     = 3
 
 # default buffer size for string buffers
 LMP_BUFSIZE        = 1024
+LMP_MAX_GROUP      = 32
 # -------------------------------------------------------------------------
 
 def get_ctypes_int(size):

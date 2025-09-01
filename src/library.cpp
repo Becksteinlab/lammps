@@ -71,6 +71,9 @@
 /// string buffer for error messages of global errors
 static std::string lammps_last_global_errormessage;
 
+/// maximum number of groups
+static constexpr int LMP_MAX_GROUP = 32;
+
 using namespace LAMMPS_NS;
 
 // for printing the non-null pointer argument warning only once
@@ -1621,7 +1624,9 @@ int lammps_extract_setting(void *handle, const char *keyword)
   if (strcmp(keyword,"peri_flag") == 0) return lmp->atom->peri_flag;
 
   if (strcmp(keyword,"thermo_every") == 0) return lmp->output->thermo_every;
-  if (strcmp(keyword,"thermo_norm") == 0) return lmp->output->thermo->normflag;
+  if (lmp->output->thermo) {
+    if (strcmp(keyword,"thermo_norm") == 0) return lmp->output->thermo->normflag;
+  }
 
   return -1;
 }
@@ -2227,6 +2232,11 @@ Get length of lists with :ref:`lammps_extract_setting() <extract_neighbor_settin
 
 void *lammps_extract_global(void *handle, const char *name)
 {
+  if (strcmp(name,"git_commit") == 0) return (void *)LAMMPS::git_commit;
+  if (strcmp(name,"git_branch") == 0) return (void  *)LAMMPS::git_branch;
+  if (strcmp(name,"git_descriptor") == 0) return (void *)LAMMPS::git_descriptor;
+  if (strcmp(name,"lammps_version") == 0) return (void *)LAMMPS_VERSION;
+
   auto *lmp = (LAMMPS *) handle;
   if (!lmp || !lmp->update || !lmp->atom || !lmp->force || !lmp->domain || !lmp->domain->lattice
       || !lmp->update->integrate) {
@@ -2257,11 +2267,6 @@ void *lammps_extract_global(void *handle, const char *name)
     if (strcmp(name,"respa_levels") == 0) return (void *) &respa->nlevels;
     if (strcmp(name,"respa_dt") == 0) return (void *) respa->step;
   }
-
-  if (strcmp(name,"git_commit") == 0) return (void *)LAMMPS::git_commit;
-  if (strcmp(name,"git_branch") == 0) return (void  *)LAMMPS::git_branch;
-  if (strcmp(name,"git_descriptor") == 0) return (void *)LAMMPS::git_descriptor;
-  if (strcmp(name,"lammps_version") == 0) return (void *)LAMMPS_VERSION;
 
   if (strcmp(name,"boxlo") == 0) return (void *) lmp->domain->boxlo;
   if (strcmp(name,"boxhi") == 0) return (void *) lmp->domain->boxhi;
@@ -6240,7 +6245,7 @@ as a C-style string instead of reading it from a file.
  *
  * \param  handle   pointer to a previously created LAMMPS instance
  * \param  id       molecule-ID
- * \param  json     molecule data in JSON format as C-style string */
+ * \param  jsonstr  molecule data in JSON format as C-style string */
 
 void lammps_create_molecule(void *handle, const char *id, const char *jsonstr)
 {
@@ -7168,9 +7173,15 @@ int lammps_id_name(void *handle, const char *category, int idx, char *buffer, in
       return 1;
     }
   } else if (strcmp(category,"group") == 0) {
-    if ((idx >= 0) && (idx < lmp->group->ngroup)) {
-      strncpy(buffer, lmp->group->names[idx], buf_size);
-      return 1;
+    // the list of groups may have "holes". So the available range is always 0 to 32
+    if ((idx >= 0) && (idx < LMP_MAX_GROUP)) {
+      if (lmp->group->names[idx]) {
+        strncpy(buffer, lmp->group->names[idx], buf_size);
+        return 1;
+      } else {
+        buffer[0] = '\0';
+        return 0;
+      }
     }
   } else if (strcmp(category,"molecule") == 0) {
     if ((idx >= 0) && (idx < lmp->atom->nmolecule)) {

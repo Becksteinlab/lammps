@@ -67,6 +67,16 @@
 #include <omp.h>
 #endif
 
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#include <process.h>
+#define execl(exe, arg0, arg1) _execl(exe, arg0, arg1)
+#else
+#include <unistd.h>
+#endif
+
 namespace {
 constexpr int DEFAULT_BUFLEN = 1024;
 
@@ -111,31 +121,80 @@ LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
     QSettings settings;
 
 #if defined(LAMMPS_GUI_USE_PLUGIN)
-    plugin_path =
-        QFileInfo(settings.value("plugin_path", "liblammps.so").toString()).canonicalFilePath();
-    if (!lammps.load_lib(plugin_path.toStdString().c_str())) {
-        // fall back to defaults
-        for (const char *libfile :
-             {"./liblammps.so", "liblammps.dylib", "./liblammps.dylib", "liblammps.dll"}) {
-            if (lammps.load_lib(libfile)) {
-                plugin_path = QFileInfo(libfile).canonicalFilePath();
-                settings.setValue("plugin_path", plugin_path);
-                break;
-            } else {
-                plugin_path.clear();
-            }
-        }
+    plugin_path = settings.value("plugin_path", "").toString();
+    if (!plugin_path.isEmpty()) {
+        // make canonical and try loading; reset to empty string if loading failed
+        plugin_path = QFileInfo(plugin_path).canonicalFilePath();
+        if (!lammps.load_lib(plugin_path)) plugin_path.clear();
     }
 
     if (plugin_path.isEmpty()) {
-        // none of the plugin paths could load, remove key
+        // no plugin configured or could not load successfully: remove any setting, if present
         settings.remove("plugin_path");
-        QMessageBox::critical(
-            this, "Error",
-            QString("Cannot open LAMMPS shared library file: %1.\n\n")
-                    .arg(settings.value("plugin_path", "liblammps.so").toString()) +
-                "Use -p command line flag to specify a path to the library.");
-        exit(1);
+
+        // construct list of possible standard choices for the shared library file:
+        // we prefer the current directory, then the dynamic library path, then system folders
+
+        QStringList dirlist{"."};
+#ifdef Q_OS_MACOS
+        QStringList filter("liblammps*.dylib");
+        dirlist.append(
+            QString::fromLocal8Bit(qgetenv("DYLD_LIBRARY_PATH")).split(":", Qt::SkipEmptyParts));
+        dirlist.append({"/Applications/LAMMPS.app/Contents/Frameworks",
+                        "/Applications/LAMMPS-GUI.app/Contents/Frameworks"});
+#elif Q_OS_WIN32
+        QStringList filter("liblammps*.dll");
+        dirlist.append(QString::fromLocal8Bit(qgetenv("PATH")).split(";", Qt::SkipEmptyParts));
+#else
+        QStringList filter("liblammps*.so*");
+        dirlist.append(
+            QString::fromLocal8Bit(qgetenv("LD_LIBRARY_PATH")).split(":", Qt::SkipEmptyParts));
+#endif
+        dirlist.append({"/usr/lib", "/usr/lib64", "/usr/local/lib", "/usr/local/lib64"});
+
+        // construct list of matching files
+        QFileInfoList entries;
+        for (const auto &dir : dirlist)
+            entries.append(QDir(dir).entryInfoList(filter));
+
+        // convert list of paths to list of canonical file names
+        QStringList choices;
+        for (const auto &fn : entries)
+            choices.append(fn.canonicalFilePath());
+        choices.removeDuplicates();
+        QString lmpversion;
+        for (const auto &libpath : choices) {
+            if (lammps.load_lib(libpath)) {
+                auto *ptr = (const char *)lammps.extract_global("lammps_version");
+                if (ptr) lmpversion = ptr;
+
+                // found a suitable version
+                if (!lmpversion.isEmpty() && (date_compare(lmpversion, "22 July 2025") >= 0)) {
+                    plugin_path = libpath;
+                    settings.setValue("plugin_path", plugin_path);
+                    settings.sync();
+                    break;
+                }
+            }
+        }
+
+        if (plugin_path.isEmpty()) {
+            // none of the plugin paths could load, remove key
+            settings.remove("plugin_path");
+            QMessageBox::critical(
+                this, "Error",
+                "Cannot open LAMMPS shared library file or provided path has an incompatible "
+                "version.\n\nPlease try again and use the -p command line flag to specify a "
+                "path to a suitable LAMMPS shared library file.");
+            exit(1);
+        }
+
+        // must re-launch LAMMPS-GUI to cleanly load the new plugin without overlaps from others.
+        const char *path = mystrdup(QCoreApplication::applicationFilePath());
+        const char *arg0 = mystrdup(QCoreApplication::arguments().at(0));
+        execl(path, arg0, (char *)nullptr);
+        // cannot continue without a path to the LAMMPS library
+        if (plugin_path.isEmpty()) exit(1);
     }
 #endif
 
@@ -713,6 +772,9 @@ void LammpsGui::update_variables()
 // open file and switch CWD to path of file
 void LammpsGui::open_file(const QString &fileName)
 {
+    // do nothing, if no file name is provided. preserves current buffer and working directory.
+    if (fileName.isEmpty()) return;
+
     if (lammps.is_running()) {
         stop_run();
         runner->wait();
@@ -1442,7 +1504,7 @@ void LammpsGui::do_run(bool use_buffer)
         QString("LAMMPS-GUI - Charts - %2 - Run %3").arg(current_file).arg(run_counter));
     chartwindow->setWindowIcon(QIcon(":/icons/lammps-icon-128x128.png"));
     chartwindow->setMinimumSize(400, 300);
-    auto *unitptr = (const char *)lammps.extract_global("units");
+    const auto *unitptr = (const char *)lammps.extract_global("units");
     if (unitptr) chartwindow->set_units(QString("Units: %1").arg(unitptr));
     auto normflag = lammps.extract_setting("thermo_norm");
     chartwindow->set_norm(normflag != 0);
@@ -1752,13 +1814,14 @@ QWizardPage *LammpsGui::tutorial_intro(const int ntutorial, const QString &infot
     page->setPixmap(QWizard::WatermarkPixmap,
                     QPixmap(QString(":/icons/tutorial%1-logo.png").arg(ntutorial)));
 
-    // XXX TODO: update URL to published tutorial DOI
+    // TBD: TODO: update URL to published tutorial DOI
     auto *label = new QLabel(
         QString("<p>This dialog will help you to select and populate a folder with materials "
                 "required to work through tutorial ") +
         QString::number(ntutorial) +
-        QString(" from the LAMMPS tutorials article by Simon Gravelle, Jake Gissinger, and Axel "
-                "Kohlmeyer.</p><p>The materials for this tutorial are downloaded from:<br><b><a "
+        QString(" from the LAMMPS tutorials article by Simon Gravelle, Cecilia Alvares, "
+                "Jake Gissinger, and Axel Kohlmeyer.</p>"
+                "<p>The materials for this tutorial are downloaded from:<br><b><a "
                 "href=\"https://github.com/lammpstutorials/lammpstutorials-article\">https://"
                 "github.com/lammpstutorials/lammpstutorials-article</a></b></p>") +
         infotext);
@@ -2015,9 +2078,7 @@ void LammpsGui::start_tutorial8()
 
 void LammpsGui::howto()
 {
-    if (docver.isEmpty()) setDocver();
-    QDesktopServices::openUrl(
-        QUrl(QString("https://docs.lammps.org%1Howto_lammps_gui.html").arg(docver)));
+    QDesktopServices::openUrl(QUrl("https://lammps-gui.lammps.org/"));
 }
 
 void LammpsGui::defaults()
@@ -2218,12 +2279,15 @@ void LammpsGui::start_lammps()
     lammps.open(narg, args);
     lammpsstatus->show();
 
-    // must have a version newer than the 29 August 2024 release of LAMMPS
-    // TODO: must update this check before next feature release
-    if (lammps.version() < 20240829) {
+    // Must have a LAMMPS version that was released after the 22 July 2025 version
+    /*
+     .. versionchanged:: TBD
+        must update this check before next feature release
+    */
+    if (lammps.version() < 20250722) {
         QMessageBox::critical(this, "Incompatible LAMMPS Version",
                               "LAMMPS-GUI version " LAMMPS_GUI_VERSION " requires\n"
-                              "a LAMMPS version of at least 29 August 2024");
+                              "a LAMMPS version of at least 22 July 2025");
         exit(1);
     }
 
@@ -2311,7 +2375,7 @@ void LammpsGui::setup_tutorial(int tutno, const QString &dir, bool purgedir, boo
 
     start_lammps();
     lammps.command("clear");
-    lammps.command(QString("shell cd " + dir));
+    lammps.command(QString("shell cd '%1'").arg(dir));
 
     // apply https proxy setting: prefer environment variable or fall back to preferences value
     auto https_proxy = QString::fromLocal8Bit(qgetenv("https_proxy"));

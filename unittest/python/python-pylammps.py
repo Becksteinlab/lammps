@@ -1,5 +1,6 @@
 import os,unittest
 from lammps import PyLammps
+from lammps.constants import LMP_MAX_GROUP
 
 try:
     import numpy
@@ -140,7 +141,7 @@ class PythonPyLammps(unittest.TestCase):
         self.assertEqual(self.pylmp.fixes[0]['style'], 'nve')
         self.assertEqual(self.pylmp.fixes[0]['group'], 'all')
         self.pylmp.group('none','empty')
-        self.assertEqual(len(self.pylmp.groups),2)
+        self.assertEqual(len(self.pylmp.groups),LMP_MAX_GROUP)
         self.pylmp.comm_style('tiled')
         self.pylmp.mass('*',1.0)
         self.pylmp.run('0','post','no')

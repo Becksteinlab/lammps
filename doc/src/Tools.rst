@@ -15,7 +15,7 @@ Sandia which provides tools for doing setup, analysis, plotting, and
 visualization for LAMMPS simulations.
 
 .. _lws: https://www.lammps.org
-.. _pizza: https://lammps.github.io/pizza
+.. _pizza: https://lammps.github.io/pizza/
 .. _python: https://www.python.org
 
 Additional tools included in the LAMMPS distribution are described on
@@ -482,7 +482,7 @@ a :doc:`molecule command file <molecule>` you would then run for example:
    check-jsonschema --schemafile molecule-schema.json tip3p.json
 
 The latest schema files are also maintained and available for download
-at https://download.lammps.org/json .  This enables validation of JSON
+at https://download.lammps.org/json/ .  This enables validation of JSON
 files even if the LAMMPS sources are not locally available. Example:
 
 .. code-block:: sh
@@ -600,11 +600,13 @@ acceleration is available and enabled by default.
 Prerequisites and portability
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+.. versionchanged:: 22July2025
+
 LAMMPS-GUI is programmed in C++ based on the C++11 standard and using
 the `Qt GUI framework <https://www.qt.io/product/framework>`_.
-Currently, Qt version 5.12 or later is required; Qt 5.15LTS is
-recommended; support for Qt version 6.x is available.  Building LAMMPS
-with CMake is required.
+For LAMMPS-GUI version 1.7.0 the use of Qt version 5.12 or later is required;
+Qt 5.15LTS is recommended; support for Qt version 6.x is available.
+Building LAMMPS with CMake is required.
 
 The LAMMPS-GUI has been successfully compiled and tested on:
 
@@ -623,7 +625,7 @@ Pre-compiled executables
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 Pre-compiled LAMMPS executable packages that include the GUI are
-currently available from https://download.lammps.org/static or
+currently available from https://download.lammps.org/static/ or
 https://github.com/lammps/lammps/releases.  For Windows, you need to
 download and then run the application installer.  For macOS you download
 and mount the disk image and then drag the application bundle to the
@@ -700,6 +702,10 @@ This is usually auto-detected on the first run and can be changed in the
 LAMMPS-GUI *Preferences* dialog.  The command-line flag allows to reset
 this path to a valid value in case the original setting has become
 invalid.  An empty path ("") as argument restores the default setting.
+
+When loading a LAMMPS library, it must be at least version 22 July
+2025 for LAMMPS-GUI version 1.7.0, since it uses features only available
+since that LAMMPS version.  Older LAMMPS versions will be rejected.
 
 Platform notes
 ^^^^^^^^^^^^^^

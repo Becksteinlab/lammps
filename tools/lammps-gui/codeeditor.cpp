@@ -16,6 +16,7 @@
 #include "lammpsgui.h"
 #include "lammpswrapper.h"
 #include "linenumberarea.h"
+#include "helpers.h"
 
 #include <QAbstractItemView>
 #include <QAction>
@@ -23,6 +24,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QDragEnterEvent>
+#include <QDragLeaveEvent>
 #include <QDropEvent>
 #include <QFileInfo>
 #include <QFont>
@@ -48,89 +50,6 @@
 #include <cstring>
 #include <string>
 #include <vector>
-
-// Convert string into words on whitespace while handling single and double
-// quotes. Adapted from LAMMPS_NS::utils::split_words() to preserve quotes.
-
-static std::vector<std::string> split_line(const std::string &text)
-{
-    std::vector<std::string> list;
-    const char *buf = text.c_str();
-    std::size_t beg = 0;
-    std::size_t len = 0;
-    std::size_t add = 0;
-
-    char c = *buf;
-    while (c) { // leading whitespace
-        if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f') {
-            c = *++buf;
-            ++beg;
-            continue;
-        };
-        len = 0;
-
-    // handle escaped/quoted text.
-    quoted:
-
-        if (c == '\'') { // handle single quote
-            add = 0;
-            len = 1;
-            c   = *++buf;
-            while (((c != '\'') && (c != '\0')) || ((c == '\\') && (buf[1] == '\''))) {
-                if ((c == '\\') && (buf[1] == '\'')) {
-                    ++buf;
-                    ++len;
-                }
-                c = *++buf;
-                ++len;
-            }
-            ++len;
-            c = *++buf;
-
-            // handle triple double quotation marks
-        } else if ((c == '"') && (buf[1] == '"') && (buf[2] == '"') && (buf[3] != '"')) {
-            len = 3;
-            add = 1;
-            buf += 3;
-            c = *buf;
-
-        } else if (c == '"') { // handle double quote
-            add = 0;
-            len = 1;
-            c   = *++buf;
-            while (((c != '"') && (c != '\0')) || ((c == '\\') && (buf[1] == '"'))) {
-                if ((c == '\\') && (buf[1] == '"')) {
-                    ++buf;
-                    ++len;
-                }
-                c = *++buf;
-                ++len;
-            }
-            ++len;
-            c = *++buf;
-        }
-
-        while (true) { // unquoted
-            if ((c == '\'') || (c == '"')) goto quoted;
-            // skip escaped quote
-            if ((c == '\\') && ((buf[1] == '\'') || (buf[1] == '"'))) {
-                ++buf;
-                ++len;
-                c = *++buf;
-                ++len;
-            }
-            if ((c == ' ') || (c == '\t') || (c == '\r') || (c == '\n') || (c == '\f') ||
-                (c == '\0')) {
-                if (beg < text.size()) list.push_back(text.substr(beg, len));
-                beg += len + add;
-                break;
-            }
-            c = *++buf;
-            ++len;
-        }
-    }
-    return list;
-}
 
 CodeEditor::CodeEditor(QWidget *parent) :
     QPlainTextEdit(parent), current_comp(nullptr), command_comp(new QCompleter(this)),
@@ -632,9 +551,16 @@ void CodeEditor::dragEnterEvent(QDragEnterEvent *event)
     event->acceptProposedAction();
 }
 
+void CodeEditor::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    event->accept();
+    cut();
+    QPlainTextEdit::dragLeaveEvent(event);
+}
+
 bool CodeEditor::canInsertFromMimeData(const QMimeData *source) const
 {
-    return source->hasUrls(); // || source->hasText();
+    return source->hasUrls() || source->hasText();
 }
 
 void CodeEditor::dropEvent(QDropEvent *event)
@@ -647,10 +573,26 @@ void CodeEditor::dropEvent(QDropEvent *event)
             moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
             gui->open_file(file);
         }
+        // properly handle drop event in base class, but set editor
+        // buffer readonly to prevent undesired changes
+        setReadOnly(true);
+        QPlainTextEdit::dropEvent(event);
+        setReadOnly(false);
     } else if (event->mimeData()->hasText()) {
         event->accept();
-        fprintf(stderr, "Drag - Drop for text block not yet implemented: text=%s\n",
-                event->mimeData()->text().toStdString().c_str());
+        // cut selected text to clipboard before we reposition
+        // the cursor and re-insert the text with drag-n-drop
+        cut();
+#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
+        cursorForPosition(event->pos()).insertText(event->mimeData()->text());
+#else
+        cursorForPosition(event->position().toPoint()).insertText(event->mimeData()->text());
+#endif
+        // properly handle drop event in base class, but set editor
+        // buffer readonly to prevent undesired changes
+        setReadOnly(true);
+        QPlainTextEdit::dropEvent(event);
+        setReadOnly(false);
     } else
         event->ignore();
 }
@@ -803,7 +745,12 @@ void CodeEditor::contextMenuEvent(QContextMenuEvent *event)
         }
     }
 
-    auto *action = menu->addAction(QString("LAMMPS Manual"));
+    auto *action = menu->addAction(QString("LAMMPS Commands Overview"));
+    action->setIcon(QIcon(":/icons/help-browser.png"));
+    action->setData(QString("/Commands_all.html"));
+    connect(action, &QAction::triggered, this, &CodeEditor::open_help);
+
+    action = menu->addAction(QString("LAMMPS Manual"));
     action->setIcon(QIcon(":/icons/help-browser.png"));
     action->setData(QString());
     connect(action, &QAction::triggered, this, &CodeEditor::open_help);
