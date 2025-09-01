@@ -57,8 +57,13 @@ int date_compare(const QString &one, const QString &two)
     if (one == two) return 0;
 
     // split string into words and check each of them
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     auto onelist = one.split(" ", Qt::SkipEmptyParts);
     auto twolist = two.split(" ", Qt::SkipEmptyParts);
+#else
+    auto onelist = one.split(" ", QString::SkipEmptyParts);
+    auto twolist = two.split(" ", QString::SkipEmptyParts);
+#endif
     if (onelist.size() != 3) return -1;
     if (twolist.size() != 3) return 1;
 
