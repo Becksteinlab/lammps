@@ -71,12 +71,12 @@ See ``examples/PACKAGES/mbx`` for additional examples of how to use MBX in LAMMP
 Description
 """""""""""
 
-The MBX (Many-Body eXpansion) software is a C++ library that provides access
-to many-body energy (MB-nrg) potential energy functions, such as the MB-pol
-water model. Developed over the past decade, these potential energy functions
-integrate physics-based and machine-learned many-body terms
-trained on electronic structure data calculated at the "gold
-standard" coupled-cluster level of theory. :ref:`(Gupta) <Gupta>`
+The MBX (Many-Body eXpansion) software is a C++ library that provides
+access to many-body energy (MB-nrg) potential energy functions, such as
+the MB-pol water model. Developed over the past decade, these potential
+energy functions integrate physics-based and machine-learned many-body
+terms trained on electronic structure data calculated at the "gold
+standard" coupled-cluster level of theory. :ref:`(Gupta) <Gupta2>`
 
 
 This fix instructs LAMMPS to call the `MBX library <_mbxwebsite>`_
@@ -85,25 +85,28 @@ used in conjunction with the :doc:`pair mbx <pair_mbx>` command.
 
 The MBX library code development is available at
 `https://github.com/paesanilab/MBX <https://github.com/paesanilab/MBX>`_.
-A detailed discussion of the code can be found in the manuscript :ref:`(Riera) <Riera>`.
+A detailed discussion of the code can be found in the manuscript :ref:`(Riera) <Riera2>`.
 
 
 See ``examples/PACKAGES/mbx`` for complete examples of how to use
 this fix command.
 
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
-same simulation, one can use :doc:`pair_style hybrid/overlay <pair_hybrid>`
-to combine the MB-nrg molecules with other pair styles, such as
-:doc:`lj/cut <pair_lj>`. Do note that all electrostatics must be computed within MBX, so the
-:doc:`coul/exclude <pair_coul>` pair_style should usually be applied on the non-MB-nrg molecules.
-See ``examples/PACKAGES/mbx`` for a complete hybrid example.
+same simulation, one can use :doc:`pair_style hybrid/overlay
+<pair_hybrid>` to combine the MB-nrg molecules with other pair styles,
+such as :doc:`lj/cut <pair_lj>`.  Do note that all electrostatics must be
+computed within MBX, so the :doc:`coul/exclude <pair_coul>` pair_style
+should usually be applied on the non-MB-nrg molecules.  See
+``examples/PACKAGES/mbx`` for a complete hybrid example.
 
 
-The *num_mon_types* argument specifies the number of different MB-nrg monomer types in the system.
+The *num_mon_types* argument specifies the number of different MB-nrg
+monomer types in the system.
 
-The *monomer_specification* argument provides the details for each monomer type.
-This information is used by MBX to map the LAMMPS atom IDs to the corresponding MBX monomer types.
-For each monomer type, the following information must be provided:
+The *monomer_specification* argument provides the details for each
+monomer type.  This information is used by MBX to map the LAMMPS atom
+IDs to the corresponding MBX monomer types.  For each monomer type, the
+following information must be provided:
 
 * monomer_name = name of the monomer type
   (e.g. h2o for water, ch4 for methane)
@@ -118,32 +121,37 @@ For each monomer type, the following information must be provided:
   (e.g. 1 2 2 for water, as it corresponds to O H H)
 
 
-The *json* argument specifies the name of the MBX JSON configuration file to use, such as `mbx.json`.
-If this file is not provided, the fix will attempt to use a default configuration.
+The *json* argument specifies the name of the MBX JSON configuration
+file to use, such as `mbx.json`.  If this file is not provided, the fix
+will attempt to use a default configuration.
 
-The *print/dipoles* argument enables the printing of dipole moments as part of the fix variable output.
-This is useful for performing vibrational spectroscopy calculations such as IR, Raman, and Sum-Frequency Generation (SFG).
+The *print/dipoles* argument enables the printing of dipole moments as
+part of the fix variable output.  This is useful for performing
+vibrational spectroscopy calculations such as IR, Raman, and
+Sum-Frequency Generation (SFG).
 
-The *print/settings* argument will print the MBX settings to the LAMMPS logfile at the start of the simulation.
-This is used for debugging and ensuring that the correct settings are being applied.
+The *print/settings* argument will print the MBX settings to the LAMMPS
+logfile at the start of the simulation.  This is used for debugging and
+ensuring that the correct settings are being applied.
 
 If you have questions not answered by this documentation, please reach
-out to us at `https://groups.google.com/g/mbx-users <https://groups.google.com/g/mbx-users>`_
+out to us at `https://groups.google.com/g/mbx-users
+<https://groups.google.com/g/mbx-users>`_
 
 Restrictions
 """"""""""""
 
-This fix is part of the MBX package.  It is only enabled if
-LAMMPS was built with that package.  See the :doc:`Build package
-<Build_package>` page for more info. This fix also relies on the
-presence of :doc:`pair mbx <pair_mbx>` command.
+This fix is part of the MBX package.  It is only enabled if LAMMPS was
+built with that package.  See the :doc:`Build package <Build_package>`
+page for more info. This fix also relies on the presence of :doc:`pair
+mbx <pair_mbx>` command.
 
 There can only be one fix mbx command active at a time.
 
-Due to the usage of Partridge and Schwenke charges for MB-pol,
-all electrostatic interactions are calculated internally in MBX.
-Therefore one should never calculate coulombic interactions in
-LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
+Due to the usage of Partridge and Schwenke charges for MB-pol, all
+electrostatic interactions are calculated internally in MBX.  Therefore
+one should never calculate coulombic interactions in LAMMPS such as
+using `coul/cut` or `coul/long` when also using MBX.
 
 
 
@@ -156,11 +164,11 @@ Related commands
 
 -----------
 
-.. _Riera:
+.. _Riera2:
 
 **(Riera)** M. Riera, C. Knight, E. Bull-Vulpe, X. Zhu, H. Agnew, D. Smith, A. Simmonett, F. Paesani, J. Chem. Phys. 159, 054802 (2023)
 
-.. _Gupta:
+.. _Gupta2:
 
 **(Gupta)** S. Gupta, E. Bull-Vulpe, H. Agnew, S. Iyer, X. Zhu, R. Zhou, C. Knight, F. Paesani, J. Chem. Theory Comput. 21, 1938 (2025)
 

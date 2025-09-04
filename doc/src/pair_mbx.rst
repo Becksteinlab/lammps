@@ -48,17 +48,16 @@ See ``examples/PACKAGES/mbx`` for additional examples of how to use MBX in LAMMP
 Description
 """""""""""
 
-The MBX (Many-Body eXpansion) software is a C++ library that provides access
-to many-body energy (MB-nrg) potential energy functions, such as the MB-pol
-water model. Developed over the past decade, these potential energy functions
-integrate physics-based and machine-learned many-body terms
-trained on electronic structure data calculated at the “gold
-standard” coupled-cluster level of theory. :ref:`(Gupta) <Gupta>`
+The MBX (Many-Body eXpansion) software is a C++ library that provides
+access to many-body energy (MB-nrg) potential energy functions, such as
+the MB-pol water model.  Developed over the past decade, these potential
+energy functions integrate physics-based and machine-learned many-body
+terms trained on electronic structure data calculated at the "gold
+standard" coupled-cluster level of theory. :ref:`(Gupta) <Gupta3>`
 
 This pair_style instructs LAMMPS to call the `MBX library <_mbxwebsite>`_
 in order to simulate MB-nrg models such as MB-pol. This pair_style must be
 used in conjunction with the :doc:`fix mbx <fix_mbx>` command.
-
 
 The MBX library code development is available at
 `https://github.com/paesanilab/MBX <https://github.com/paesanilab/MBX>`_.
@@ -69,35 +68,37 @@ See ``examples/PACKAGES/mbx`` for complete examples of how to use
 this fix command.
 
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
-same simulation, one can use :doc:`pair_style hybrid/overlay <pair_hybrid>`
-to combine the MB-nrg molecules with other pair styles, such as
-:doc:`lj/cut <pair_lj>`. Do note that all electrostatics must be computed within MBX, so the
-:doc:`coul/exclude <pair_coul>` pair_style should usually be applied on the non-MB-nrg molecules.
-See ``examples/PACKAGES/mbx`` for a complete hybrid example.
+same simulation, one can use :doc:`pair_style hybrid/overlay
+<pair_hybrid>` to combine the MB-nrg molecules with other pair styles,
+such as :doc:`lj/cut <pair_lj>`.  Do note that all electrostatics must be
+computed within MBX, so the :doc:`coul/exclude <pair_coul>` pair_style
+should usually be applied on the non-MB-nrg molecules.  See
+``examples/PACKAGES/mbx`` for a complete hybrid example.
 
 
-Since MBX is a many-body method, it is internally parameterized and does not require explicit
-specification of all pairwise interactions. Therefore, `pair_coeff` should always just be set
-to ``pair_coeff * *`` when using MBX. Failure to properly set the pair_coeff results in the
-common error ``Incorrect args for pair coefficients``.
+Since MBX is a many-body method, it is internally parameterized and does
+not require explicit specification of all pairwise
+interactions. Therefore, :doc:`pair_coeff <pair_coeff>` should always
+just be set to ``pair_coeff * *`` when using MBX.  Failure to properly
+set the pair_coeff results in the common error ``Incorrect args for pair
+coefficients``.
 
 If you have questions not answered by this documentation, please reach
-out to us at `https://groups.google.com/g/mbx-users <https://groups.google.com/g/mbx-users>`_
+out to us at `https://groups.google.com/g/mbx-users
+<https://groups.google.com/g/mbx-users>`_
 
 Restrictions
 """"""""""""
 
 This pair_style is part of the MBX package.  It is only enabled if
 LAMMPS was built with that package.  See the :doc:`Build package
-<Build_package>` page for more info. This pair_style also relies on the
+<Build_package>` page for more info.  This pair_style also relies on the
 presence of :doc:`fix mbx <fix_mbx>` command.
 
 Due to the usage of Partridge and Schwenke charges for MB-pol,
 all electrostatic interactions are calculated internally in MBX.
 Therefore one should never calculate coulombic interactions in
 LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
-
-
 
 Related commands
 """"""""""""""""
@@ -112,7 +113,7 @@ Related commands
 
 **(Riera)** M. Riera, C. Knight, E. Bull-Vulpe, X. Zhu, H. Agnew, D. Smith, A. Simmonett, F. Paesani, J. Chem. Phys. 159, 054802 (2023)
 
-.. _Gupta:
+.. _Gupta3:
 
 **(Gupta)** S. Gupta, E. Bull-Vulpe, H. Agnew, S. Iyer, X. Zhu, R. Zhou, C. Knight, F. Paesani, J. Chem. Theory Comput. 21, 1938 (2025)
 
