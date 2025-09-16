@@ -267,7 +267,7 @@ whether an extra library is needed to build and use the package:
      - no
    * - :ref:`MBX <PKG-MBX>`
      - `MBX MB-nrg potential library <https://mbxsimulations.com/>`_
-     - :doc:`fix mbx <fix_mbx>`, :doc:`pair_mbx <pair_mbx>`
+     - :doc:`pair_mbx <pair_mbx>`
      - ``PACKAGES/mbx``
      - no
    * - :ref:`MC <PKG-MC>`

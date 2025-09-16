@@ -243,7 +243,6 @@ thermo_modify   flush yes
 fix              mynvt all nvt temp 298.15 298.15 $(100.0*dt)
 #fix             3 all npt temp 298.15 298.15 $(250.0*dt) iso 1.0 1.0 $(1000.0*dt)
 #fix             4 mof npt temp 298.15 298.15 $(250.0*dt) iso 1.0 1.0 $(1000.0*dt)
-#fix             5 water gcmc 100 100 0 0 54341 298.15 -5.0 0.1 mol h2o tfac_insert 5.0/3.0  group water shake wshake
 
 #fix             nve all nve
 #fix             nvt all nvt temp 300.0 300.0 1.0

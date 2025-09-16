@@ -1517,21 +1517,22 @@ MBX Package
 
 **Contents**
 
-The fix mbx and pair_style mbx commands implement the MBX library for
+The pair_style mbx command implements the MBX library for
 MB-pol and MB-nrg data-driven many-body potential energy functions. MBX
-is called using both the :doc:`fix mbx <fix_mbx>` and :doc:`pair_style mbx <pair_mbx>` commands, which
-together allow for MB-nrg potentials such as MB-pol to be used in LAMMPS.
+is called using :doc:`pair_style mbx <pair_mbx>` command, which
+allow for MB-nrg potentials such as MB-pol to be used in LAMMPS.
 For more information on MBX, see the `MBX library <https://mbxsimulations.com>`_ website.
 
 **Authors:** The `MBX library <https://mbxsimulations.com>`_ is developed
 by the Paesani group at the University of California, San Diego. Major contributors
 include: Marc Riera and Ethan Bull-Vulpe.
 
+.. versionadded:: 01October2025
+
 **Supporting info:**
 
 * ``src/MBX``: filenames -> commands
 * :doc:`pair_style mbx <pair_mbx>`
-* :doc:`fix mbx <fix_mbx>`
 * https://mbxsimulations.com/
 
 ----------
