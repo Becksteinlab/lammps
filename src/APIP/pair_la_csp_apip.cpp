@@ -79,10 +79,10 @@ void PairLACSPAPIP::compute(int eflag, int vflag)
   double time_wall_start = platform::walltime();
   int n_computations = 0;
 
-  int i, j, ii, jj, inum, jnum, k, i_pair, pair_ngh_0, pair_ngh_1;
-  int *ilist, *jlist, *numneigh, **firstneigh, **ngh_pairs;
+  int i, j, ii, jj, inum, jnum, k, i_pair, pair_ngh_0, pair_ngh_1, groupbit_constlambda;
+  int *ilist, *jlist, *numneigh, **firstneigh, **ngh_pairs, *mask;
   double **x, **f, *lambda, *csp, *csp_avg, *csp_norm, *e_fast, *e_precise;
-  double xtmp, ytmp, ztmp, lambdatmp, fpair, delx, dely, delz, r, rsq, cspavgtmp, prefactortmp, delx0, dely0, delz0, delx1, dely1, delz1;
+  double xtmp, ytmp, ztmp, lambdatmp, fpair, delx, dely, delz, r, rsq, cspavgtmp, prefactortmp, delx0, dely0, delz0, delx1, dely1, delz1, threshold_lo, threshold_hi, threshold_width, tmp;
 
   int nlocal = atom->nlocal;
   int newton_pair = force->newton_pair;
@@ -97,8 +97,13 @@ void PairLACSPAPIP::compute(int eflag, int vflag)
   csp_avg = atom->apip_la_avg;
   e_fast = atom->apip_e_fast;
   e_precise = atom->apip_e_precise;
+  mask = atom->mask;
 
   ngh_pairs = (int **) fix_la_csp->extract("fix_lambda_la_csp_apip:ngh_pairs", i);
+  threshold_lo = fix_la_csp->threshold_lo;
+  threshold_hi = fix_la_csp->threshold_hi;
+  threshold_width = fix_la_csp->threshold_width;
+  groupbit_constlambda = fix_la_csp->groupbit;
 
   inum = list->inum;
   ilist = list->ilist;
@@ -121,7 +126,15 @@ void PairLACSPAPIP::compute(int eflag, int vflag)
   // e_fast and e_precise are known only for own atoms
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];
-    prefactor1[i] = fix_la_csp->der_switching_function_poly(csp_avg[i]);
+    // the derivative must be calculated from the switching function defined in FixLambdaLACSPAPIP::switching_function_poly
+    if (lambda[i] != 0 && lambda [i] != 1 && (mask[i] & groupbit_constlambda)) {
+      // calculate derviative of lambda
+      tmp = 1 - 2 * (1 + (csp_avg[i] - threshold_hi) / threshold_width);
+      prefactor1[i] = -1.875 / threshold_width * (1 - 2 * tmp * tmp + pow(tmp, 4));
+    } else {
+      prefactor1[i] = 0;
+    }
+
     // e_fast and e_precise are computed only for lambda in (0,1)
     // lambda in (0,1) implies that the derivative of the switching function is non-zero
     if (prefactor1[i] != 0) prefactor1[i] *= (e_fast[i] - e_precise[i]) / csp_norm[i];

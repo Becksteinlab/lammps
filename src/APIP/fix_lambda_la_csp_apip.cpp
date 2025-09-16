@@ -90,7 +90,13 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
         error->all(FLERR, "expected dynamic or static instead of {}", arg[i+1]);
       i++;
     } else if (strcmp(arg[i], "lambda_non_group") == 0) {
-      lambda_non_group = utils::numeric(FLERR, arg[10], false, lmp);
+      if (strcmp(arg[i+1], "fast") == 0)
+        lambda_non_group = 1;
+      else if (strcmp(arg[i+1], "precise") == 0)
+        lambda_non_group = 0;
+      else
+        lambda_non_group = utils::numeric(FLERR, arg[i+1], false, lmp);
+      i++;
     } else {
       error->all(FLERR, "unknown argument {}", arg[i]);
     }
@@ -255,12 +261,13 @@ void FixLambdaLACSPAPIP::pre_force(int /*vflag*/) {
 void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
 {
   int i, j, k, ii, jj, kk, n_nearest, n_pairs, inum, jnum;
-  int *ilist, *jlist, *numneigh, **firstneigh;
+  int *ilist, *jlist, *numneigh, **firstneigh, *mask;
   double xtmp, ytmp, ztmp, delx, dely, delz, rsq, value, weight;
   double *lambda, *csp, *csp_avg, *csp_norm;
 
   tagint *tag = atom->tag;
 
+  mask = atom->mask;
   lambda = atom->apip_lambda;
   csp = atom->apip_la_inp;
   csp_avg = atom->apip_la_avg;
@@ -445,9 +452,11 @@ void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
 
   for (i = 0; i < nlocal; i++) {
     csp_avg[i] /= csp_norm[i];
-    lambda[i] = switching_function_poly(csp_avg[i]);
 
-    // TODO consider lambda_non_group here
+    if (mask[i] & groupbit)
+      lambda[i] = switching_function_poly(csp_avg[i]);
+    else
+      lambda[i] = lambda_non_group;
   }
 
   delete[] pairs_value;
@@ -461,7 +470,7 @@ void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
 void FixLambdaLACSPAPIP::pre_force_const_pairs()
 {
   int i, j, ii, jj, kk, inum, jnum;
-  int *ilist, *jlist, *numneigh, **firstneigh;
+  int *ilist, *jlist, *numneigh, **firstneigh, *mask;
   double xtmp, ytmp, ztmp, delx, dely, delz, rsq, value, weight, delx_j, dely_j, delz_j, delx_k, dely_k, delz_k;
   double *lambda, *csp, *csp_avg, *csp_norm, **x, **stored_tags;
 
@@ -471,6 +480,7 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
 
   tagint *tag = atom->tag;
 
+  mask = atom->mask;
   lambda = atom->apip_lambda;
   csp = atom->apip_la_inp;
   csp_avg = atom->apip_la_avg;
@@ -623,9 +633,11 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
 
   for (i = 0; i < nlocal; i++) {
     csp_avg[i] /= csp_norm[i];
-    lambda[i] = switching_function_poly(csp_avg[i]);
 
-    // TODO consider lambda_non_group here
+    if (mask[i] & groupbit)
+      lambda[i] = switching_function_poly(csp_avg[i]);
+    else
+      lambda[i] = lambda_non_group;
   }
 }
 
@@ -696,6 +708,7 @@ void FixLambdaLACSPAPIP::select2(int k, int n, double *arr, int *iarr)
 // the first two derivatives of the switching function lambda vanishes at the boundaries of the switching region
 double FixLambdaLACSPAPIP::switching_function_poly(double input)
 {
+  // NOTE: the derivative of this switching function is implemented and used in pair_la_csp_apip.cpp
   // calculate lambda
   if (input <= threshold_lo) {
     return 1;
@@ -704,17 +717,6 @@ double FixLambdaLACSPAPIP::switching_function_poly(double input)
   } else {
     double tmp = 1 - 2 * (1 + (input - threshold_hi) / threshold_width);
     return 0.5 + 7.5 / 2. * (tmp / 4. - pow(tmp, 3) / 6. + pow(tmp, 5) / 20.);
-  }
-}
-
-double FixLambdaLACSPAPIP::der_switching_function_poly(double input)
-{
-  // calculate lambda
-  if (input <= threshold_lo || input >= threshold_hi) {
-    return 0;
-  } else {
-    double tmp = 1 - 2 * (1 + (input - threshold_hi) / threshold_width);
-    return -1.875 / threshold_width * (1 - 2 * tmp * tmp + pow(tmp, 4));
   }
 }
 
