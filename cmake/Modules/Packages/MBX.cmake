@@ -14,14 +14,14 @@ if(BUILD_MPI)
   set(MBX_CONFIG_MPI "--enable-mpi")
   set(MBX_CONFIG_CC  ${CMAKE_C_COMPILER})
   set(MBX_CONFIG_CXX  ${CMAKE_CXX_COMPILER})
-  set(MBX_CONFIG_CPPFLAGS "-I ${MPI_CXX_INCLUDE_PATH}")
+  # set(MBX_CONFIG_CPPFLAGS "-I ${MPI_CXX_INCLUDE_PATH}")
   # set(MBX_CONFIG_LIB "${MPI_CXX_LIBRARIES}")
   # set(MBX_CONFIG_DEP "")
 else()
   set(MBX_CONFIG_MPI "--disable-mpi")
   set(MBX_CONFIG_CC  ${CMAKE_C_COMPILER})
   set(MBX_CONFIG_CXX  ${CMAKE_CXX_COMPILER})
-  set(MBX_CONFIG_CPPFLAGS "")
+  # set(MBX_CONFIG_CPPFLAGS "")
   # set(MBX_CONFIG_LIB "")
   # set(MBX_CONFIG_DEP "")
 
@@ -84,7 +84,7 @@ if(DOWNLOAD_MBX)
                                             ${MBX_CONFIG_MPI}
                                             CXX=${MBX_CONFIG_CXX}
                                             CC=${MBX_CONFIG_CC}
-                                            CPPFLAGS=${MBX_CONFIG_CPPFLAGS}
+                                            # CPPFLAGS=${MBX_CONFIG_CPPFLAGS}
     BUILD_BYPRODUCTS ${MBX_BUILD_BYPRODUCTS}
   )
   ExternalProject_get_property(mbx_build INSTALL_DIR)

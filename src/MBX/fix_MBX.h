@@ -160,8 +160,7 @@ class FixMBX : public Fix {
   void mbxt_write_summary();
   void mbxt_print_time(const char *, int, double *);
 
-  MBXParseResult reportFailure(const std::string& msg);
-  MBXParseResult test_MBX_fix_parsing(int narg, char **arg);
+  bool validateMBXFixParameters(int narg, char **arg);
 
   int aspc_order;
   int aspc_num_hist;
@@ -205,6 +204,7 @@ class FixMBX : public Fix {
   int get_num_atoms_per_monomer(char *, bool &);
   int get_include_monomer(char *, int, bool &, bool &);
   void add_monomer_atom_types(char *, std::vector<std::string> &);
+  std::pair<int, int> parse_dp1_range(const std::string &);
 
   virtual int pack_forward_comm(int, int *, double *, int, int *);
   virtual void unpack_forward_comm(int, int, double *);

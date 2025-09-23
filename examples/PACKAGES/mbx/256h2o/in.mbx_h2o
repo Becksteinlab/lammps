@@ -1,7 +1,7 @@
 processors      * * * map xyz
 
-units		real
-atom_style	full
+units           real
+atom_style      full
 boundary        p p p
 
 read_data       initial.data 
@@ -15,12 +15,12 @@ angle_style     none
 dihedral_style  none
 improper_style  none
 
-pair_coeff      * * 1 h2o 1 2 3 1 2 2 json mbx.json
+pair_coeff      * * 1 h2o 1 2 2 json mbx.json
 
-neighbor	2.0 bin
-neigh_modify	every 1 delay 10
+neighbor        2.0 bin
+neigh_modify    every 1 delay 10
 
-timestep	0.5
+timestep        0.5
 
 compute         mbx all pair mbx
 variable        e1bpip    equal c_mbx[1]
@@ -34,14 +34,13 @@ variable        eind      equal c_mbx[8]
 variable        eele      equal c_mbx[9]
 variable        etot      equal c_mbx[10]
 
-
-fix             1 all npt temp 298 298 200 iso 1.0 1.0 2000
+fix             1 all npt temp 298 298 100 iso 1.0 1.0 1000
 
 velocity        all create 298 428459 rot yes dist gaussian
 velocity        all zero linear
 velocity        all zero angular
 
-thermo_style	custom step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press
+thermo_style    custom step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press
 thermo          1
 thermo_modify   flush yes
 

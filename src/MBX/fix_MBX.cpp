@@ -45,9 +45,8 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-// TODO: change citation for fix style
-static const char cite_fix_mbx[] =
-    "fix mbx command:\n\n"
+static const char cite_pair_mbx[] =
+    "pair mbx command:\n\n"
     "@article{10.1063/5.0156036,\n"
     " author = {Riera, Marc and Knight, Christopher and Bull-Vulpe, Ethan F. and Zhu, Xuanyu and "
     "Agnew, Henry and Smith, Daniel G. A. and Simmonett, Andrew C. and Paesani, Francesco},\n"
@@ -63,152 +62,175 @@ static const char cite_fix_mbx[] =
 
 /* ---------------------------------------------------------------------- */
 
+std::pair<int, int> FixMBX::parse_dp1_range(const std::string& dp1_str) {
+  try {
+    size_t pos = 0;
+    int val = std::stoi(dp1_str, &pos);
+    if (pos == dp1_str.size()) {
+      // Single integer
+      if (val < 1)
+        throw std::invalid_argument("[MBX] Atom ID " + dp1_str + " in dp1 must be positive");
+      return {val, val};
+    }
+  } catch (...) {
+    // Not a single integer, try to parse as range
+  }
 
-MBXParseResult FixMBX::reportFailure(const std::string& msg) {
-    // std::cerr << "[MBX] " << msg << std::endl;
-    error->all(FLERR, ("[MBX] " + msg).c_str());
-    return {false, msg};
+  // Try to parse as a range (e.g., "1*11")
+  size_t star = dp1_str.find('*');
+  if (star == std::string::npos)
+    throw std::invalid_argument("[MBX] Invalid dp1 format: " + dp1_str);
+
+  std::string start_str = dp1_str.substr(0, star);
+  std::string end_str = dp1_str.substr(star + 1);
+  int start = 0, end = 0;
+  try {
+    size_t spos = 0, epos = 0;
+    start = std::stoi(start_str, &spos);
+    end = std::stoi(end_str, &epos);
+
+    if (spos != start_str.size() || epos != end_str.size())
+      throw std::invalid_argument("Non-integer characters found in range");
+  } catch (...) {
+    throw std::invalid_argument("[MBX] Invalid integers in dp1 range: " + dp1_str);
+  }
+  if (start < 1 || end < start)
+    throw std::invalid_argument("[MBX] Invalid range values for dp1: " + dp1_str);
+
+  return {start, end};
 }
 
-MBXParseResult FixMBX::test_MBX_fix_parsing(int narg, char **arg) {
+
+bool FixMBX::validateMBXFixParameters(int narg, char **arg) {
   if (narg < 2)
-    return reportFailure("Input line too short");
+    error->all(FLERR, ("[MBX] Input line too short"));
 
   int num_monomers = 0;
   try {
     num_monomers = std::stoi(arg[0]);
   } catch (...) {
-    return reportFailure("num_monomers is not a valid integer: " + std::string(arg[0]));
+    error->all(FLERR, ("[MBX] num_monomers is not a valid integer: " + std::string(arg[0])));
   }
   if (num_monomers < 1)
-    return reportFailure("num_monomers must be positive");
+    error->all(FLERR, ("[MBX] num_monomers must be positive"));
 
   std::map<int, std::string> mbx_atom_id_mapping; // atom ID mapping for all monomers
 
   int input_validation_index = 1; // part of arg currently being validated
 
   // Lambda to check dp1 monomer syntax
-  auto check_external_dp1 = [&](int n_atoms, char **current_monomer_atoms) -> MBXParseResult {
+  auto check_external_dp1 = [&](int n_atoms, char **current_monomer_atoms) -> bool {
     if (n_atoms != 1)
-      return reportFailure("Wrong number of arguments for dp1: expected 1, got " + std::to_string(n_atoms));
+      error->all(FLERR, ("[MBX] Wrong number of arguments for dp1: expected 1, got " + std::to_string(n_atoms)));
     const std::string atom_id_str = current_monomer_atoms[0];
 
-    // dp1 can have either a single atom ID or a range like 1*10
-    bool is_single_atom_ID = true;
-    int at = 0;
+
+    int start_index, end_index;
     try {
-      size_t pos = 0;
-      at = std::stoi(atom_id_str, &pos);
-      if (pos != atom_id_str.size())
-        throw std::invalid_argument("Non-integer characters found");
-    } catch (...) {
-      is_single_atom_ID = false;
+      std::tie(start_index, end_index) = parse_dp1_range(atom_id_str);
+    } catch (const std::exception& e) {
+      error->all(FLERR, e.what());
     }
+    if (start_index < 1 || end_index < start_index)
+      error->all(FLERR, ("[MBX] Invalid range values for dp1: " + atom_id_str));
 
-    if (is_single_atom_ID) {
-      if (at < 1)
-        return reportFailure("Atom ID " + atom_id_str + " must be positive");
+    for (int at = start_index; at <= end_index; ++at) {
       if (mbx_atom_id_mapping.count(at))
-        return reportFailure("Duplicate atom ID found across monomers: " + std::to_string(at));
+        error->all(FLERR, ("[MBX] Already defined atom IDs found in dp1: " + std::to_string(at)));
       mbx_atom_id_mapping[at] = "X";
-    } else {
-      size_t star = atom_id_str.find('*');
-      if (star == std::string::npos)
-        return reportFailure("Invalid format for dp1: " + atom_id_str);
-      std::string start_str = atom_id_str.substr(0, star);
-      std::string end_str = atom_id_str.substr(star + 1);
-      int start = 0, end = 0;
-      try {
-        start = std::stoi(start_str);
-        end = std::stoi(end_str);
-      } catch (...) {
-        return reportFailure("Invalid integers in range for dp1: " + atom_id_str);
-      }
-      if (start < 1 || end < start) return reportFailure("Invalid range values for dp1: " + atom_id_str);
-
-      for (int at = start; at <= end; ++at) {
-        if (mbx_atom_id_mapping.count(at))
-          return reportFailure("Already defined atom IDs found in dp1: " + std::to_string(at));
-        mbx_atom_id_mapping[at] = "X";
-      }
     }
-    return {true, "OK"};
+    return true;
   };
 
   // Lambda to check syntax of a monomer with n_atoms and atom IDs in current_monomer
-  auto check_monomer_syntax = [&](int n_atoms, char **current_monomer) -> MBXParseResult {
+  auto check_monomer_syntax = [&](int n_atoms, char **current_monomer) -> bool {
     std::string current_monomer_name = current_monomer[0];
     std::vector<std::string> current_monomer_atoms;
+
     for (int i = 1; i <= n_atoms; ++i)
       current_monomer_atoms.push_back(current_monomer[i]);
-    std::vector<std::string> monomer_atom_ids;
+    std::vector<std::string> expected_monomer_atom_ids;
+
     try {
-      add_monomer_atom_types(const_cast<char*>(current_monomer_name.c_str()), monomer_atom_ids);
+      add_monomer_atom_types(const_cast<char*>(current_monomer_name.c_str()), expected_monomer_atom_ids);
     } catch (const std::exception& e) {
-      return reportFailure(e.what());
+      error->all(FLERR, ("[MBX] Invalid monomer name " + current_monomer_name));
     }
+
     if (current_monomer_atoms.size() != n_atoms)
-      return reportFailure("Wrong number of atoms: expected " + std::to_string(n_atoms) + ", got " + std::to_string(current_monomer_atoms.size()));
-    if (current_monomer_name == "dp1")
+      error->all(FLERR, ("[MBX] Wrong number of atoms: expected " + std::to_string(n_atoms) + ", got " + std::to_string(current_monomer_atoms.size())));
+    
+      if (current_monomer_name == "dp1")
       return check_external_dp1(n_atoms, &current_monomer[1]);
+
     std::vector<int> atom_ids;
-    for (size_t i = 0; i < monomer_atom_ids.size(); ++i) {
+    for (size_t i = 0; i < expected_monomer_atom_ids.size(); ++i) {
       int at = 0;
       try {
         at = std::stoi(current_monomer_atoms[i]);
       } catch (...) {
-        return reportFailure("Atom ID " + current_monomer_atoms[i] + " is not a valid integer");
+        error->all(FLERR, ("[MBX] Atom ID " + current_monomer_atoms[i] + " is not a valid integer"));
       }
-      if (at < 1) return reportFailure("Atom ID " + current_monomer_atoms[i] + " must be positive");
+      if (at < 1) error->all(FLERR, ("[MBX] Atom ID " + current_monomer_atoms[i] + " must be positive"));
       atom_ids.push_back(at);
     }
+
     std::set<int> unique_atom_ids(atom_ids.begin(), atom_ids.end());
-    std::set<std::string> unique_monomer_atom_ids(monomer_atom_ids.begin(), monomer_atom_ids.end());
+    std::set<std::string> unique_monomer_atom_ids(expected_monomer_atom_ids.begin(), expected_monomer_atom_ids.end());
     if (unique_atom_ids.size() < unique_monomer_atom_ids.size())
-      return reportFailure("Wrong number of unique atom IDs in " + current_monomer_name + ": expected " + std::to_string(unique_monomer_atom_ids.size()) + ", got " + std::to_string(unique_atom_ids.size()));
+      error->all(FLERR, ("[MBX] Wrong number of unique atom IDs in " + current_monomer_name + ": expected " + std::to_string(unique_monomer_atom_ids.size()) + ", got " + std::to_string(unique_atom_ids.size())));
     std::map<int, std::string> atom_mapping;
+
+    // check that atom ID mapping is consistent
     for (size_t i = 0; i < atom_ids.size(); ++i) {
       int at = atom_ids[i];
-      if (!atom_mapping.count(at)) atom_mapping[at] = monomer_atom_ids[i];
-      else if (atom_mapping[at] != monomer_atom_ids[i]){
+      if (!atom_mapping.count(at)) // first time seeing this atom ID
+        atom_mapping[at] = expected_monomer_atom_ids[i];
+      else if (atom_mapping[at] != expected_monomer_atom_ids[i]){ // inconsistent mapping
         std::string monomer_atom_ids_string = "";
-        for (const auto& mat : monomer_atom_ids) {
+        for (const auto& mat : expected_monomer_atom_ids) {
           monomer_atom_ids_string += mat + " ";
         }
         std::string atom_ids_string = "";
         for (const auto& at2 : atom_ids) {
           atom_ids_string += std::to_string(at2) + " ";
         }
-        return reportFailure("Incorrect atom ID mapping in " + current_monomer_name + ". Expected " + monomer_atom_ids_string + "but got " + atom_ids_string);
+        error->all(FLERR, ("[MBX] Incorrect atom ID mapping in " + current_monomer_name + ". Expected " + monomer_atom_ids_string + "but got " + atom_ids_string));
       }
-      if (mbx_atom_id_mapping.count(at))
-        return reportFailure("Already defined atom IDs found in " + current_monomer_name + ": " + std::to_string(at));
+      if (mbx_atom_id_mapping.count(at)) // atom ID already defined in another monomer
+        error->all(FLERR, ("[MBX] Already defined atom IDs found in " + current_monomer_name + ": " + std::to_string(at)));
     }
+
+
     int minimum_index = *std::min_element(atom_ids.begin(), atom_ids.end());
     int maximum_index = *std::max_element(atom_ids.begin(), atom_ids.end());
     for (int i = minimum_index; i <= maximum_index; ++i) {
       if (std::find(atom_ids.begin(), atom_ids.end(), i) == atom_ids.end())
-        return reportFailure("Atom IDs must be contiguous in " + current_monomer_name + ". Missing " + std::to_string(i));
+        error->all(FLERR, ("[MBX] Atom IDs must be contiguous in " + current_monomer_name + ". Missing " + std::to_string(i)));
     }
-    for (const auto& kv : atom_mapping) mbx_atom_id_mapping[kv.first] = kv.second;
-    return {true, "OK"};
+    for (const auto& kv : atom_mapping) // transfer monomer mapping to global mapping
+      mbx_atom_id_mapping[kv.first] = kv.second;
+    return true;
   };
 
+  // validate each monomer
   for (int monomer_index = 0; monomer_index < num_monomers; ++monomer_index) {
     if (input_validation_index >= narg)
-      return reportFailure("Not enough arguments to read a monomer name");
+      error->all(FLERR, ("[MBX] Not enough arguments to read a monomer name"));
     std::string monomer_name = arg[input_validation_index];
     int num_atoms = 0;
+
+    // ensure monomer name is valid and get number of atoms
     try {
       bool is_ext = false;
       num_atoms = get_num_atoms_per_monomer(const_cast<char*>(monomer_name.c_str()), is_ext);
     } catch (const std::exception& e) {
-      return reportFailure("Invalid monomer name " + monomer_name);
+      error->all(FLERR, ("[MBX] Invalid monomer name " + monomer_name));
     }
     if (input_validation_index + num_atoms >= narg)
-      return reportFailure("Not enough arguments to read monomer atoms for " + monomer_name);
-    MBXParseResult result = check_monomer_syntax(num_atoms, &arg[input_validation_index]);
-    if (!result.success) return result;
+      error->all(FLERR, ("[MBX] Not enough arguments to read monomer atoms for " + monomer_name));
+
+      check_monomer_syntax(num_atoms, &arg[input_validation_index]);
     input_validation_index += num_atoms + 1;
   }
 
@@ -217,36 +239,30 @@ MBXParseResult FixMBX::test_MBX_fix_parsing(int narg, char **arg) {
   while (input_validation_index < narg) {
     if (strcmp(arg[input_validation_index], "json") == 0) {
       if (input_validation_index + 1 >= narg)
-        return reportFailure("Not enough arguments to read json filename");
+        error->all(FLERR, ("[MBX] Not enough arguments to read json filename"));
       input_validation_index += 2;
     } else if (strcmp(arg[input_validation_index], "print/settings") == 0) {
       input_validation_index += 1;
-    } else if (strcmp(arg[input_validation_index], "print/dipoles") == 0) {
+    } else if (strcmp(arg[input_validation_index], "print/dipoles") == 0) { // dipoles are now always printed by default
       input_validation_index += 1;
     } else if (strcmp(arg[input_validation_index], "aspc/reset") == 0) {
       if (input_validation_index + 1 >= narg)
-        return reportFailure("Not enough arguments to read aspc/reset value");
+        error->all(FLERR, ("[MBX] Not enough arguments to read aspc/reset value"));
       int aspc_reset = 0;
       try {
         aspc_reset = std::stoi(arg[input_validation_index + 1]);
       } catch (...) {
-        return reportFailure("aspc/reset value is not a valid integer");
+        error->all(FLERR, ("[MBX] aspc/reset value is not a valid integer"));
       }
       if (aspc_reset < 1)
-        return reportFailure("aspc/reset value must be positive");
+        error->all(FLERR, ("[MBX] aspc/reset value must be positive"));
       input_validation_index += 2;
     } else {
-      return reportFailure(std::string("Unknown keyword: ") + arg[input_validation_index]);
+      error->all(FLERR, ("[MBX] Unknown keyword: " + std::string(arg[input_validation_index])));
     }
   }
 
-
-  // if (input_validation_index != narg) {
-  //   std::ostringstream oss;
-  //   for (int i = input_validation_index; i < narg; ++i) oss << arg[i] << " ";
-  //   return reportFailure("Extra arguments at end of input line: " + oss.str());
-  // }
-  return {true, "OK"};
+  return true;
 }
 
 
@@ -260,7 +276,8 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   // atom mapping = list of LAMMPS atom types that correspond to the atoms in the monomer
   // json arg = specifies the name of the MBX json configuration file, such as mbx.json
 
-  if (lmp->citeme) lmp->citeme->add(cite_fix_mbx);
+  if (lmp->citeme)
+    lmp->citeme->add(cite_pair_mbx);
 
   me = comm->me;
   nprocs = comm->nprocs;
@@ -268,8 +285,8 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
 
   // // validate input arguments
-  MBXParseResult validation_result = test_MBX_fix_parsing(narg - 3, &arg[3]);
-  if (validation_result.success == true) {
+  bool validation_result = validateMBXFixParameters(narg - 3, &arg[3]);
+  if (validation_result) {
       fprintf(stderr, "MBX fix input validation successful.\n");
   }
 
@@ -319,25 +336,40 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
       error->all(FLERR, "[MBX] num_atoms_per_mol > _MAX_ATOMS_PER_MONOMER : did developer correctly add support for monomer?");
 
 
-    // TODO add dp1 handling
+    if (current_monomer_name == "dp1") {
+      // dp1 can either by a single atom ID or a range of IDs in the form "1*11"
+      int start, end;
+      try {
 
-    // find min and max atom type index in the mapping
-    for (int j = 0; j < current_n_atoms; j++) {
-      int current_index = utils::inumeric(FLERR, arg[iarg + j], false, lmp);
-      if (current_index < current_lower_index)
-        current_lower_index = current_index;
-      if (current_index > current_higher_index)
-        current_higher_index = current_index;
+        std::tie(start, end) = parse_dp1_range(std::string(arg[iarg++]));
+      } catch (const std::exception& e) {
+        error->all(FLERR, e.what());
+      }
 
-    lower_atom_type_index_in_mol[i] = current_lower_index;
-    higher_atom_type_index_in_mol[i] = current_higher_index;
-    }
+      lower_atom_type_index_in_mol[i] = start;
+      higher_atom_type_index_in_mol[i] = end;
 
-    for (int j = 0; j < current_n_atoms; j++) {
-      order_in_mol[i][j] = utils::inumeric(FLERR, arg[iarg++], false, lmp);
+      order_in_mol[i][0] = start; // only one atom in dp1
+
+    } else { // handling all other monomers
+      // find min and max atom type index in the mapping
+      for (int j = 0; j < current_n_atoms; j++) {
+        int current_index = utils::inumeric(FLERR, arg[iarg + j], false, lmp);
+        if (current_index < current_lower_index)
+          current_lower_index = current_index;
+        if (current_index > current_higher_index)
+          current_higher_index = current_index;
+
+      lower_atom_type_index_in_mol[i] = current_lower_index;
+      higher_atom_type_index_in_mol[i] = current_higher_index;
+      }
+
+      for (int j = 0; j < current_n_atoms; j++) {
+        order_in_mol[i][j] = utils::inumeric(FLERR, arg[iarg++], false, lmp);
+      }
     }
   }
-  
+
 
 
   // process remaining optional keywords
@@ -345,7 +377,7 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   use_json = 0;
   json_file = NULL;
   print_settings = 0;
-  print_dipoles = 1;
+  print_dipoles = 1; // dipoles are now always printed by default
   aspc_step_reset = 1000;
 
   while (iarg < narg) {
@@ -414,7 +446,8 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   pair_mbx = nullptr;
   pair_mbx = (PairMBX *) force->pair_match("^mbx", 0);
-  if (!pair_mbx) error->all(FLERR, "[MBX] Pair mbx is missing");
+  if (!pair_mbx)
+    error->all(FLERR, "[MBX] Pair mbx is missing");
 
   ptr_mbx = NULL;
 
@@ -1503,6 +1536,20 @@ void FixMBX::mbx_init()
   //     }
   // }
 
+  Pair* pairstyles_coullong = force->pair_match(".*coul/long.*", 0);
+  Pair* pairstyles_coulcut = force->pair_match(".*coul/cut.*", 0);
+  Pair* pairstyles_coulexclude = force->pair_match("coul/exclude", 0);
+
+  if (!pairstyles_coulexclude && mbx_num_ext > 0)
+    error->warning(FLERR, "[MBX] dp1 monomers present, but coul/exclude pair style not found. If using special_bonds, please include coul/exclude: ");
+  
+  if (pairstyles_coulcut) {
+    error->warning(FLERR, "[MBX] Incompatible coul/cut pair style: coulombic interactions should be handled internally by MBX: ");
+  }
+  if (pairstyles_coullong) {
+    error->warning(FLERR, "[MBX] Incompatible  coul/long pair style: coulombic interactions should be handled internally by MBX: ");
+  }
+
   mbxt_stop(MBXT_INIT);
 }
 
@@ -1598,7 +1645,7 @@ void FixMBX::mbx_init_local()
 
       tagint anchor = tag[i];
 
-      // TODO fix this if monomer becomes too lurge
+      // TODO fix this if monomer becomes too large
       int amap[_MAX_ATOMS_PER_MONOMER];
       bool add_monomer = true;
       for (int j = 1; j < na; ++j) {

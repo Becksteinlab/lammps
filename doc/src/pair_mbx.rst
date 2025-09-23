@@ -10,7 +10,7 @@ Syntax
 
     pair_style mbx cutoff
 
-* cutoff = real-space cutoff for MBX. 9.0 Angstroms is usually a safe value.
+* cutoff = real-space cutoff for MBX in Angstroms
 
 
 Examples
@@ -62,6 +62,13 @@ A detailed discussion of the code structure can be found in the
 manuscript :ref:`(Riera) <Riera>`, while a detailed description of the
 performance scaling can be found in the manuscript :ref:`(Gupta) <Gupta3>`.
 
+The *cutoff* argument specifies the real-space cutoff for MBX in
+Angstroms. For periodic systems, a safe value is 9.0 Angstroms, which
+is the cutoff used in the original MB-pol model.  For non-periodic
+systems, the cutoff can be set to a large value, such as 100.0
+Angstroms, to ensure that all interactions are captured. A larger cutoff
+is always safer, but will result in a slower simulation.
+
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
 same simulation, one can use :doc:`pair_style hybrid/overlay
 <pair_hybrid>` to combine the MB-nrg molecules with other pair styles,
@@ -74,7 +81,7 @@ should usually be applied on the non-MB-nrg molecules.  See
 ``examples/PACKAGES/mbx`` for a complete hybrid example.
 
 
-If you have questions not answered by this documentation, please 
+If you have questions not answered by this documentation, please
 reference the MBX website
 `mbxsimulations.com <https://mbxsimulations.com>`_ or reach out to us at
 `https://groups.google.com/g/mbx-users <https://groups.google.com/g/mbx-users>`_
@@ -109,6 +116,28 @@ should be used to represent the non-MB-nrg molecules. `dp1` is a
 special monomer in MBX in that its *atom_mapping* can be a range of
 LAMMPS atom types, such as `1*11` to represent atom types 1 through 11.
 
+.. warning::
+
+    Since the MB-nrg models (e.g. MB-pol) used in MBX include both permanent
+    electrostatics and polarization, it is important to ensure that no
+    electrostatic interactions are calculated twice.
+
+    When using MBX, **all electrostatics are handled internally by MBX.**
+    Therefore, one should never use a coulombic pair style in LAMMPS
+    such as `coul/cut` or `coul/long` when also using MBX.
+
+    When performing a hybrid simulation using dp1,
+    note that many frameworks (Amber, CHARMM, OPLS, ClayFF etc.) require the usage of
+    special_bonds to exclude some bonded coulomb interactions (1-2, 1-3, and/or 1-4).
+    Since MBX is handling all
+    electrostatics, this should therefore be accounted for using the :doc:`coul/exclude <pair_coul>` command.
+
+    .. code-block:: LAMMPS
+
+        pair_style      hybrid/overlay mbx 9.0 lj/cut 9.0 coul/exclude 9.0
+        pair_coeff      * * mbx 2 dp1 1*11 h2o 12 13 13 json mbx.json
+        pair_coeff      1*11 1*11 coul/exclude
+
 The *json* argument specifies the name of the MBX JSON configuration
 file to use, such as `mbx.json`.  If this file is not provided, the fix
 will attempt to use a default configuration.
@@ -129,6 +158,9 @@ Due to the usage of Partridge and Schwenke charges for MB-pol,
 all electrostatic interactions are calculated internally in MBX.
 Therefore one should never calculate coulombic interactions in
 LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
+
+MBX is primarily tested to work with `units real`. If you encounter
+issues with other unit styles, please contact the developers.
 
 Related commands
 """"""""""""""""
