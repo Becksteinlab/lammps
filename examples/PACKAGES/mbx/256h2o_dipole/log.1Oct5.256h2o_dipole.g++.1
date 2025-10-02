@@ -1,4 +1,4 @@
-LAMMPS (10 Sep 2025 - Development - 892ed7cb91-modified)
+LAMMPS (10 Sep 2025 - Development - 06700059df-modified)
   using 1 OpenMP thread(s) per MPI task
 processors      * * * map xyz
 
@@ -71,6 +71,23 @@ velocity        all zero angular
 thermo_style    custom step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press
 thermo          1
 thermo_modify   flush yes
+
+
+# Dipole moments in Debye units ##
+variable dipnorm_tot atom sqrt(f__FIX_MBX_INTERNAL[7]*f__FIX_MBX_INTERNAL[7]+f__FIX_MBX_INTERNAL[8]*f__FIX_MBX_INTERNAL[8]+f__FIX_MBX_INTERNAL[9]*f__FIX_MBX_INTERNAL[9])/0.2081943 # original (total dipole)
+variable dipnorm_ind atom sqrt(f__FIX_MBX_INTERNAL[4]*f__FIX_MBX_INTERNAL[4]+f__FIX_MBX_INTERNAL[5]*f__FIX_MBX_INTERNAL[5]+f__FIX_MBX_INTERNAL[6]*f__FIX_MBX_INTERNAL[6])/0.2081943 # induced
+variable dipnorm_perm atom sqrt(f__FIX_MBX_INTERNAL[1]*f__FIX_MBX_INTERNAL[1]+f__FIX_MBX_INTERNAL[2]*f__FIX_MBX_INTERNAL[2]+f__FIX_MBX_INTERNAL[3]*f__FIX_MBX_INTERNAL[3])/0.2081943 # perm
+
+variable dipx_perm atom f__FIX_MBX_INTERNAL[1]/0.2081943
+variable dipy_perm atom f__FIX_MBX_INTERNAL[2]/0.2081943
+variable dipz_perm atom f__FIX_MBX_INTERNAL[3]/0.2081943
+variable dipx_ind atom f__FIX_MBX_INTERNAL[4]/0.2081943
+variable dipy_ind atom f__FIX_MBX_INTERNAL[5]/0.2081943
+variable dipz_ind atom f__FIX_MBX_INTERNAL[6]/0.2081943
+
+# Dump details ##
+dump            3 all custom 8 dump.dipoles id mol type q x y z v_dipx_perm v_dipy_perm v_dipz_perm v_dipnorm_perm v_dipx_ind v_dipy_ind v_dipz_ind v_dipnorm_ind
+dump_modify     3 sort id
 
 fix             thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press)" file thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press"
 fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
@@ -223,21 +240,21 @@ Per MPI rank memory allocation (min/avg/max) = 8.503 | 8.503 | 8.503 Mbytes
         98   49             298.3444      -1717.6699      682.09923     -2399.7691     -1490.8738      1.0071856      19.664118      19.664118      19.664118      7603.6731      749.7945       383.51787      5002.295       2045.2025    
         99   49.5           303.69032     -1717.6577      694.3215      -2411.9792     -1565.0541      1.0071598      19.664286      19.664286      19.664286      7603.8677     -428.98746      35.109599      4522.2203      1376.1141    
        100   50             304.19917     -1717.4072      695.48487     -2412.8921     -1643.8597      1.0071338      19.664455      19.664455      19.664455      7604.0642     -1562.6018     -82.581449      3634.7925      663.20306    
-Loop time of 77.6892 on 1 procs for 100 steps with 768 atoms
+Loop time of 81.6891 on 1 procs for 100 steps with 768 atoms
 
-Performance: 0.056 ns/day, 431.607 hours/ns, 1.287 timesteps/s, 988.554 atom-step/s
+Performance: 0.053 ns/day, 453.829 hours/ns, 1.224 timesteps/s, 940.149 atom-step/s
 99.6% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 77.08      | 77.08      | 77.08      |   0.0 | 99.22
-Bond    | 4.8807e-05 | 4.8807e-05 | 4.8807e-05 |   0.0 |  0.00
-Neigh   | 0.058271   | 0.058271   | 0.058271   |   0.0 |  0.08
-Comm    | 0.0078434  | 0.0078434  | 0.0078434  |   0.0 |  0.01
-Output  | 0.1748     | 0.1748     | 0.1748     |   0.0 |  0.23
-Modify  | 0.36707    | 0.36707    | 0.36707    |   0.0 |  0.47
-Other   |            | 0.001449   |            |       |  0.00
+Pair    | 81.083     | 81.083     | 81.083     |   0.0 | 99.26
+Bond    | 2.3926e-05 | 2.3926e-05 | 2.3926e-05 |   0.0 |  0.00
+Neigh   | 0.056893   | 0.056893   | 0.056893   |   0.0 |  0.07
+Comm    | 0.006624   | 0.006624   | 0.006624   |   0.0 |  0.01
+Output  | 0.1924     | 0.1924     | 0.1924     |   0.0 |  0.24
+Modify  | 0.34857    | 0.34857    | 0.34857    |   0.0 |  0.43
+Other   |            | 0.001237   |            |       |  0.00
 
 Nlocal:            768 ave         768 max         768 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
@@ -267,51 +284,51 @@ WARNING: Likewise 1-2 special neighbor interactions != 1.0 (src/force.cpp:200)
 WARNING: Angles are defined but no angle style is set (src/force.cpp:203)
 WARNING: Likewise 1-3 special neighbor interactions != 1.0 (src/force.cpp:205)
 
-[MBX] Total MBX fix/pair time= 78.540038 seconds
+[MBX] Total MBX fix/pair time= 82.579885 seconds
 [MBX] Timing Summary
 [MBX] kernel                      tmin          tavg          tmax         count   %total
 [MBX] -----------------------------------------------------------------------------------
-[MBX] INIT                :        0.2209        0.2209        0.2209        11     0.28%
-[MBX] UPDATE_XYZ          :      0.026252      0.026252      0.026252       101     0.03%
-[MBX] ACCUMULATE_F        :      0.061258      0.061258      0.061258       505     0.08%
-[MBX] E1B                 :       0.23343       0.23343       0.23343       101     0.30%
+[MBX] INIT                :       0.21117       0.21117       0.21117        11     0.26%
+[MBX] UPDATE_XYZ          :      0.023674      0.023674      0.023674       101     0.03%
+[MBX] ACCUMULATE_F        :      0.064444      0.064444      0.064444       606     0.08%
+[MBX] E1B                 :       0.22828       0.22828       0.22828       101     0.28%
 [MBX] E2B_LOCAL           :             0             0             0         0     0.00%
-[MBX] E2B_GHOST           :        4.4734        4.4734        4.4734       101     5.70%
+[MBX] E2B_GHOST           :        4.2927        4.2927        4.2927       101     5.20%
 [MBX] E3B_LOCAL           :             0             0             0         0     0.00%
-[MBX] E3B_GHOST           :        33.696        33.696        33.696       101    42.90%
+[MBX] E3B_GHOST           :        32.793        32.793        32.793       101    39.71%
 [MBX] E4B_LOCAL           :             0             0             0         0     0.00%
-[MBX] E4B_GHOST           :       0.18854       0.18854       0.18854       101     0.24%
-[MBX] DISP                :        3.6741        3.6741        3.6741       101     4.68%
-[MBX] DISP_PME            :        1.3864        1.3864        1.3864       101     1.77%
-[MBX] BUCK                :        3.2882        3.2882        3.2882       202     4.19%
-[MBX] ELE                 :         30.83         30.83         30.83       101    39.25%
+[MBX] E4B_GHOST           :       0.18523       0.18523       0.18523       101     0.22%
+[MBX] DISP                :        3.6249        3.6249        3.6249       101     4.39%
+[MBX] DISP_PME            :        1.3722        1.3722        1.3722       101     1.66%
+[MBX] BUCK                :        8.7197        8.7197        8.7197       202    10.56%
+[MBX] ELE                 :         30.61         30.61         30.61       101    37.07%
 [MBX] INIT_FULL           :             0             0             0         0     0.00%
 [MBX] UPDATE_XYZ_FULL     :             0             0             0         0     0.00%
 [MBX] ACCUMULATE_F_FULL   :             0             0             0         0     0.00%
-[MBX] INIT_LOCAL          :      0.070922      0.070922      0.070922        11     0.09%
-[MBX] UPDATE_XYZ_LOCAL    :      0.028538      0.028538      0.028538       101     0.04%
-[MBX] ACCUMULATE_F_LOCAL  :      0.025252      0.025252      0.025252       404     0.03%
+[MBX] INIT_LOCAL          :      0.070534      0.070534      0.070534        11     0.09%
+[MBX] UPDATE_XYZ_LOCAL    :      0.029598      0.029598      0.029598       101     0.04%
+[MBX] ACCUMULATE_F_LOCAL  :      0.018873      0.018873      0.018873       303     0.02%
 
 
 [MBX] Electrostatics Summary
 [MBX] kernel                      tmin          tavg          tmax         count   %total
 [MBX] -----------------------------------------------------------------------------------
-[MBX] ELE_PERMDIP_REAL    :         2.623         2.623         2.623       101     3.34%
-[MBX] ELE_PERMDIP_PME     :       0.95066       0.95066       0.95066       101     1.21%
-[MBX] ELE_DIPFIELD_REAL   :        9.4337        9.4337        9.4337      1144    12.01%
-[MBX] ELE_DIPFIELD_PME    :         10.83         10.83         10.83      1144    13.79%
-[MBX] ELE_GRAD_REAL       :        2.5541        2.5541        2.5541       101     3.25%
-[MBX] ELE_GRAD_PME        :        3.1728        3.1728        3.1728       101     4.04%
-[MBX] ELE_GRAD_FIN        :      0.038718      0.038718      0.038718       101     0.05%
-[MBX] ELE_PME_SETUP       :    0.00016448    0.00016448    0.00016448      1346     0.00%
-[MBX] ELE_PME_C           :        1.8872        1.8872        1.8872       202     2.40%
-[MBX] ELE_PME_D           :        11.894        11.894        11.894      1245    15.14%
-[MBX] ELE_PME_E           :         1.142         1.142         1.142       101     1.45%
-[MBX] DISP_PME_SETUP      :       0.11351       0.11351       0.11351       101     0.14%
-[MBX] DISP_PME_E          :        1.2222        1.2222        1.2222       101     1.56%
-[MBX] ELE_COMM_REVFOR     :      0.013132      0.013132      0.013132      1245     0.02%
-[MBX] ELE_COMM_REVSET     :    0.00020663    0.00020663    0.00020663        11     0.00%
-[MBX] ELE_COMM_REV        :    0.00053256    0.00053256    0.00053256      1234     0.00%
-[MBX] ELE_COMM_FORSET     :    0.00093601    0.00093601    0.00093601        11     0.00%
-[MBX] ELE_COMM_FOR        :     0.0086331     0.0086331     0.0086331      1234     0.01%
-Total wall time: 0:01:18
+[MBX] ELE_PERMDIP_REAL    :        2.6111        2.6111        2.6111       101     3.16%
+[MBX] ELE_PERMDIP_PME     :       0.94165       0.94165       0.94165       101     1.14%
+[MBX] ELE_DIPFIELD_REAL   :        9.3677        9.3677        9.3677      1144    11.34%
+[MBX] ELE_DIPFIELD_PME    :        10.734        10.734        10.734      1144    13.00%
+[MBX] ELE_GRAD_REAL       :        2.5292        2.5292        2.5292       101     3.06%
+[MBX] ELE_GRAD_PME        :        3.1881        3.1881        3.1881       101     3.86%
+[MBX] ELE_GRAD_FIN        :      0.041173      0.041173      0.041173       101     0.05%
+[MBX] ELE_PME_SETUP       :    8.9081e-05    8.9081e-05    8.9081e-05      1346     0.00%
+[MBX] ELE_PME_C           :        1.8791        1.8791        1.8791       202     2.28%
+[MBX] ELE_PME_D           :        11.805        11.805        11.805      1245    14.30%
+[MBX] ELE_PME_E           :        1.1499        1.1499        1.1499       101     1.39%
+[MBX] DISP_PME_SETUP      :       0.11126       0.11126       0.11126       101     0.13%
+[MBX] DISP_PME_E          :        1.2107        1.2107        1.2107       101     1.47%
+[MBX] ELE_COMM_REVFOR     :      0.013077      0.013077      0.013077      1245     0.02%
+[MBX] ELE_COMM_REVSET     :    0.00021655    0.00021655    0.00021655        11     0.00%
+[MBX] ELE_COMM_REV        :    0.00061239    0.00061239    0.00061239      1234     0.00%
+[MBX] ELE_COMM_FORSET     :    0.00094583    0.00094583    0.00094583        11     0.00%
+[MBX] ELE_COMM_FOR        :      0.008454      0.008454      0.008454      1234     0.01%
+Total wall time: 0:01:22

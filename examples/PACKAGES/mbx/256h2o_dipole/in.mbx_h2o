@@ -44,6 +44,23 @@ thermo_style    custom step time temp etotal ke pe enthalpy density lx ly lz vol
 thermo          1
 thermo_modify   flush yes
 
+
+# Dipole moments in Debye units ##
+variable dipnorm_tot atom sqrt(f__FIX_MBX_INTERNAL[7]*f__FIX_MBX_INTERNAL[7]+f__FIX_MBX_INTERNAL[8]*f__FIX_MBX_INTERNAL[8]+f__FIX_MBX_INTERNAL[9]*f__FIX_MBX_INTERNAL[9])/0.2081943 # original (total dipole)
+variable dipnorm_ind atom sqrt(f__FIX_MBX_INTERNAL[4]*f__FIX_MBX_INTERNAL[4]+f__FIX_MBX_INTERNAL[5]*f__FIX_MBX_INTERNAL[5]+f__FIX_MBX_INTERNAL[6]*f__FIX_MBX_INTERNAL[6])/0.2081943 # induced
+variable dipnorm_perm atom sqrt(f__FIX_MBX_INTERNAL[1]*f__FIX_MBX_INTERNAL[1]+f__FIX_MBX_INTERNAL[2]*f__FIX_MBX_INTERNAL[2]+f__FIX_MBX_INTERNAL[3]*f__FIX_MBX_INTERNAL[3])/0.2081943 # perm
+
+variable dipx_perm atom f__FIX_MBX_INTERNAL[1]/0.2081943
+variable dipy_perm atom f__FIX_MBX_INTERNAL[2]/0.2081943
+variable dipz_perm atom f__FIX_MBX_INTERNAL[3]/0.2081943
+variable dipx_ind atom f__FIX_MBX_INTERNAL[4]/0.2081943
+variable dipy_ind atom f__FIX_MBX_INTERNAL[5]/0.2081943
+variable dipz_ind atom f__FIX_MBX_INTERNAL[6]/0.2081943
+
+# Dump details ##
+dump            3 all custom 8 dump.dipoles id mol type q x y z v_dipx_perm v_dipy_perm v_dipz_perm v_dipnorm_perm v_dipx_ind v_dipy_ind v_dipz_ind v_dipnorm_ind
+dump_modify     3 sort id
+
 fix             thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press)" file thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press"
 fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
 
