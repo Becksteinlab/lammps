@@ -160,7 +160,7 @@ For a complete list of available monomers in MBX, please see the
         compute         mbx all pair mbx
 
 The *json* argument specifies the name of the MBX JSON configuration
-file to use, such as `mbx.json`.  If this file is not provided, the fix
+file to use, such as `mbx.json`.  If this file is not provided, the pair style
 will attempt to use a default configuration. See the `MBX documentation
 <https://mbxsimulations.com/tutorials/json-file>`_ for more details on
 how to create this file.
