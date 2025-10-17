@@ -23,7 +23,7 @@
 #include "force.h"
 #include "kspace.h"
 #include "math_const.h"
-#include "mdftaper.h"
+#include "math_special.h"
 #include "neigh_list.h"
 #include "neighbor.h"
 #include "pair.h"
@@ -35,6 +35,8 @@
 using namespace LAMMPS_NS;
 using namespace MathConst;
 using namespace FixConst;
+using MathSpecial::mdftaper;
+
 
 /* ---------------------------------------------------------------------- */
 
