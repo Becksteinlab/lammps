@@ -4,16 +4,15 @@ units           real
 atom_style      full
 boundary        p p p
 
-read_data       initial.data 
-#read_restart    restart.old
+read_data       initial.data
 
 pair_style      mbx 9.0
-pair_modify     mix arithmetic
 
-bond_style      none
-angle_style     none
-dihedral_style  none
-improper_style  none
+# Define bonds and angles to use if using SHAKE constraints
+bond_style      zero
+angle_style     zero
+bond_coeff      1 0.98823 # from PIMD
+angle_coeff     1 105.50896 # from PIMD
 
 pair_coeff      * * 1 h2o 1 2 2 json mbx.json
 
@@ -34,6 +33,7 @@ variable        eind      equal c_mbx[8]
 variable        eele      equal c_mbx[9]
 variable        etot      equal c_mbx[10]
 
+#fix             RIGID all shake 0.0001 20 0 b 1 a 1
 fix             1 all npt temp 298 298 100 iso 1.0 1.0 1000
 
 velocity        all create 298 428459 rot yes dist gaussian
@@ -61,15 +61,14 @@ variable dipz_ind atom f__FIX_MBX_INTERNAL[6]/0.2081943
 dump            3 all custom 8 dump.dipoles id mol type q x y z v_dipx_perm v_dipy_perm v_dipz_perm v_dipnorm_perm v_dipx_ind v_dipy_ind v_dipz_ind v_dipnorm_ind
 dump_modify     3 sort id
 
-fix             thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press)" file thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press"
-fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
+# fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
 
-dump            1 all custom 1 dump.lammpstrj id mol type q x y z
-dump_modify     1 append no sort id format line "%d %d %d %8.4f %15.8f %15.8f %15.8f"
+# dump            1 all custom 1 dump.lammpstrj id mol type q x y z
+# dump_modify     1 append no sort id format line "%d %d %d %8.4f %15.8f %15.8f %15.8f"
 
-restart         10 restart.1 restart.2
+# restart         10 restart.1 restart.2
 
-run             100  upto
+run             100
 
-write_data      final.data nocoeff
-write_restart   restart.new
+# write_data      final.data
+# write_restart   restart.new

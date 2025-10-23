@@ -4,11 +4,9 @@ units           real
 atom_style      full
 boundary        p p p
 
-read_data       initial.data 
-#read_restart    restart.old
+read_data       initial.data
 
 pair_style      mbx 9.0
-pair_modify     mix arithmetic
 
 # Define bonds and angles to use if using SHAKE constraints
 bond_style      zero
@@ -46,15 +44,14 @@ thermo_style    custom step time temp etotal ke pe enthalpy density lx ly lz vol
 thermo          1
 thermo_modify   flush yes
 
-fix             thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press)" file thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press"
-fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
+# fix             verbose_mbx_thermo_print all print 1 "$(step) $(0.001*time) $(temp) $(etotal) $(ke) $(pe) $(enthalpy) $(density) $(lx) $(ly) $(lz) $(vol) $(pxx) $(pyy) $(pzz) $(press) $(v_e1bpip) $(v_e2bpip) $(v_e3bpip) $(v_e4bpip) $(v_edisp) $(v_ebuck) $(v_eperm) $(v_eind) $(v_eele) $(v_etot)" file mbx_thermo.out screen no title "# step time temp etotal ke pe enthalpy density lx ly lz vol pxx pyy pzz press e1bpip e2bpip e3bpip e4bpip edisp ebuck eperm eind eele etot"
 
-dump            1 all custom 1 dump.lammpstrj id mol type q x y z
-dump_modify     1 append no sort id format line "%d %d %d %8.4f %15.8f %15.8f %15.8f"
+# dump            1 all custom 1 dump.lammpstrj id mol type q x y z
+# dump_modify     1 append no sort id format line "%d %d %d %8.4f %15.8f %15.8f %15.8f"
 
-restart         10 restart.1 restart.2
+# restart         10 restart.1 restart.2
 
-run             100  upto
+run             100
 
-write_data      final.data nocoeff
-write_restart   restart.new
+# write_data      final.data
+# write_restart   restart.new
