@@ -18,7 +18,9 @@
 #include "comm.h"
 #include "error.h"
 #include "force.h"
+#include "improper.h"
 
+#include <algorithm>
 #include <cstring>
 #include <utility>
 
@@ -493,6 +495,73 @@ int LabelMap::infer_dihedraltype(std::vector<std::string> mytypes)
           mytypes[2] == dtypes[2] && mytypes[3] == dtypes[3]) ||
           (mytypes[3] == dtypes[0] && mytypes[2] == dtypes[1] &&
            mytypes[1] == dtypes[2] && mytypes[0] == dtypes[3])) return i+1;
+  }
+  return -1;
+}
+
+
+/* ----------------------------------------------------------------------
+   infer improper type from four atom types
+   input/output is numeric types, uses type labels internally
+   assumes improper types of the form '[a][b][c][d]'
+   the symmetry of the improper is encoded in improper.symmatoms
+------------------------------------------------------------------------- */
+
+int LabelMap::infer_impropertype(int type1, int type2, int type3, int type4)
+{
+  // convert numeric atom types to type label
+
+  std::vector<std::string> mytypes;
+  mytypes[0] = typelabel[type1-1];
+  mytypes[1] = typelabel[type2-1];
+  mytypes[2] = typelabel[type3-1];
+  mytypes[3] = typelabel[type4-1];
+  for (int i = 0; i < 4; i++)
+    if (mytypes[i].empty()) return -1;
+
+  return infer_impropertype(mytypes);
+}
+
+/* ----------------------------------------------------------------------
+   infer improper type from four atom types
+   input/output is numeric types, uses type labels internally
+   assumes improper types of the form '[a][b][c][d]'
+   the symmetry of the improper is encoded in improper.symmatoms
+------------------------------------------------------------------------- */
+
+int LabelMap::infer_impropertype(std::vector<std::string> mytypes)
+{
+  // search for matching improper type label
+
+  int status, nlist;
+  std::vector<std::string> itypes(4);
+  std::vector<std::string> list1(4);
+  std::vector<std::string> list2(4);
+  for (int i = 0; i < nimpropertypes; i++) {
+    nlist = 0;
+    status = parse_brackets(4, itypelabel[i], itypes);
+    if (status != -1) {
+      for (int j = 0; j < 4; j++) {
+        if (force->improper->symmatoms[j] == 1) {
+          if (mytypes[j] != itypes[j]) {
+            status = -1;
+            break;
+          }
+        } else {
+          list1[nlist] = mytypes[j];
+          list2[nlist++] = itypes[j];
+        }
+      }
+      if (status == -1) continue;
+      std::sort(list1.begin(),list1.end());
+      std::sort(list2.begin(),list2.end());
+      for (int j = 0; j < nlist; j++)
+        if (list1[j] != list2[j]) {
+          status = -1;
+          break;
+        }
+      if (status != -1) return i+1;
+    }
   }
   return -1;
 }

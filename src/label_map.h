@@ -49,6 +49,9 @@ class LabelMap : protected Pointers {
   int infer_dihedraltype(int, int, int, int);        // infer dihedral type from four atom types
   int infer_dihedraltype(std::vector<std::string>);  // infer dihedral type from four atom type labels
 
+  int infer_impropertype(int, int, int, int);        // infer improper type from four atom types
+  int infer_impropertype(std::vector<std::string>);  // infer improper type from four atom type labels
+
   int parse_brackets(int, std::string, std::vector<std::string> &); // get strings within sets of brackets
 
   // input/output for atom class label map
