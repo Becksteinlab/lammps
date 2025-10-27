@@ -3356,26 +3356,27 @@ void FixBondReact::update_everything()
         auto &rxn = rxns[(int) update_mega_glove[0][i]];
         for (int j = 0; j < rxn.product->natoms; j++) {
           int jj = rxn.atoms[j].amap[1]-1;
-          if (atom->map(update_mega_glove[jj+1][i]) < nlocal && atom->map(update_mega_glove[jj+1][i]) >= 0) {
+          int jjlocal = atom->map(update_mega_glove[jj+1][i]);
+          if (jjlocal < nlocal && jjlocal >= 0) {
             if (rxn.atoms[j].landlocked == 1) {
-              delta_angle -= num_angle[atom->map(update_mega_glove[jj+1][i])];
-              num_angle[atom->map(update_mega_glove[jj+1][i])] = 0;
+              delta_angle -= num_angle[jjlocal];
+              num_angle[jjlocal] = 0;
             }
             if (rxn.atoms[j].landlocked == 0) {
-              for (int p = num_angle[atom->map(update_mega_glove[jj+1][i])]-1; p > -1; p--) {
+              for (int p = num_angle[jjlocal]-1; p > -1; p--) {
                 for (int n = 0; n < rxn.product->natoms; n++) {
                   int nn = rxn.atoms[n].amap[1]-1;
                   if (n!=j && rxn.atoms[n].landlocked == 1 &&
-                      (angle_atom1[atom->map(update_mega_glove[jj+1][i])][p] == update_mega_glove[nn+1][i] ||
-                       angle_atom2[atom->map(update_mega_glove[jj+1][i])][p] == update_mega_glove[nn+1][i] ||
-                       angle_atom3[atom->map(update_mega_glove[jj+1][i])][p] == update_mega_glove[nn+1][i])) {
-                    for (int m = p; m < num_angle[atom->map(update_mega_glove[jj+1][i])]-1; m++) {
-                      angle_type[atom->map(update_mega_glove[jj+1][i])][m] = angle_type[atom->map(update_mega_glove[jj+1][i])][m+1];
-                      angle_atom1[atom->map(update_mega_glove[jj+1][i])][m] = angle_atom1[atom->map(update_mega_glove[jj+1][i])][m+1];
-                      angle_atom2[atom->map(update_mega_glove[jj+1][i])][m] = angle_atom2[atom->map(update_mega_glove[jj+1][i])][m+1];
-                      angle_atom3[atom->map(update_mega_glove[jj+1][i])][m] = angle_atom3[atom->map(update_mega_glove[jj+1][i])][m+1];
+                      (angle_atom1[jjlocal][p] == update_mega_glove[nn+1][i] ||
+                       angle_atom2[jjlocal][p] == update_mega_glove[nn+1][i] ||
+                       angle_atom3[jjlocal][p] == update_mega_glove[nn+1][i])) {
+                    for (int m = p; m < num_angle[jjlocal]-1; m++) {
+                      angle_type[jjlocal][m] = angle_type[jjlocal][m+1];
+                      angle_atom1[jjlocal][m] = angle_atom1[jjlocal][m+1];
+                      angle_atom2[jjlocal][m] = angle_atom2[jjlocal][m+1];
+                      angle_atom3[jjlocal][m] = angle_atom3[jjlocal][m+1];
                     }
-                    num_angle[atom->map(update_mega_glove[jj+1][i])]--;
+                    num_angle[jjlocal]--;
                     delta_angle--;
                     break;
                   }
@@ -3388,29 +3389,74 @@ void FixBondReact::update_everything()
         if (rxn.product->angleflag) {
           for (int j = 0; j < rxn.product->natoms; j++) {
             int jj = rxn.atoms[j].amap[1]-1;
-            if (atom->map(update_mega_glove[jj+1][i]) < nlocal && atom->map(update_mega_glove[jj+1][i]) >= 0) {
+            int jjlocal = atom->map(update_mega_glove[jj+1][i]);
+            if (jjlocal < nlocal && jjlocal >= 0) {
               if (rxn.atoms[j].landlocked == 1) {
-                num_angle[atom->map(update_mega_glove[jj+1][i])] = rxn.product->num_angle[j];
+                num_angle[jjlocal] = rxn.product->num_angle[j];
                 delta_angle += rxn.product->num_angle[j];
                 for (int p = 0; p < rxn.product->num_angle[j]; p++) {
-                  angle_type[atom->map(update_mega_glove[jj+1][i])][p] = rxn.product->angle_type[j][p];
-                  angle_atom1[atom->map(update_mega_glove[jj+1][i])][p] = update_mega_glove[rxn.atoms[rxn.product->angle_atom1[j][p]-1].amap[1]][i];
-                  angle_atom2[atom->map(update_mega_glove[jj+1][i])][p] = update_mega_glove[rxn.atoms[rxn.product->angle_atom2[j][p]-1].amap[1]][i];
-                  angle_atom3[atom->map(update_mega_glove[jj+1][i])][p] = update_mega_glove[rxn.atoms[rxn.product->angle_atom3[j][p]-1].amap[1]][i];
+                  int aatom1 = rxn.product->angle_atom1[j][p];
+                  int aatom2 = rxn.product->angle_atom2[j][p];
+                  int aatom3 = rxn.product->angle_atom3[j][p];
+                  int iaatom1 = rxn.atoms[aatom1-1].amap[1]-1;
+                  int iaatom2 = rxn.atoms[aatom2-1].amap[1]-1;
+                  int iaatom3 = rxn.atoms[aatom3-1].amap[1]-1;
+                  int atag1 = update_mega_glove[iaatom1+1][i];
+                  int atag2 = update_mega_glove[iaatom2+1][i];
+                  int atag3 = update_mega_glove[iaatom3+1][i];
+                  if (rxn.atoms[iaatom1].wildcard == 1 ||
+                      rxn.atoms[iaatom2].wildcard == 1 ||
+                      rxn.atoms[iaatom3].wildcard == 1) {
+                    int alocal1 = atom->map(atag1);
+                    int alocal2 = atom->map(atag2);
+                    int alocal3 = atom->map(atag3);
+                    if (alocal1 < 0 || alocal2 < 0 || alocal3 < 0)
+                      error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                    int atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
+                    if (atype == -1) error->all(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
+                    angle_type[jjlocal][p] = atype;
+                  } else {
+                    angle_type[jjlocal][p] = rxn.product->angle_type[j][p];
+                  }
+                  angle_atom1[jjlocal][p] = atag1;
+                  angle_atom2[jjlocal][p] = atag2;
+                  angle_atom3[jjlocal][p] = atag3;
                 }
               }
               if (rxn.atoms[j].landlocked == 0) {
                 for (int p = 0; p < rxn.product->num_angle[j]; p++) {
-                  if (rxn.atoms[rxn.product->angle_atom1[j][p]-1].landlocked == 1 ||
-                      rxn.atoms[rxn.product->angle_atom2[j][p]-1].landlocked == 1 ||
-                      rxn.atoms[rxn.product->angle_atom3[j][p]-1].landlocked == 1) {
-                    insert_num = num_angle[atom->map(update_mega_glove[jj+1][i])];
-                    angle_type[atom->map(update_mega_glove[jj+1][i])][insert_num] = rxn.product->angle_type[j][p];
-                    angle_atom1[atom->map(update_mega_glove[jj+1][i])][insert_num] = update_mega_glove[rxn.atoms[rxn.product->angle_atom1[j][p]-1].amap[1]][i];
-                    angle_atom2[atom->map(update_mega_glove[jj+1][i])][insert_num] = update_mega_glove[rxn.atoms[rxn.product->angle_atom2[j][p]-1].amap[1]][i];
-                    angle_atom3[atom->map(update_mega_glove[jj+1][i])][insert_num] = update_mega_glove[rxn.atoms[rxn.product->angle_atom3[j][p]-1].amap[1]][i];
-                    num_angle[atom->map(update_mega_glove[jj+1][i])]++;
-                    if (num_angle[atom->map(update_mega_glove[jj+1][i])] > atom->angle_per_atom)
+                  int aatom1 = rxn.product->angle_atom1[j][p];
+                  int aatom2 = rxn.product->angle_atom2[j][p];
+                  int aatom3 = rxn.product->angle_atom3[j][p];
+                  if (rxn.atoms[aatom1-1].landlocked == 1 ||
+                      rxn.atoms[aatom2-1].landlocked == 1 ||
+                      rxn.atoms[aatom3-1].landlocked == 1) {
+                    int iaatom1 = rxn.atoms[aatom1-1].amap[1]-1;
+                    int iaatom2 = rxn.atoms[aatom2-1].amap[1]-1;
+                    int iaatom3 = rxn.atoms[aatom3-1].amap[1]-1;
+                    int atag1 = update_mega_glove[iaatom1+1][i];
+                    int atag2 = update_mega_glove[iaatom2+1][i];
+                    int atag3 = update_mega_glove[iaatom3+1][i];
+                    insert_num = num_angle[jjlocal];
+                    if (rxn.atoms[iaatom1].wildcard == 1 ||
+                        rxn.atoms[iaatom2].wildcard == 1 ||
+                        rxn.atoms[iaatom3].wildcard == 1) {
+                      int alocal1 = atom->map(atag1);
+                      int alocal2 = atom->map(atag2);
+                      int alocal3 = atom->map(atag3);
+                      if (alocal1 < 0 || alocal2 < 0 || alocal3 < 0)
+                        error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                      int atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
+                      if (atype == -1) error->all(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
+                      angle_type[jjlocal][insert_num] = atype;
+                    } else {
+                      angle_type[jjlocal][insert_num] = rxn.product->angle_type[j][p];
+                    }
+                    angle_atom1[jjlocal][insert_num] = atag1;
+                    angle_atom2[jjlocal][insert_num] = atag2;
+                    angle_atom3[jjlocal][insert_num] = atag3;
+                    num_angle[jjlocal]++;
+                    if (num_angle[jjlocal] > atom->angle_per_atom)
                       error->one(FLERR,"Fix bond/react topology/atom exceed system topology/atom");
                     delta_angle++;
                   }
