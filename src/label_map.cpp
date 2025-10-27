@@ -404,7 +404,7 @@ int LabelMap::infer_bondtype(std::vector<std::string> mytypes)
 
   std::vector<std::string> btypes(2);
   for (int i = 0; i < nbondtypes; i++) {
-    int status = parse_brackets(2, btypelabel[i], btypes);
+    int status = parse_typelabel(2, btypelabel[i], btypes);
     if (status != -1)
       if ((mytypes[0] == btypes[0] && mytypes[1] == btypes[1]) ||
           (mytypes[0] == btypes[1] && mytypes[1] == btypes[0])) return i+1;
@@ -446,7 +446,7 @@ int LabelMap::infer_angletype(std::vector<std::string> mytypes)
   int status;
   std::vector<std::string> atypes(3);
   for (int i = 0; i < nangletypes; i++) {
-    status = parse_brackets(3, atypelabel[i], atypes);
+    status = parse_typelabel(3, atypelabel[i], atypes);
     if (status != -1 && mytypes[1] == atypes[1])
       if ((mytypes[0] == atypes[0] && mytypes[2] == atypes[2]) ||
           (mytypes[0] == atypes[2] && mytypes[2] == atypes[0])) return i+1;
@@ -489,7 +489,7 @@ int LabelMap::infer_dihedraltype(std::vector<std::string> mytypes)
   int status;
   std::vector<std::string> dtypes(4);
   for (int i = 0; i < ndihedraltypes; i++) {
-    status = parse_brackets(4, dtypelabel[i], dtypes);
+    status = parse_typelabel(4, dtypelabel[i], dtypes);
     if (status != -1)
       if ((mytypes[0] == dtypes[0] && mytypes[1] == dtypes[1] &&
           mytypes[2] == dtypes[2] && mytypes[3] == dtypes[3]) ||
@@ -498,7 +498,6 @@ int LabelMap::infer_dihedraltype(std::vector<std::string> mytypes)
   }
   return -1;
 }
-
 
 /* ----------------------------------------------------------------------
    infer improper type from four atom types
@@ -539,7 +538,7 @@ int LabelMap::infer_impropertype(std::vector<std::string> mytypes)
   std::vector<std::string> list2(4);
   for (int i = 0; i < nimpropertypes; i++) {
     nlist = 0;
-    status = parse_brackets(4, itypelabel[i], itypes);
+    status = parse_typelabel(4, itypelabel[i], itypes);
     if (status != -1) {
       for (int j = 0; j < 4; j++) {
         if (force->improper->symmatoms[j] == 1) {
@@ -567,22 +566,22 @@ int LabelMap::infer_impropertype(std::vector<std::string> mytypes)
 }
 
 /* ----------------------------------------------------------------------
-   return 'ntypes' number of strings between brackets
+   return 'ntypes' number of strings between hyphen delimiters
 ------------------------------------------------------------------------- */
 
-int LabelMap::parse_brackets(int ntypes, std::string label, std::vector<std::string> &types)
+int LabelMap::parse_typelabel(int ntypes, std::string label, std::vector<std::string> &types)
 {
-  int lbrac,rbrac,len;
+  // TODO: more robust parser. e.g., there could be two dashes in a row
+  int delimloc,len;
   size_t npos = std::string::npos;
 
-  for (int i = 0; i < ntypes; i++) {
-    lbrac = label.find("[");
-    rbrac = label.find("]");
-    if (lbrac == npos || rbrac == npos) return -1;
-    len = rbrac - lbrac - 1;
-    types[i] = label.substr(lbrac+1,len);
-    label = label.substr(rbrac+1);
+  for (int i = 0; i < ntypes-1; i++) {
+    delimloc = label.find("-");
+    if (delimloc == npos) return -1;
+    types[i] = label.substr(0,delimloc);
+    label = label.substr(delimloc+1);
   }
+  types[ntypes-1] = label;
   return 1;
 }
 
