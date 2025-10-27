@@ -452,6 +452,7 @@ FixBondReact::FixBondReact(LAMMPS *lmp, int narg, char **arg) :
     int idx = 1;
     for (auto &atm : rxn.atoms) {
       atm.edge = 0;
+      atm.wildcard = 0;
       atm.recharged = 1; // update all partial charges by default
       atm.deleted = 0;
       atm.created = 0;
@@ -3918,7 +3919,7 @@ read map file
 
 void FixBondReact::read_map_file(Reaction &rxn)
 {
-  int rv, nedge, nequivalent, nchiral, ndelete, ncreate = 0;
+  int rv, nedge, nequivalent, nchiral, nwild, ndelete, ncreate = 0;
   char line[MAXLINE] = {'\0'};
   char keyword[MAXLINE] = {'\0'};
   char *eof,*ptr;
@@ -3957,6 +3958,9 @@ void FixBondReact::read_map_file(Reaction &rxn)
       if (rv != 1) error->one(FLERR, "Map file header is incorrectly formatted");
     } else if (strstr(line,"chiralIDs")) {
       rv = sscanf(line,"%d",&nchiral);
+      if (rv != 1) error->one(FLERR, "Map file header is incorrectly formatted");
+    } else if (strstr(line,"wildcards")) {
+      rv = sscanf(line,"%d",&nwild);
       if (rv != 1) error->one(FLERR, "Map file header is incorrectly formatted");
     } else if (strstr(line,"constraints")) {
       int nconstraints;
@@ -4006,6 +4010,8 @@ void FixBondReact::read_map_file(Reaction &rxn)
       CreateAtoms(line, rxn, ncreate);
     } else if (strcmp(keyword,"ChiralIDs") == 0) {
       ChiralCenters(line, rxn, nchiral);
+    } else if (strcmp(keyword,"Wildcards") == 0) {
+      ReadWildcards(line, rxn, nwild);
     } else if (strcmp(keyword,"Constraints") == 0) {
       ReadConstraints(line, rxn);
     } else error->one(FLERR,"Fix bond/react: Unknown section in map file");
@@ -4141,6 +4147,18 @@ void FixBondReact::ChiralCenters(char *line, Reaction &rxn, int nchiral)
     }
     // get orientation
     rxn.atoms[tmp-1].chiral[1] = get_chirality(my4coords);
+  }
+}
+
+void FixBondReact::ReadWildcards(char *line, Reaction &rxn, int nwild)
+{
+  int tmp;
+  for (int i = 0; i < nwild; i++) {
+    readline(line);
+    sscanf(line,"%d",&tmp);
+    if (tmp > rxn.reactant->natoms)
+      error->one(FLERR,"Bond/react: Invalid template atom ID in map file");
+    rxn.atoms[tmp-1].wildcard = 1;
   }
 }
 
