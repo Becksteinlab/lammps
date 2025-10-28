@@ -582,7 +582,7 @@ FixRigid::FixRigid(LAMMPS *lmp, int narg, char **arg) :
     random = new RanMars(lmp, seed + comm->me);
     memory->create(langextra, nbody, 6, "rigid:langextra");
     for (i = 0; i < nbody; i++) {
-      for (j = 0; i < 6; j++) langextra[i][j] = 0.0;
+      for (j = 0; j < 6; j++) langextra[i][j] = 0.0;
     }
   }
 
@@ -811,7 +811,6 @@ void FixRigid::setup(int vflag)
   int i, ibody, n;
   const int nlocal = atom->nlocal;
 
-  if (langflag) apply_langevin_thermostat();
   compute_forces_and_torques();
 
   // enforce 2d body forces and torques
