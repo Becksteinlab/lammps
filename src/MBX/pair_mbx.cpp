@@ -268,10 +268,6 @@ void PairMBX::allocate()
 
 void PairMBX::settings(int narg, char **arg)
 {
-
-  //TODO Re-enable this once MBX is properly versioned at >1.3.2
-  // utils::logmesg(lmp, std::string("MBX Version ") + MBX_VERSION + "\n");
-
   if (narg != 1) error->all(FLERR, "Illegal pair_style command");
 
   cut_global = utils::numeric(FLERR, arg[0], false, lmp);

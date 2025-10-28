@@ -112,6 +112,7 @@ class FixMBX : public Fix {
   bblock::System *ptr_mbx;          // pointer to MBX object
   bblock::System *ptr_mbx_local;    // pointer to MBX object for local atoms
 
+  static std::string cite_pair_mbx;
   int me, nprocs;
   bigint ngroup;
 

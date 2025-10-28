@@ -47,19 +47,20 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-static const char cite_pair_mbx[] =
-    "pair mbx command:\n\n"
-    "@article{10.1063/5.0156036,\n"
-    " author = {Riera, Marc and Knight, Christopher and Bull-Vulpe, Ethan F. and Zhu, Xuanyu and "
-    "Agnew, Henry and Smith, Daniel G. A. and Simmonett, Andrew C. and Paesani, Francesco},\n"
-    " title = \"{MBX: A many-body energy and force calculator for data-driven many-body "
-    "simulations}\",\n"
-    " journal = {The Journal of Chemical Physics},\n"
-    " volume = {159},\n"
-    " number = {5},\n"
-    " pages = {054802},\n"
-    " year = {2023},\n"
-    " doi = {10.1063/5.0156036},\n"
+std::string FixMBX::cite_pair_mbx = std::string(
+    "pair mbx command:\n\n" \
+    "@article{10.1063/5.0156036,\n" \
+    " author = {Riera, Marc and Knight, Christopher and Bull-Vulpe, Ethan F. and Zhu, Xuanyu and " \
+    "Agnew, Henry and Smith, Daniel G. A. and Simmonett, Andrew C. and Paesani, Francesco},\n" \
+    " title = \"{MBX: A many-body energy and force calculator for data-driven many-body " \
+    "simulations}\",\n" \
+    " journal = {The Journal of Chemical Physics},\n" \
+    " volume = {159},\n" \
+    " number = {5},\n" \
+    " pages = {054802},\n" \
+    " year = {2023},\n" \
+    " doi = {10.1063/5.0156036},\n" \
+    " version = {") + bblock::System::get_mbx_version() + "}\n"  \
     "}\n\n";
 
 /* ---------------------------------------------------------------------- */
