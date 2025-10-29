@@ -453,7 +453,7 @@ FixBondReact::FixBondReact(LAMMPS *lmp, int narg, char **arg) :
     int idx = 1;
     for (auto &atm : rxn.atoms) {
       atm.edge = 0;
-      atm.wildcard = 0;
+      atm.wildcard = false;
       atm.recharged = 1; // update all partial charges by default
       atm.deleted = 0;
       atm.created = 0;
@@ -1515,18 +1515,14 @@ void FixBondReact::make_a_guess(Superimpose &super, Reaction &rxn)
   if (assigned_count == nfirst_neighs) status = Status::GUESSFAIL;
 
   // check if all neigh atom types are the same between simulation and unreacted mol
-  std::vector<int> mol_types(nfirst_neighs), lcl_types(nfirst_neighs), shared_types;
+  std::multiset<int> mol_types, lcl_types;
   for (int i = 0; i < nfirst_neighs; i++) {
-    mol_types[i] = rxn.reactant->type[(int)rxn.reactant->special[sp.pion][i]-1];
-    lcl_types[i] = type[atom->map(xspecial[atom->map(sp.glove[sp.pion])][i])];
+    int imolatom = (int) rxn.reactant->special[sp.pion][i]-1;
+    if (!rxn.atoms[imolatom].wildcard) mol_types.insert(rxn.reactant->type[imolatom]);
+    lcl_types.insert(type[atom->map(xspecial[atom->map(sp.glove[sp.pion])][i])]);
   }
 
-  sort(mol_types.begin(), mol_types.end());
-  sort(lcl_types.begin(), lcl_types.end());
-  std::set_intersection(mol_types.begin(), mol_types.end(), lcl_types.begin(), lcl_types.end(),
-                        std::back_inserter(shared_types));
-
-  if (shared_types.size() != nfirst_neighs) {
+  if (!std::includes(lcl_types.begin(), lcl_types.end(), mol_types.begin(), mol_types.end())) {
     status = Status::GUESSFAIL;
     return;
   }
@@ -1815,7 +1811,7 @@ check if an atom type matches that of a reactant atom
 bool FixBondReact::compare_atomtype(int checktype, Reaction &rxn, int reactant_atom)
 {
   int iatom = reactant_atom - 1; // index of reactant atom
-  if (checktype == rxn.reactant->type[iatom] || rxn.atoms[iatom].wildcard == 1) return true;
+  if (checktype == rxn.reactant->type[iatom] || rxn.atoms[iatom].wildcard) return true;
   else return false;
 }
 
@@ -3161,7 +3157,7 @@ void FixBondReact::update_everything()
           if (stabilization_flag == 1) i_statted_tags[ilocal] = 0;
           i_react_tags[ilocal] = rxn.ID;
 
-          if (rxn.atoms[j].landlocked == 1 && rxn.atoms[j].wildcard == 0)
+          if (rxn.atoms[j].landlocked == 1 && !rxn.atoms[j].wildcard)
             type[ilocal] = rxn.product->type[j];
           if (rxn.product->qflag && atom->q_flag && rxn.atoms[jj].recharged == 1) {
             double *q = atom->q;
@@ -3306,7 +3302,7 @@ void FixBondReact::update_everything()
               int batom = rxn.product->bond_atom[j][p];
               int ibatom = rxn.atoms[batom-1].amap[1]-1;
               int btag = update_mega_glove[ibatom+1][i];
-              if (rxn.atoms[jj].wildcard == 1 || rxn.atoms[ibatom].wildcard == 1) {
+              if (rxn.atoms[jj].wildcard || rxn.atoms[ibatom].wildcard) {
                 int blocal = atom->map(btag);
                 if (blocal < 0) error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                 int btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
@@ -3329,7 +3325,7 @@ void FixBondReact::update_everything()
                 int ibatom = rxn.atoms[batom-1].amap[1]-1;
                 int btag = update_mega_glove[ibatom+1][i];
                 insert_num = num_bond[jjlocal];
-                if (rxn.atoms[jj].wildcard == 1 || rxn.atoms[ibatom].wildcard == 1) {
+                if (rxn.atoms[jj].wildcard || rxn.atoms[ibatom].wildcard) {
                   int blocal = atom->map(btag);
                   if (blocal < 0) error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                   int btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
@@ -3418,9 +3414,9 @@ void FixBondReact::update_everything()
                   int atag1 = update_mega_glove[iaatom1+1][i];
                   int atag2 = update_mega_glove[iaatom2+1][i];
                   int atag3 = update_mega_glove[iaatom3+1][i];
-                  if (rxn.atoms[iaatom1].wildcard == 1 ||
-                      rxn.atoms[iaatom2].wildcard == 1 ||
-                      rxn.atoms[iaatom3].wildcard == 1) {
+                  if (rxn.atoms[iaatom1].wildcard ||
+                      rxn.atoms[iaatom2].wildcard ||
+                      rxn.atoms[iaatom3].wildcard) {
                     int alocal1 = atom->map(atag1);
                     int alocal2 = atom->map(atag2);
                     int alocal3 = atom->map(atag3);
@@ -3452,9 +3448,9 @@ void FixBondReact::update_everything()
                     int atag2 = update_mega_glove[iaatom2+1][i];
                     int atag3 = update_mega_glove[iaatom3+1][i];
                     insert_num = num_angle[jjlocal];
-                    if (rxn.atoms[iaatom1].wildcard == 1 ||
-                        rxn.atoms[iaatom2].wildcard == 1 ||
-                        rxn.atoms[iaatom3].wildcard == 1) {
+                    if (rxn.atoms[iaatom1].wildcard ||
+                        rxn.atoms[iaatom2].wildcard ||
+                        rxn.atoms[iaatom3].wildcard) {
                       int alocal1 = atom->map(atag1);
                       int alocal2 = atom->map(atag2);
                       int alocal3 = atom->map(atag3);
@@ -3548,10 +3544,10 @@ void FixBondReact::update_everything()
                   int tag2 = update_mega_glove[iatom2+1][i];
                   int tag3 = update_mega_glove[iatom3+1][i];
                   int tag4 = update_mega_glove[iatom4+1][i];
-                  if (rxn.atoms[iatom1].wildcard == 1 ||
-                      rxn.atoms[iatom2].wildcard == 1 ||
-                      rxn.atoms[iatom3].wildcard == 1 ||
-                      rxn.atoms[iatom4].wildcard == 1) {
+                  if (rxn.atoms[iatom1].wildcard ||
+                      rxn.atoms[iatom2].wildcard ||
+                      rxn.atoms[iatom3].wildcard ||
+                      rxn.atoms[iatom4].wildcard) {
                     int local1 = atom->map(tag1);
                     int local2 = atom->map(tag2);
                     int local3 = atom->map(tag3);
@@ -3589,10 +3585,10 @@ void FixBondReact::update_everything()
                     int tag3 = update_mega_glove[iatom3+1][i];
                     int tag4 = update_mega_glove[iatom4+1][i];
                     insert_num = num_dihedral[jjlocal];
-                    if (rxn.atoms[iatom1].wildcard == 1 ||
-                        rxn.atoms[iatom2].wildcard == 1 ||
-                        rxn.atoms[iatom3].wildcard == 1 ||
-                        rxn.atoms[iatom4].wildcard == 1) {
+                    if (rxn.atoms[iatom1].wildcard ||
+                        rxn.atoms[iatom2].wildcard ||
+                        rxn.atoms[iatom3].wildcard ||
+                        rxn.atoms[iatom4].wildcard) {
                       int local1 = atom->map(tag1);
                       int local2 = atom->map(tag2);
                       int local3 = atom->map(tag3);
@@ -3688,10 +3684,10 @@ void FixBondReact::update_everything()
                   int tag2 = update_mega_glove[iatom2+1][i];
                   int tag3 = update_mega_glove[iatom3+1][i];
                   int tag4 = update_mega_glove[iatom4+1][i];
-                  if (rxn.atoms[iatom1].wildcard == 1 ||
-                      rxn.atoms[iatom2].wildcard == 1 ||
-                      rxn.atoms[iatom3].wildcard == 1 ||
-                      rxn.atoms[iatom4].wildcard == 1) {
+                  if (rxn.atoms[iatom1].wildcard ||
+                      rxn.atoms[iatom2].wildcard ||
+                      rxn.atoms[iatom3].wildcard ||
+                      rxn.atoms[iatom4].wildcard) {
                     int local1 = atom->map(tag1);
                     int local2 = atom->map(tag2);
                     int local3 = atom->map(tag3);
@@ -3729,10 +3725,10 @@ void FixBondReact::update_everything()
                     int tag3 = update_mega_glove[iatom3+1][i];
                     int tag4 = update_mega_glove[iatom4+1][i];
                     insert_num = num_improper[jjlocal];
-                    if (rxn.atoms[iatom1].wildcard == 1 ||
-                        rxn.atoms[iatom2].wildcard == 1 ||
-                        rxn.atoms[iatom3].wildcard == 1 ||
-                        rxn.atoms[iatom4].wildcard == 1) {
+                    if (rxn.atoms[iatom1].wildcard ||
+                        rxn.atoms[iatom2].wildcard ||
+                        rxn.atoms[iatom3].wildcard ||
+                        rxn.atoms[iatom4].wildcard) {
                       int local1 = atom->map(tag1);
                       int local2 = atom->map(tag2);
                       int local3 = atom->map(tag3);
@@ -4354,7 +4350,7 @@ void FixBondReact::ReadWildcards(char *line, Reaction &rxn, int nwild)
     sscanf(line,"%d",&tmp);
     if (tmp > rxn.reactant->natoms)
       error->one(FLERR,"Bond/react: Invalid template atom ID in map file");
-    rxn.atoms[tmp-1].wildcard = 1;
+    rxn.atoms[tmp-1].wildcard = true;
   }
 }
 

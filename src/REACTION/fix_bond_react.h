@@ -107,7 +107,7 @@ class FixBondReact : public Fix {
     struct ReactionAtomFlags {
       int edge;                                            // true if atom in molecule template has incorrect valency
       int landlocked;                                      // true if atom is at least three bonds away from edge atoms
-      int wildcard;                                        // true if atom type contains a wildcard
+      bool wildcard;                                       // true if atom type contains a wildcard
       int recharged;                                       // true if atom whose charge should be updated
       int deleted;                                         // true if atom in pre-reacted template to delete
       int created;                                         // true if atom in post-reacted template to create
