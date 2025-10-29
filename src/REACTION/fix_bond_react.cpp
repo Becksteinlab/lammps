@@ -3317,9 +3317,9 @@ void FixBondReact::update_everything()
               int btag = update_mega_glove[ibatom+1][i];
               if (rxn.atoms[jj].wildcard == 1 || rxn.atoms[ibatom].wildcard == 1) {
                 int blocal = atom->map(btag);
-                if (blocal < 0) error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                if (blocal < 0) error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                 int btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
-                if (btype == -1) error->all(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
+                if (btype == -1) error->one(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
                 bond_type[jjlocal][p] = btype;
               } else {
                 bond_type[jjlocal][p] = rxn.product->bond_type[j][p];
@@ -3340,9 +3340,9 @@ void FixBondReact::update_everything()
                 insert_num = num_bond[jjlocal];
                 if (rxn.atoms[jj].wildcard == 1 || rxn.atoms[ibatom].wildcard == 1) {
                   int blocal = atom->map(btag);
-                  if (blocal < 0) error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                  if (blocal < 0) error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                   int btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
-                  if (btype == -1) error->all(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
+                  if (btype == -1) error->one(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
                   bond_type[jjlocal][insert_num] = btype;
                 } else {
                   bond_type[jjlocal][insert_num] = rxn.product->bond_type[j][p];
@@ -3434,9 +3434,9 @@ void FixBondReact::update_everything()
                     int alocal2 = atom->map(atag2);
                     int alocal3 = atom->map(atag3);
                     if (alocal1 < 0 || alocal2 < 0 || alocal3 < 0)
-                      error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                      error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                     int atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
-                    if (atype == -1) error->all(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
+                    if (atype == -1) error->one(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
                     angle_type[jjlocal][p] = atype;
                   } else {
                     angle_type[jjlocal][p] = rxn.product->angle_type[j][p];
@@ -3468,9 +3468,9 @@ void FixBondReact::update_everything()
                       int alocal2 = atom->map(atag2);
                       int alocal3 = atom->map(atag3);
                       if (alocal1 < 0 || alocal2 < 0 || alocal3 < 0)
-                        error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                        error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                       int atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
-                      if (atype == -1) error->all(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
+                      if (atype == -1) error->one(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
                       angle_type[jjlocal][insert_num] = atype;
                     } else {
                       angle_type[jjlocal][insert_num] = rxn.product->angle_type[j][p];
@@ -3566,9 +3566,9 @@ void FixBondReact::update_everything()
                     int local3 = atom->map(tag3);
                     int local4 = atom->map(tag4);
                     if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
-                      error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                      error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                     int dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
-                    if (dtype == -1) error->all(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
+                    if (dtype == -1) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
                     dihedral_type[jjlocal][p] = dtype;
                   } else {
                     dihedral_type[jjlocal][p] = rxn.product->dihedral_type[j][p];
@@ -3607,9 +3607,9 @@ void FixBondReact::update_everything()
                       int local3 = atom->map(tag3);
                       int local4 = atom->map(tag4);
                       if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
-                        error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                        error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                       int dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
-                      if (dtype == -1) error->all(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
+                      if (dtype == -1) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
                       dihedral_type[jjlocal][insert_num] = dtype;
                     } else {
                       dihedral_type[jjlocal][insert_num] = rxn.product->dihedral_type[j][p];
@@ -3706,9 +3706,9 @@ void FixBondReact::update_everything()
                     int local3 = atom->map(tag3);
                     int local4 = atom->map(tag4);
                     if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
-                      error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                      error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                     int itype = atom->lmap->infer_impropertype(type[local1],type[local2],type[local3],type[local4]);
-                    if (itype == -1) error->all(FLERR,"Bond/react: Unable to infer improper type from wildcard atoms");
+                    if (itype == -1) error->one(FLERR,"Bond/react: Unable to infer improper type from wildcard atoms");
                     improper_type[jjlocal][p] = itype;
                   } else {
                     improper_type[jjlocal][p] = rxn.product->improper_type[j][p];
@@ -3747,9 +3747,9 @@ void FixBondReact::update_everything()
                       int local3 = atom->map(tag3);
                       int local4 = atom->map(tag4);
                       if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
-                        error->all(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
+                        error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
                       int itype = atom->lmap->infer_impropertype(type[local1],type[local2],type[local3],type[local4]);
-                      if (itype == -1) error->all(FLERR,"Bond/react: Unable to infer improper type from wildcard atoms");
+                      if (itype == -1) error->one(FLERR,"Bond/react: Unable to infer improper type from wildcard atoms");
                       improper_type[jjlocal][insert_num] = itype;
                     } else {
                       improper_type[jjlocal][insert_num] = rxn.product->improper_type[j][p];
