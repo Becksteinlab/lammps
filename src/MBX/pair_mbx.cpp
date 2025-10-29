@@ -352,12 +352,10 @@ void PairMBX::accumulate_f(bool include_ext)
           f[ii][1] -= grads[indx++];
           f[ii][2] -= grads[indx++];
         }
-#ifndef _DEBUG_EFIELD
       } else if (is_ext) {
         f[i][0] -= grads_ext[indx_ext++];
         f[i][1] -= grads_ext[indx_ext++];
         f[i][2] -= grads_ext[indx_ext++];
-#endif
       }
 
     }    // if(anchor)
@@ -433,12 +431,10 @@ void PairMBX::accumulate_f_all(bool include_ext)
           f[ii][1] -= grads[indx++];
           f[ii][2] -= grads[indx++];
         }
-#ifndef _DEBUG_EFIELD
       } else if (is_ext) {
         f[i][0] -= grads_ext[indx_ext++];
         f[i][1] -= grads_ext[indx_ext++];
         f[i][2] -= grads_ext[indx_ext++];
-#endif
       }
 
     }    // if(anchor)
@@ -516,12 +512,10 @@ void PairMBX::accumulate_f_local(bool include_ext)
           f[ii][1] -= grads[indx++];
           f[ii][2] -= grads[indx++];
         }
-#ifndef _DEBUG_EFIELD
       } else if (is_ext) {
         f[i][0] -= grads_ext[indx_ext++];
         f[i][1] -= grads_ext[indx_ext++];
         f[i][2] -= grads_ext[indx_ext++];
-#endif
       }
 
     }    // if(anchor)

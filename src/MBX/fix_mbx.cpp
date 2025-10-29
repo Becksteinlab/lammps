@@ -44,8 +44,6 @@
 
 //#define _DEBUG
 
-//#define _DEBUG_EFIELD
-
 namespace LAMMPS_NS {
 //PImpl idiom to hide MBX implementation details
 struct MBXImpl {
@@ -1223,7 +1221,6 @@ void FixMBX::mbx_init()
       }
 
       // test if external charged particle
-#ifndef _DEBUG_EFIELD
       if (strcmp("dp1", mol_names[mtype]) == 0) {
         add_monomer = false;
 
@@ -1239,9 +1236,6 @@ void FixMBX::mbx_init()
         // add info for monomer
 
       } else if (add_monomer) {
-#else
-      if (add_monomer) {
-#endif
         // add coordinates
 
         xyz.push_back(x[i][0] - xlo);
@@ -1313,11 +1307,9 @@ void FixMBX::mbx_init()
   }
 
   // load external charged particles
-#ifndef _DEBUG_EFIELD
   if (mbx_num_ext > 0) {
     mbx_impl->ptr_mbx->SetExternalChargesAndPositions(chg_ext, xyz_ext, islocal_ext, tag_ext);
   }
-#endif
 
   // setup MBX solver(s); need to keep pbc turned off, which currently disables electrostatic solver
 
@@ -1448,7 +1440,6 @@ void FixMBX::mbx_init_local()
       }
 
       // test if external charged particle
-#ifndef _DEBUG_EFIELD
       if (strcmp("dp1", mol_names[mtype]) == 0) {
         add_monomer = false;
 
@@ -1464,9 +1455,6 @@ void FixMBX::mbx_init_local()
         // add info for monomer
 
       } else if (add_monomer) {
-#else
-      if (add_monomer) {
-#endif
         // add coordinates
 
         xyz.push_back(x[i][0] - xlo);
@@ -1530,11 +1518,9 @@ void FixMBX::mbx_init_local()
   }
 
   // load external charged particles
-#ifndef _DEBUG_EFIELD
   if (mbx_num_ext_local > 0) {
     mbx_impl->ptr_mbx_local->SetExternalChargesAndPositions(chg_ext, xyz_ext, islocal_ext, tag_ext);
   }
-#endif
 
   std::vector<double> box;
 
@@ -1669,7 +1655,6 @@ void FixMBX::mbx_update_xyz()
       }
 
       // test if external charged particle
-#ifndef _DEBUG_EFIELD
       if (strcmp("dp1", mol_names[mtype]) == 0) {
         add_monomer = false;
 
@@ -1683,9 +1668,6 @@ void FixMBX::mbx_update_xyz()
         // add info for monomer
 
       } else if (add_monomer) {
-#else
-      if (add_monomer) {
-#endif
         // add coordinates
 
         xyz[indx * 3] = x[i][0] - xlo;
@@ -1812,7 +1794,6 @@ void FixMBX::mbx_update_xyz_local()
       }
 
       // test if external charged particle
-#ifndef _DEBUG_EFIELD
       if (strcmp("dp1", mol_names[mtype]) == 0) {
         add_monomer = false;
 
@@ -1826,9 +1807,6 @@ void FixMBX::mbx_update_xyz_local()
         // add info for monomer
 
       } else if (add_monomer) {
-#else
-      if (add_monomer) {
-#endif
         // add coordinates
 
         xyz[indx * 3] = x[i][0] - xlo;
@@ -2163,12 +2141,10 @@ int FixMBX::get_include_monomer(char *name, int anchor, bool &inc, bool &inc_e)
     }
   }
 
-#ifndef _DEBUG_EFIELD
   if (strcmp("dp1", name) == 0) {
     inc = false;
     inc_e = true;
   }
-#endif
 
   return na;
 }

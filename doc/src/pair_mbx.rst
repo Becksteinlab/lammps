@@ -36,6 +36,7 @@ Examples
 
     # For a system involving water (atom types O=12, H=13) in a hybrid simulation
     # with special_bonds and coul/exclude to exclude 1-2, 1-3, and 1-4 electrostatics
+    # for the charmm framework
     special_bonds   charmm
     pair_style      hybrid/overlay mbx 9.0 lj/cut 9.0 coul/exclude 9.0
     pair_coeff      * * mbx 2 dp1 1*11 h2o 12 13 13 json mbx.json
