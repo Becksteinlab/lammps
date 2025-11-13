@@ -296,9 +296,9 @@ void FixWidom::init()
 
   if (region) {
     if (region->bboxflag == 0)
-      error->all(FLERR,"Fix gcmc region does not support a bounding box");
+      error->all(FLERR,"Fix widom region does not support a bounding box");
     if (region->dynamic_check())
-      error->all(FLERR,"Fix gcmc region cannot be dynamic");
+      error->all(FLERR,"Fix widom region cannot be dynamic");
 
     region_xlo = region->extent_xlo;
     region_xhi = region->extent_xhi;

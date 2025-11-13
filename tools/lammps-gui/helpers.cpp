@@ -21,6 +21,7 @@
 #include <QFileInfo>
 #include <QPalette>
 #include <QProcess>
+#include <QRegularExpression>
 #include <QStringList>
 #include <QWidget>
 
@@ -57,8 +58,13 @@ int date_compare(const QString &one, const QString &two)
     if (one == two) return 0;
 
     // split string into words and check each of them
+#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
     auto onelist = one.split(" ", Qt::SkipEmptyParts);
     auto twolist = two.split(" ", Qt::SkipEmptyParts);
+#else
+    auto onelist = one.split(" ", QString::SkipEmptyParts);
+    auto twolist = two.split(" ", QString::SkipEmptyParts);
+#endif
     if (onelist.size() != 3) return -1;
     if (twolist.size() != 3) return 1;
 
@@ -194,9 +200,12 @@ bool has_exe(const QString &exe)
     if (!findProcess.waitForFinished()) return false; // Not found or which does not work
 
     QString retStr(findProcess.readAll());
-    retStr = retStr.trimmed();
 
-    QFile file(retStr);
+    // truncate multi-line output to first line
+    auto idx = retStr.indexOf(QRegularExpression("[\n\r]"), 0);
+    if (idx > 0) retStr.truncate(idx);
+
+    QFile file(retStr.trimmed());
     QFileInfo check_file(file);
     return (check_file.exists() && check_file.isFile());
 }

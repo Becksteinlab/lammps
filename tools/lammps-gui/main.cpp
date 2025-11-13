@@ -36,12 +36,13 @@ int main(int argc, char *argv[])
     qRegisterMetaTypeStreamOperators<QList<QString>>("QList<QString>");
 #endif
 
-#ifndef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
+    // macOS does not support the "C" locale with UTF-8 encoding,
+    // Since Qt requires UTF-8 we use "en_US" instead.
+    qputenv("LC_ALL", "en_US.UTF-8");
+#else
     // enforce using the plain ASCII C locale with UTF-8 encoding within the GUI.
     qputenv("LC_ALL", "C.UTF-8");
-#else
-    // macOS does not support "C" locale with UTF-8 encoding, but Qt requires UTF-8
-    qputenv("LC_ALL", "en_US.UTF-8");
 #endif
 
     // disable processor affinity for threads by default
@@ -73,6 +74,8 @@ int main(int argc, char *argv[])
 
     parser.addHelpOption();
     parser.addVersionOption();
+    parser.addOptions({{{"x","width"}, "Override LAMMPS-GUI editor window width", "width"},
+                       {{"y","height"},"Override LAMMPS-GUI editor window height", "height"}});
     parser.addPositionalArgument("file", "The LAMMPS input file to open (optional).");
     parser.process(app);
 
@@ -88,9 +91,12 @@ int main(int argc, char *argv[])
 #endif
 
     QString infile;
+    QStringList flags = parser.optionNames();
+    int width = parser.value("width").toInt();
+    int height = parser.value("height").toInt();
     QStringList args = parser.positionalArguments();
     if (!args.empty()) infile = args[0];
-    LammpsGui w(nullptr, infile);
+    LammpsGui w(nullptr, infile, width, height);
     w.show();
     return app.exec();
 }

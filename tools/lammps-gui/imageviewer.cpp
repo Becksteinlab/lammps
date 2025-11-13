@@ -465,14 +465,14 @@ void ImageViewer::toggle_axes()
 void ImageViewer::do_zoom_in()
 {
     zoom = zoom * 1.1;
-    zoom = std::min(zoom, 5.0);
+    zoom = std::min(zoom, 10.0);
     createImage();
 }
 
 void ImageViewer::do_zoom_out()
 {
     zoom = zoom / 1.1;
-    zoom = std::max(zoom, 0.5);
+    zoom = std::max(zoom, 0.25);
     createImage();
 }
 
@@ -619,6 +619,8 @@ void ImageViewer::createImage()
     }
 
     QSettings settings;
+    // attempt to clean up if a previous write_dump command failed
+    lammps->command("if $(is_defined(dump,WRITE_DUMP)) then 'undump WRITE_DUMP'");
     QString dumpcmd = QString("write_dump ") + group + " image ";
     QDir dumpdir(QDir::tempPath());
     QFile dumpfile(dumpdir.absoluteFilePath(filename + ".ppm"));
@@ -635,7 +637,7 @@ void ImageViewer::createImage()
     QString elements = "element ";
     QString adiams;
     useelements = false;
-    if ((units == "real") || (units == "metal")) {
+    if (masses && ((units == "real") || (units == "metal"))) {
         useelements = true;
         for (int i = 1; i <= ntypes; ++i) {
             int idx = get_pte_from_mass(masses[i]);

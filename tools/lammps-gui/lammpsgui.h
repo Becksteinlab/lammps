@@ -69,7 +69,8 @@ class LammpsGui : public QMainWindow {
     friend class Preferences;
 
 public:
-    LammpsGui(QWidget *parent = nullptr, const QString &filename = QString());
+    LammpsGui(QWidget *parent = nullptr, const QString &filename = QString(), int width = 0,
+              int height = 0);
     ~LammpsGui() override;
 
     LammpsGui()                             = delete;
@@ -190,6 +191,8 @@ private:
 
 protected:
     int nthreads;
+    int mainx;
+    int mainy;
 };
 
 class TutorialWizard : public QWizard {

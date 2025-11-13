@@ -86,19 +86,20 @@ constexpr int MAX_DEFAULT_THREADS = 16;
 
 const QString blank(" ");
 const QString citeme("# When using LAMMPS-GUI in your project, please cite: "
-                     "https://arxiv.org/abs/2503.14020\n");
+                     "https://doi.org/10.33011/livecoms.6.1.3037\n");
 const QString bannerstyle("CodeEditor {background-position: center center; "
                           "padding: 0px; "
                           "background-repeat: no-repeat; "
                           "background-image: url(:/icons/lammps-gui-banner.png);}");
 } // namespace
 
-LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
+LammpsGui::LammpsGui(QWidget *parent, const QString &filename, int width, int height) :
     QMainWindow(parent), ui(new Ui::LammpsGui), highlighter(nullptr), capturer(nullptr),
     status(nullptr), cpuuse(nullptr), logwindow(nullptr), imagewindow(nullptr),
     chartwindow(nullptr), slideshow(nullptr), logupdater(nullptr), dirstatus(nullptr),
     progress(nullptr), prefdialog(nullptr), lammpsstatus(nullptr), varwindow(nullptr),
-    wizard(nullptr), runner(nullptr), is_running(false), run_counter(0)
+    wizard(nullptr), runner(nullptr), is_running(false), run_counter(0), nthreads(1), mainx(width),
+    mainy(height)
 {
     docver = "";
     ui->setupUi(this);
@@ -136,13 +137,13 @@ LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
         // we prefer the current directory, then the dynamic library path, then system folders
 
         QStringList dirlist{"."};
-#ifdef Q_OS_MACOS
+#if defined(Q_OS_MACOS)
         QStringList filter("liblammps*.dylib");
         dirlist.append(
             QString::fromLocal8Bit(qgetenv("DYLD_LIBRARY_PATH")).split(":", Qt::SkipEmptyParts));
         dirlist.append({"/Applications/LAMMPS.app/Contents/Frameworks",
                         "/Applications/LAMMPS-GUI.app/Contents/Frameworks"});
-#elif Q_OS_WIN32
+#elif defined(Q_OS_WIN32)
         QStringList filter("liblammps*.dll");
         dirlist.append(QString::fromLocal8Bit(qgetenv("PATH")).split(";", Qt::SkipEmptyParts));
 #else
@@ -183,9 +184,9 @@ LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
             settings.remove("plugin_path");
             QMessageBox::critical(
                 this, "Error",
-                "Cannot open LAMMPS shared library file or provided path has an incompatible "
-                "version.\n\nPlease try again and use the -p command line flag to specify a "
-                "path to a suitable LAMMPS shared library file.");
+                "Cannot open a LAMMPS shared library file or the provided path has an "
+                "incompatible LAMMPS version.\n\nPlease try again and use the -p command line "
+                "flag to specify a path to a suitable LAMMPS shared library file.");
             exit(1);
         }
 
@@ -238,7 +239,6 @@ LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
     // Default is to use OMP_NUM_THREADS setting, if that is not available, thenhalf of max
     // (assuming hyper-threading is enabled) and no more than MAX_DEFAULT_THREADS (=16).
     // This is only if there is no preference set but do not override OMP_NUM_THREADS
-    nthreads = 1;
 #if defined(_OPENMP)
     int default_threads = std::min(QThread::idealThreadCount() / 2, MAX_DEFAULT_THREADS);
     default_threads     = std::max(default_threads, 1);
@@ -406,7 +406,12 @@ LammpsGui::LammpsGui(QWidget *parent, const QString &filename) :
     } else {
         setWindowTitle("LAMMPS-GUI - Editor - *unknown*");
     }
-    resize(settings.value("mainx", "500").toInt(), settings.value("mainy", "320").toInt());
+    // set width and height of main window.
+    // use last values unless overridden from command-line
+    // do not accept an geometry smaller than 800x400
+    if (mainx < 800) mainx = settings.value("mainx", "800").toInt();
+    if (mainy < 400) mainy = settings.value("mainy", "400").toInt();
+    resize(mainx, mainy);
 
     // start LAMMPS and initialize command completion
     start_lammps();
@@ -593,51 +598,61 @@ void LammpsGui::get_directory()
 
 void LammpsGui::start_exe()
 {
-    if (!lammps.extract_setting("box_exists")) return;
     auto *act = qobject_cast<QAction *>(sender());
     if (act) {
-        auto exe        = act->data().toString();
-        QString datacmd = "write_data '";
-        QDir datadir(QDir::tempPath());
-        QFile datafile(datadir.absoluteFilePath(current_file + ".data"));
-        datacmd += datafile.fileName() + "'";
-        if (exe == "vmd") {
-            QStringList args;
-            QFile vmdfile(datadir.absoluteFilePath("tmp-loader.vmd"));
-            vmdfile.open(QIODevice::WriteOnly);
-            vmdfile.write("package require topotools\n");
-            vmdfile.write("topo readlammpsdata {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write("}\ntopo guessatom lammps data\n");
-            vmdfile.write("animate write psf {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".psf}\nanimate write dcd {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".dcd}\nmol delete top\nmol new {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".psf} type psf waitfor all\nmol addfile {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".dcd} type dcd waitfor all\nfile delete {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write("} {");
-            vmdfile.write(vmdfile.fileName().toLocal8Bit());
-            vmdfile.write("} {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".dcd} {");
-            vmdfile.write(datafile.fileName().toLocal8Bit());
-            vmdfile.write(".psf}\n");
-            vmdfile.close();
-            args << "-e" << vmdfile.fileName();
-            lammps.command(datacmd);
-            auto *vmd = new QProcess(this);
-            vmd->start(exe, args);
-        }
-        if (exe == "ovito") {
-            QStringList args;
-            args << datafile.fileName();
-            lammps.command(datacmd);
-            auto *ovito = new QProcess(this);
-            ovito->start(exe, args);
+        auto exe = act->data().toString();
+        QStringList args;
+        if (lammps.extract_setting("box_exist")) {
+            QString datacmd = "write_data '";
+            QDir datadir(QDir::tempPath());
+            QFile datafile(datadir.absoluteFilePath(current_file + ".data"));
+            datacmd += datafile.fileName() + "'";
+            if (exe == "vmd") {
+                QFile vmdfile(datadir.absoluteFilePath("tmp-loader.vmd"));
+                if (vmdfile.open(QIODevice::WriteOnly)) {
+                    vmdfile.write("package require topotools\n");
+                    vmdfile.write("topo readlammpsdata {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write("}\ntopo guessatom lammps data\n");
+                    vmdfile.write("animate write psf {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".psf}\nanimate write dcd {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".dcd}\nmol delete top\nmol new {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".psf} type psf waitfor all\nmol addfile {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".dcd} type dcd waitfor all\nfile delete {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write("} {");
+                    vmdfile.write(vmdfile.fileName().toLocal8Bit());
+                    vmdfile.write("} {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".dcd} {");
+                    vmdfile.write(datafile.fileName().toLocal8Bit());
+                    vmdfile.write(".psf}\n");
+                    vmdfile.close();
+                    args << "-e" << vmdfile.fileName();
+                    lammps.command(datacmd);
+                    auto *vmd = new QProcess(this);
+                    vmd->start(exe, args);
+                } else {
+                    QMessageBox::warning(this, "LAMMPS-GUI Error",
+                                         "Cannot create temporary file for loading system in VMD " +
+                                             vmdfile.errorString());
+                }
+            }
+            if (exe == "ovito") {
+                QStringList args;
+                args << datafile.fileName();
+                lammps.command(datacmd);
+                auto *ovito = new QProcess(this);
+                ovito->start(exe, args);
+            }
+        } else {
+            // launch program without arguments when no system exists (yet)
+            auto *proc = new QProcess(this);
+            proc->start(exe, args);
         }
     }
 }

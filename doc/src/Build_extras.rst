@@ -206,6 +206,17 @@ have to set appropriate environment variables. Some variables such as
 ``HCC_AMDGPU_TARGET`` (for ROCm <= 4.0) or ``CUDA_PATH`` are
 necessary for ``hipcc`` and the linker to work correctly.
 
+When compiling for HIP ROCm, GPU sorting with ``-D
+HIP_USE_DEVICE_SORT=on`` requires installing the ``hipcub`` library
+(https://github.com/ROCmSoftwarePlatform/hipCUB).  The HIP CUDA-backend
+additionally requires CUB (https://nvidia.github.io/cccl/cub/).  Setting
+``-DDOWNLOAD_CUB=yes`` will download and compile CUB.
+
+The GPU library has some multi-thread support using OpenMP.  If LAMMPS
+is built with ``-D BUILD_OMP=on`` this will also be enabled.
+
+For a debug build, set ``GPU_DEBUG`` to be ``yes``.
+
 .. versionadded:: 3Aug2022
 
 Using the CHIP-SPV implementation of HIP is supported. It allows one to
