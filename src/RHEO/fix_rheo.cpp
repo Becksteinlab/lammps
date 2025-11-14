@@ -125,7 +125,7 @@ FixRHEO::FixRHEO(LAMMPS *lmp, int narg, char **arg) :
           shift_cross_type_flag = 1;
           shift_scale = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
           shift_cmin = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
-          shift_wmin = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
+          shift_rmin = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
           iarg += 3;
         } else if (strcmp(arg[iarg + 1], "exclude/type") == 0) {
           if (iarg + 2 >= narg) utils::missing_cmd_args(FLERR, "fix rheo shift exclude/type", error);
