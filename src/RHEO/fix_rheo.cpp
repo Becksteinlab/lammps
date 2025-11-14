@@ -159,7 +159,7 @@ FixRHEO::FixRHEO(LAMMPS *lmp, int narg, char **arg) :
     } else if (strcmp(arg[iarg], "rho/sum") == 0) {
       rhosum_flag = 1;
       while (iarg < narg) {  // optional sub-arguments
-        if (strcmp(arg[iarg], "self/mass") == 0) {
+        if (strcmp(arg[iarg + 1], "self/mass") == 0) {
           rhosum_self_mass_flag = 1;
         } else {
           break;
