@@ -134,11 +134,10 @@ if((CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minform=severe")
 endif()
 
-# silence nvcc warnings
-if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND NOT
-    ((CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    OR (CMAKE_CXX_COMPILER_ID STREQUAL "XLClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "CrayClang")))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128")
+# silence nvcc warnings when using nvcc_wrapper
+get_filename_component(LAMMPS_CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME CACHE)
+if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND (LAMMPS_CXX_COMPILER_NAME STREQUAL "nvcc_wrapper"))
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128,--diag_suppress=186")
 endif()
 
 # we *require* C++11 without extensions but prefer C++17.
