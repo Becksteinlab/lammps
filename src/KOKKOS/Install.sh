@@ -185,6 +185,8 @@ action fix_nve_limit_kokkos.cpp
 action fix_nve_limit_kokkos.h
 action fix_nve_sphere_kokkos.cpp
 action fix_nve_sphere_kokkos.h
+action fix_nve_asphere_kokkos.cpp fix_nve_asphere.cpp
+action fix_nve_asphere_kokkos.h fix_nve_asphere.h
 action fix_nvt_kokkos.cpp
 action fix_nvt_kokkos.h
 action fix_nvt_sllod_kokkos.cpp
@@ -245,6 +247,7 @@ action kokkos_few.h
 action kokkos_type.h
 action kokkos.cpp
 action kokkos.h
+action math_extra_kokkos.h
 action math_special_kokkos.cpp
 action math_special_kokkos.h
 action meam_dens_final_kokkos.h meam_dens_final.cpp
