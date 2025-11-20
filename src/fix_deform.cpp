@@ -57,6 +57,7 @@ irregular(nullptr), set(nullptr)
   end_flag = 1;
   need_flip_change = 0;
   allow_flip_change = 1;
+  couple_directions = 0;
 
   nevery = utils::inumeric(FLERR, arg[3], false, lmp);
   if (nevery < 0) error->all(FLERR, "Fix {} Nevery must be >= 0", style);
@@ -269,6 +270,20 @@ irregular(nullptr), set(nullptr)
     error->all(FLERR, "Cannot use fix {} tilt on a shrink-wrapped 2nd dim", style);
   if (set[5].style && (domain->boundary[1][0] >= 2 || domain->boundary[1][1] >= 2))
     error->all(FLERR, "Cannot use fix {} tilt on a shrink-wrapped 2nd dim", style);
+
+  // warn about couple=yes when x/y/z is not TRATE or xy/xz/yz is not ERATE
+
+  if (couple_directions && comm->me == 0) {
+    bool warn = false;
+    int i = 0;
+    for (; i < 3 && !warn; i++)
+      warn = !(set[i].style == TRATE || set[i].style == NONE);
+    for (; i < 6 && !warn; i++) 
+      warn = !(set[i].style == ERATE || set[i].style == NONE);
+    if (warn)
+      error->warning(FLERR, "fix {} couple yes only handles coupling between "
+                     "x/y/z trate and xy/xz/yz erate .", style);
+  }
 
   // apply scaling to FINAL,DELTA,VEL,WIGGLE since they have dist/vel units
 
@@ -511,28 +526,34 @@ void FixDeform::init()
     } else if (set[i].style == VEL) {
       set[i].tilt_stop = set[i].tilt_start + delt * set[i].vel;
     } else if (set[i].style == ERATE) {
-      // Account for effect of TRATE elongation on shearing
+      // Account for effect of TRATE elongation on shearing if required
       double arate = 0.0, brate = 0.0, h_bb;
       if (i == 3) {
-        if (set[1].style == TRATE) arate = set[1].rate;
-        if (set[2].style == TRATE) brate = set[2].rate;
+        if (couple_directions) {
+          if (set[1].style == TRATE) arate = set[1].rate;
+          if (set[2].style == TRATE) brate = set[2].rate;
+        }
         h_bb = set[2].hi_start - set[2].lo_start;
       }
       if (i == 4) {
-        if (set[0].style == TRATE) arate = set[0].rate;
-        if (set[2].style == TRATE) brate = set[2].rate;
+        if (couple_directions) {
+          if (set[0].style == TRATE) arate = set[0].rate;
+          if (set[2].style == TRATE) brate = set[2].rate;
+        }
         h_bb = set[2].hi_start - set[2].lo_start;
       }
       if (i == 5) {
-        if (set[0].style == TRATE) arate = set[0].rate;
-        if (set[1].style == TRATE) brate = set[1].rate;
+        if (couple_directions) {
+          if (set[0].style == TRATE) arate = set[0].rate;
+          if (set[1].style == TRATE) brate = set[1].rate;
+        }
         h_bb = set[1].hi_start - set[1].lo_start;
       }
       // TODO: set up/use a nearly_equal function for
       //       floating point comparisons?
       if (arate == 0.0) {
         if (brate == 0.0)
-          set[i].tilt_stop = set[i].rate * h_bb * delt;
+          set[i].tilt_stop = set[i].rate * h_bb * delt;   // Always the case if couple_directions == 0
         else
           set[i].tilt_stop = set[i].rate * h_bb / brate * (exp(brate * delt)-1.0);
       } else {
@@ -601,7 +622,7 @@ void FixDeform::init()
   // ERATE is accounted for if xz is also ERATE, so allow in that case
 
   if (set[3].style && set[5].style &&
-    !(set[3].style == ERATE && set[4].style == ERATE)
+    !(couple_directions && set[3].style == ERATE && set[4].style == ERATE)
   ) {
     int flag = 0;
     double lo,hi;
@@ -652,7 +673,7 @@ void FixDeform::init()
   for (int i = 3; i < 6; i++) {
     h_rate[i] = 0.0;
     if (set[i].style == FINAL || set[i].style == DELTA ||
-        set[i].style == VEL) {
+        set[i].style == VEL || (!couple_directions && set[i].style == ERATE)) {
       if (delt != 0.0)
         h_rate[i] = (set[i].tilt_stop - set[i].tilt_start) / delt;
       else h_rate[i] = 0.0;
@@ -678,7 +699,9 @@ void FixDeform::init()
 
   // Account for xy shear with yz tilt
 
-  if (set[5].style == ERATE && set[5].rate != 0.0 && set[4].style == ERATE) {
+  if (couple_directions && set[5].style == ERATE &&
+    set[5].rate != 0.0 && set[4].style == ERATE)
+  {
     h_rate[4] += set[5].rate*set[3].tilt_start;
     set[4].tilt_stop += calc_xz_correction(delt);
   }
@@ -727,23 +750,25 @@ void FixDeform::pre_exchange()
   if (flip == 0) return;
 
   // account for effect of box flip on h_rate
-  for (int i = 3; i < 6; i++) {
-    if (set[i].style == ERATE) {
-      double arate = 0.0;
-      if (i == 3) {
-        if (set[1].style == TRATE) arate = set[1].rate;
+  if (couple_directions) {
+    for (int i = 3; i < 6; i++) {
+      if (set[i].style == ERATE) {
+        double arate = 0.0;
+        if (i == 3) {
+          if (set[1].style == TRATE) arate = set[1].rate;
+        }
+        if (i == 4) {
+          if (set[0].style == TRATE) arate = set[0].rate;
+        }
+        if (i == 5) {
+          if (set[0].style == TRATE) arate = set[0].rate;
+        }
+        h_rate[i] += arate * (set[i].tilt_flip - set[i].tilt_target);
       }
-      if (i == 4) {
-        if (set[0].style == TRATE) arate = set[0].rate;
-      }
-      if (i == 5) {
-        if (set[0].style == TRATE) arate = set[0].rate;
-      }
-      h_rate[i] += arate * (set[i].tilt_flip - set[i].tilt_target);
     }
-  }
-  if (set[5].style == ERATE && set[5].rate != 0.0 && set[4].style == ERATE) {
-    h_rate[4] += set[5].rate*(set[3].tilt_flip - set[3].tilt_target);
+    if (set[5].style == ERATE && set[5].rate != 0.0 && set[4].style == ERATE) {
+      h_rate[4] += set[5].rate*(set[3].tilt_flip - set[3].tilt_target);
+    }
   }
 
   domain->yz = set[3].tilt_target = set[3].tilt_flip;
@@ -907,7 +932,7 @@ void FixDeform::apply_strain()
         double delt = (update->ntimestep - update->beginstep) * update->dt;
         set[i].tilt_target = set[i].tilt_start * exp(set[i].rate * delt);
         h_rate[i] = set[i].rate * domain->h[i];
-      } else if (set[i].style == ERATE) {
+      } else if (couple_directions && set[i].style == ERATE) {
         // solve ODE for a,b,c box vectors accounting for elongation caused by TRATE
         // this is needed for correct velocity remapping and correct calculation of
         //  the velocity gradient tensor from (h_rate * h_inv) under mixed flow.
@@ -959,8 +984,11 @@ void FixDeform::apply_strain()
     }
 
     // correct for effects of deformation on xz tilt
-    if (set[5].style == ERATE && set[5].rate != 0.0 && set[4].style == ERATE)
+    if (couple_directions && set[5].style == ERATE &&
+      set[5].rate != 0.0 && set[4].style == ERATE)
+    {
       set[4].tilt_target += calc_xz_correction(nsteps * dt);
+    }
   }
 }
 
@@ -1046,7 +1074,7 @@ void FixDeform::update_domain()
     for (int i = 3; i < 6; i++) {
       if (set[i].style == TRATE) {
         h_rate[i] = set[i].rate * domain->h[i];
-      } else if (set[i].style == ERATE) {
+      } else if (couple_directions && set[i].style == ERATE) {
         // solve ODE for a,b,c box vectors accounting for elongation caused by TRATE
         // this is needed for correct velocity remapping and correct calculation of
         //  the velocity gradient tensor from (h_rate * h_inv) under mixed flow.
@@ -1068,8 +1096,11 @@ void FixDeform::update_domain()
       }
     }
     // TODO: use nearly_equal for check on set[5].rate?
-    if (set[5].style == ERATE && set[5].rate != 0.0 && set[4].style == ERATE)
+    if (couple_directions && set[5].style == ERATE &&
+      set[5].rate != 0.0 && set[4].style == ERATE)
+    {
       h_rate[4] += set[5].rate*set[3].tilt_target;
+    }
   }
 
 
@@ -1404,6 +1435,10 @@ void FixDeform::options(int narg, char **arg)
         utils::missing_cmd_args(FLERR, fmt::format("fix {} {}", style, arg[iarg]), error);
       for (int i = 0; i < nskip; i++) leftover_iarg.push_back(iarg + i);
       iarg += nskip;
+    } else if (strcmp(arg[iarg], "couple") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, thiscmd + " couple", error);
+      couple_directions = utils::logical(FLERR, arg[iarg+1], false, lmp);
+      iarg += 2;
     } else error->all(FLERR, "Unknown fix {} keyword: {}", style, arg[iarg]);
   }
 }

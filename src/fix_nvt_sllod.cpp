@@ -128,37 +128,58 @@ void FixNVTSllod::init()
     if (f == nullptr) continue;
     if ((peculiar_flag && f->remapflag != Domain::NO_REMAP) ||
         (!peculiar_flag && f->remapflag != Domain::V_REMAP))
-      error->all(FLERR,"Using fix {} with inconsistent fix deform remap option", style);
+      error->all(FLERR,"Using fix {} with inconsistent fix {} remap option", style, f->style);
 
     if (integrator == REVERSIBLE) {
-      // error on unsupported mixed flows
-      bool elongation = false;
       if (comm->me == 0) {
+
+        // warn about flows which may produce a non-constant flow tensor
+        
         for (int j = 0; j < 3; ++j) {
-          if (f->set[j].style) {
-            elongation = true;
-            if (f->set[j].style != FixDeform::TRATE)
-              error->warning(FLERR,"fix {} expects the trate style for x/y/z deformation", style);
-          }
+          if (f->set[j].style && f->set[j].style != FixDeform::TRATE)
+            error->warning(FLERR,"Using non-constant strain rate with fix {}. "
+                           "Expect the trate style for x/y/z deformation", style);
         }
-      }
-      for (int j = 3; j < 6; ++j) {
-        if (f->set[j].style && f->set[j].style != FixDeform::ERATE) {
-          if (elongation) error->all(FLERR,"fix {} requires the erate style for "
-              "xy/xz/yz deformation under mixed shear/extensional flow", style);
-          else if (comm->me == 0)
-            error->warning(FLERR,"Using non-constant shear rate with fix nvt/sllod");
+
+        for (int j = 3; j < 6; ++j) {
+          if (f->set[j].style && f->set[j].style != FixDeform::ERATE)
+            error->warning(FLERR,"Using non-constant shear rate with fix {}. "
+                           "Expect the erate style for xy/xz/yz deformation", style);
         }
-      }
-      if (comm->me == 0) {
-        // warn about fix deform settings that do not produce a constant flow tensor
-        if (f->set[5].style && f->set[5].rate != 0.0 &&
-            (f->set[3].style || domain->yz != 0.0) &&
+
+        bool xy_shear_yz_tilt = (f->set[5].style && f->set[5].rate != 0.0 && (f->set[3].style || domain->yz != 0.0));
+        if (xy_shear_yz_tilt &&
             (f->set[4].style != FixDeform::ERATE ||
              f->set[5].style != FixDeform::ERATE ||
              (f->set[3].style && f->set[3].style != FixDeform::ERATE)))
-          error->warning(FLERR,"Shearing xy with a yz tilt is only handled correctly "
-              "if fix deform uses the erate style for xy, xz and yz");
+        {
+          error->warning(FLERR,"fix {} only handles shearing xy with a yz tilt correctly "
+              "if fix {} uses the erate style for xy, xz and yz.", style, f->style);
+        }
+
+        // warn when not using fix deform couple yes in situations where it is
+        // needed for constant flow tensor:
+        //  - xy shear with a possible yz tilt
+        //  - elongation of x or y with xy shear
+        //  - elongation of x or z with xz shear
+        //  - elongation of y or z with yz shear
+        //  - elongation of x with possible xy or xz tilt
+        //  - elongation of y with possible yz tilt
+        if (!f->couple_directions) {
+          if (xy_shear_yz_tilt)
+            error->warning(FLERR,"fix {} requires fix {} to use the couple yes option "
+                           "when xy is shearing with yz tilt or shear", style, f->style);
+          if (f->set[0].style && (domain->xy != 0.0 || domain->xz != 0.0 || f->set[4].style || f->set[5].style))
+            error->warning(FLERR,"fix {} requires fix {} to use the couple yes option "
+                           "under x elongation with xy or xz tilt or shear", style, f->style);
+          if (f->set[1].style && (domain->yz != 0.0 || f->set[3].style || f->set[5].style))
+            error->warning(FLERR,"fix {} requires fix {} to use the couple yes option "
+                           "under y elongation with xy shear or yz tilt or shear", style, f->style);
+          if (f->set[2].style && (f->set[3].style || f->set[4].style))
+            error->warning(FLERR,"fix {} requires fix {} to use the couple yes option "
+                           "under y elongation with xz or yz shear", style, f->style);
+        }
+        
         if (f->end_flag)
           error->warning(FLERR,"fix {} requires box deformation to occur with "
               "position updates to be strictly correct. Set the N parameter of "
