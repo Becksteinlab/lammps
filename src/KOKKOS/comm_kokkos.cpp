@@ -885,6 +885,7 @@ void CommKokkos::exchange_device()
         k_count.sync<DeviceType>();
 
         if (bonus_flag) {
+          atomKK->sync(ExecutionSpaceFromDevice<DeviceType>::space,ELLIPSOID_MASK);
           if (ellipsoid_flag) k_bonus_flags = atomKK->k_ellipsoid;
 
           if (line_flag || tri_flag || body_flag)
@@ -910,7 +911,7 @@ void CommKokkos::exchange_device()
 
         k_count.sync_host();
         int count = k_count.view_host()(0);
-        int count_bonus = 0;
+        int count_bonus = k_count.view_host()(1);
         if (bonus_flag) {
           k_exchange_sendlist_bonus.modify<DeviceType>();
         }
@@ -966,7 +967,7 @@ void CommKokkos::exchange_device()
 
         auto d_exchange_sendlist_bonus = Kokkos::subview(k_exchange_sendlist_bonus.view<DeviceType>(),std::make_pair(0,count_bonus));
         Kokkos::sort(DeviceType(), d_exchange_sendlist_bonus);
-        k_exchange_sendlist_bonus.sync<LMPHostType>();
+        k_exchange_sendlist_bonus.sync_host();
 
         // when atom is deleted, fill it in with last atom
 
