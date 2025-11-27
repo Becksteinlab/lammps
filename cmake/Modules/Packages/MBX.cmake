@@ -19,13 +19,13 @@ else()
 endif()
 
 
-# TODO: change to static release tarball
-set(MBX_URL "https://github.com/paesanilab/MBX/archive/refs/tags/v1.3.0.tar.gz"
-  CACHE STRING "URL for MBX tarball")
-set(MBX_MD5 "7cfbf221f9c249c364c7f47769d0d768" CACHE STRING "MD5 checksum of MBX tarball")
+# TODO: change to production release tarball!!
+set(MBX_URL "https://github.com/Miniland1333/MBX/releases/download/test_1.3.3/mbx-1.3.3.tar.gz" CACHE STRING "URL for MBX tarball")
+  # TODO: update checksum for production release!!
+set(MBX_SHA256 "3b84aee62c80191e2f667270f580b11210b5a1744f4c8681b80a68195c32948c" CACHE STRING "SHA256 checksum of MBX tarball")
 
 mark_as_advanced(MBX_URL)
-mark_as_advanced(MBX_MD5)
+mark_as_advanced(MBX_SHA256)
 
 
 
@@ -60,18 +60,17 @@ if(DOWNLOAD_MBX)
   # MBX perform autoreconf -fi
 
   message(STATUS "MBX_CONFIG_MPI: ${MBX_CONFIG_MPI}")
-  message(MBX_CONFIG_CXX: ${MBX_CONFIG_CXX})
-  message(CPPFLAGS: ${MBX_CONFIG_CPPFLAGS})
+  message(STATUS "MBX_CONFIG_CXX: ${MBX_CONFIG_CXX}")
 
   include(ExternalProject)
   ExternalProject_Add(mbx_build
     URL     ${MBX_URL}
-    URL_MD5 ${MBX_MD5}
-    CONFIGURE_COMMAND --prefix=<INSTALL_DIR>
+    URL_HASH SHA256=${MBX_SHA256}
+    CONFIGURE_COMMAND <SOURCE_DIR>/configure
+                      --prefix=<INSTALL_DIR>
                       ${MBX_CONFIG_MPI}
                       CXX=${MBX_CONFIG_CXX}
                       CC=${MBX_CONFIG_CC}
-                      # CPPFLAGS=${MBX_CONFIG_CPPFLAGS}
     BUILD_BYPRODUCTS ${MBX_BUILD_BYPRODUCTS}
   )
   ExternalProject_get_property(mbx_build INSTALL_DIR)
