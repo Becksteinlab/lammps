@@ -49,6 +49,7 @@ if (test $1 = "ASPHERE") then
   depend OPENMP
   depend CG-DNA
   depend INTEL
+  depend KOKKOS
 fi
 
 if (test $1 = "CLASS2") then
