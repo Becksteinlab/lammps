@@ -36,6 +36,34 @@ class AtomVecHybridKokkos : public AtomVecKokkos, public AtomVecHybrid {
 
   void grow(int) override;
   void sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorter) override;
+
+  void pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                              const DAT::tdual_double_2d_lr &buf) override;
+
+  void unpack_comm_bonus_kokkos(const int &n, const int &nfirst,
+                                const DAT::tdual_double_2d_lr &buf) override;
+
+  void pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_sendlist,
+                                DAT::tdual_double_2d_lr &buf,
+                                ExecutionSpace space) override;
+
+  void unpack_border_bonus_kokkos(const int &n, const int &nfirst,
+                                  const DAT::tdual_double_2d_lr &buf,
+                                  ExecutionSpace space) override;
+
+  void pack_exchange_bonus_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
+                                  DAT::tdual_int_1d k_sendlist,
+                                  DAT::tdual_int_1d k_copylist,
+                                  DAT::tdual_int_1d k_copylist_bonus,
+                                  ExecutionSpace space) override;
+
+  void unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_lr &k_buf,
+                                    int nrecv, int nlocal, int dim,
+                                    double lo, double hi,
+                                    ExecutionSpace space,
+                                    DAT::tdual_int_1d &k_indices) override;
+
+  void set_size_exchange() override;
   void sync(ExecutionSpace space, uint64_t mask) override;
   void modified(ExecutionSpace space, uint64_t mask) override;
   void sync_pinned(ExecutionSpace space, uint64_t mask, int async_flag = 0) override;

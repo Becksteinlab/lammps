@@ -56,6 +56,8 @@ void AtomVecHybridKokkos::grow(int n)
   f = atom->f;
 }
 
+// TODO: move dynamic_cast into init
+
 /* ----------------------------------------------------------------------
    sort atom arrays on device
 ------------------------------------------------------------------------- */
@@ -66,7 +68,92 @@ void AtomVecHybridKokkos::sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorte
     (dynamic_cast<AtomVecKokkos*>(styles[k]))->sort_kokkos(Sorter);
 }
 
-// TODO: move dynamic_cast into init
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                                                 const DAT::tdual_double_2d_lr &buf)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_comm_bonus_kokkos(n,list,buf);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::unpack_comm_bonus_kokkos(const int &n, const int &nfirst,
+                                                   const DAT::tdual_double_2d_lr &buf)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      unpack_comm_bonus_kokkos(n,nfirst,buf);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_sendlist,
+                                                   DAT::tdual_double_2d_lr &buf,
+                                                   ExecutionSpace space)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_border_bonus_kokkos(n,k_sendlist,buf,space);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::unpack_border_bonus_kokkos(const int &n, const int &nfirst,
+                                                     const DAT::tdual_double_2d_lr &buf,
+                                                     ExecutionSpace space)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      unpack_border_bonus_kokkos(n,nfirst,buf,space);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::pack_exchange_bonus_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
+                                                     DAT::tdual_int_1d k_sendlist,
+                                                     DAT::tdual_int_1d k_copylist,
+                                                     DAT::tdual_int_1d k_copylist_bonus,
+                                                     ExecutionSpace space)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_exchange_bonus_kokkos(nsend,buf,k_sendlist,k_copylist,
+                                 k_copylist_bonus,space);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_lr &k_buf,
+                                                       int nrecv, int nlocal, int dim,
+                                                       double lo, double hi,
+                                                       ExecutionSpace space,
+                                                       DAT::tdual_int_1d &k_indices)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      unpack_exchange_bonus_kokkos(k_buf,nrecv,nlocal,dim,lo,hi,
+                                   space,k_indices);
+}
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecHybridKokkos::set_size_exchange()
+{
+  AtomVecKokkos::set_size_exchange();
+
+ size_exchange_bonus = 0;
+ for (int k = 0; k < nstyles; k++)
+    size_exchange_bonus += (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      size_exchange_bonus;
+
+  size_exchange += size_exchange_bonus;
+
+ for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->size_exchange = size_exchange;
+}
 
 /* ---------------------------------------------------------------------- */
 
