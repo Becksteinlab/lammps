@@ -99,7 +99,7 @@ class AtomVecKokkos : virtual public AtomVec {
                              ExecutionSpace space,
                              DAT::tdual_int_1d &k_indices);
 
-  // Bonus functions - MOSTLY PLACEHOLDERS THIS NOW
+  // Bonus functions
 
   virtual void pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
                                       const DAT::tdual_double_2d_lr &buf) {}
@@ -132,24 +132,7 @@ class AtomVecKokkos : virtual public AtomVec {
   virtual int get_status_nlocal_bonus() { return 0; }
   virtual void set_status_nlocal_bonus(int) {}
 
-  // virtual int unpack_border_bonus_kokkos(const int &n, const int &nfirst,
-  //                           const DAT::tdual_double_2d_lr &buf,
-  //                           ExecutionSpace space) { return 0; }
-
-  // virtual int pack_exchange_bonus_kokkos(const int &nsend,
-  //                                      DAT::tdual_double_2d_lr &buf,
-  //                                      ExecutionSpace space) { return 0; }
-
-  // virtual int unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_lr &k_buf,
-  //                                        int nrecv,
-  //                                        int nlocal,
-  //                                        int dim,
-  //                                        double lo,
-  //                                        double hi,
-  //                                        ExecutionSpace space,
-  //                                        DAT::tdual_int_1d &k_indices) { return 0; }
-
-  int size_exchange,size_exchange_default;
+  int size_exchange,size_exchange_default,size_exchange_bonus;
 
   uint64_t datamask_grow;
   uint64_t datamask_comm;
@@ -158,6 +141,8 @@ class AtomVecKokkos : virtual public AtomVec {
   uint64_t datamask_border;
   uint64_t datamask_border_vel;
   uint64_t datamask_exchange;
+
+  virtual void set_size_exchange();
 
  protected:
   DAT::t_tagint_1d d_tag;
@@ -254,7 +239,6 @@ class AtomVecKokkos : virtual public AtomVec {
   uint64_t field2mask(std::string);
   int field2size(std::string);
   void set_atom_masks();
-  virtual void set_size_exchange();
 
  public:
 
