@@ -22,7 +22,7 @@ endif()
 # TODO: change to production release tarball!!
 set(MBX_URL "https://github.com/Miniland1333/MBX/releases/download/test_1.3.3/mbx-1.3.3.tar.gz" CACHE STRING "URL for MBX tarball")
   # TODO: update checksum for production release!!
-set(MBX_SHA256 "3b84aee62c80191e2f667270f580b11210b5a1744f4c8681b80a68195c32948c" CACHE STRING "SHA256 checksum of MBX tarball")
+set(MBX_SHA256 "4c634d626e750360d65f41a628d4f7d886186efd80def07d9b54c25cf287c65c" CACHE STRING "SHA256 checksum of MBX tarball")
 
 mark_as_advanced(MBX_URL)
 mark_as_advanced(MBX_SHA256)
