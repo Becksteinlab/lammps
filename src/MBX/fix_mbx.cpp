@@ -503,7 +503,7 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
     if (err)
       error->all(
           FLERR,
-          "[MBX] Inconsistent proc mapping; 'processors * * * map xyz' required for PME solver");
+          "[MBX] Inconsistent proc mapping: 'processors * * * map xyz' required for PME solver");
   }
 
   // setup json, if requested

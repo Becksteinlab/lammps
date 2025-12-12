@@ -79,8 +79,12 @@ captured in the real-space.
 
 .. warning::
 
-    MBX must currently be used with `processors` mapping style `xyz`,
-    such as `processors * * * map xyz`.
+    MBX must currently be used with `processors` mapping style `xyz`. If you
+    do not, MBX will throw the error:
+
+    .. code-block:: LAMMPS
+
+        [MBX] Inconsistent proc mapping: 'processors * * * map xyz' required for PME solver
 
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
 same simulation, one can use :doc:`pair_style hybrid/overlay
@@ -163,7 +167,7 @@ For a complete list of available monomers in MBX, please see the
 
 The *json* argument specifies the name of the MBX JSON configuration
 file to use, such as `mbx.json`.  If this file is not provided, the pair style
-will attempt to use a default configuration. See the `MBX documentation
+will attempt to use a default configuration. See the `mbx.json documentation
 <https://mbxsimulations.com/tutorials/json-file>`_ for more details on
 how to create this file.
 
