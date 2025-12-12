@@ -49,6 +49,8 @@ See ``examples/PACKAGES/mbx`` for full examples of how to use MBX in LAMMPS.
 Description
 """""""""""
 
+.. versionadded:: TBD
+
 The MBX (Many-Body eXpansion) software is a C++ library that provides
 access to many-body energy (MB-nrg) potential energy functions, such as
 the MB-pol water model.  Developed over the past decade, these potential
@@ -74,6 +76,11 @@ and all classical interactions beyond this cutoff will then be handled via parti
 Ewald (PME) within MBX. For non-periodic systems, the cutoff can be set to a
 large value, such as 100.0 Angstroms, to ensure that all interactions are
 captured in the real-space.
+
+.. warning::
+
+    MBX must currently be used with `processors` mapping style `xyz`,
+    such as `processors * * * map xyz`.
 
 For hybrid simulations involving MB-nrg and non-MB-nrg molecules in the
 same simulation, one can use :doc:`pair_style hybrid/overlay
@@ -176,6 +183,8 @@ All electrostatic interactions are calculated internally in MBX.
 Therefore one should never calculate coulombic interactions in
 LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
 See the warning above for more details.
+
+MBX currently only supports `processors` mapping style `xyz`.
 
 MBX is primarily tested to work with `units real`. If you encounter
 issues with other unit styles, please contact the MBX developers.
