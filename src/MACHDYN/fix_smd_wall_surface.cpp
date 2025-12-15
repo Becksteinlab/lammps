@@ -21,7 +21,9 @@
 #include "atom_vec.h"
 #include "comm.h"
 #include "domain.h"
+#include "dump_image.h"
 #include "error.h"
+#include "memory.h"
 #include "text_file_reader.h"
 
 #include <Eigen/Eigen>
@@ -37,7 +39,8 @@ static constexpr double EPSILON = 1.0e-6;
 
 /* ---------------------------------------------------------------------- */
 
-FixSMDWallSurface::FixSMDWallSurface(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
+FixSMDWallSurface::FixSMDWallSurface(LAMMPS *lmp, int narg, char **arg) :
+    Fix(lmp, narg, arg), imgobjs(nullptr), imgparms(nullptr)
 {
 
   restart_global = 0;
@@ -66,7 +69,10 @@ FixSMDWallSurface::~FixSMDWallSurface()
 {
   free(filename);
   filename = nullptr;
-  // unregister this fix so atom class doesn't invoke it any more
+
+  // clean up dump image data
+  memory->destroy(imgobjs);
+  memory->destroy(imgparms);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -326,4 +332,48 @@ void FixSMDWallSurface::read_triangles(int pass)
 
   delete[] vert;
   fclose(fp);
+}
+
+/* ----------------------------------------------------------------------
+ create list of visualization object for dump image
+ ------------------------------------------------------------------------- */
+int FixSMDWallSurface::image(int *&objs, double **&parms)
+{
+  const int nlocal = atom->nlocal;
+  const int * const type = atom->type;
+  const double * const * const verts = atom->smd_data_9;
+
+  int numobjs = 0;
+  for (int i = 0; i < nlocal; ++i)
+    if (type[i] == wall_particle_type) ++numobjs;
+
+  if (numobjs == 0) return 0;
+
+  // reallocate storage
+  memory->destroy(imgobjs);
+  memory->destroy(imgparms);
+  memory->create(imgobjs, numobjs, "wall_surface:imgobjs");
+  memory->create(imgparms, numobjs, 10, "wall_surface:imgobjs");
+
+  // copy tri objects
+  numobjs = 0;
+  for (int i = 0; i < nlocal; ++i) {
+    if (type[i] == wall_particle_type) {
+      imgobjs[numobjs] = DumpImage::TRI;
+      imgparms[numobjs][0] = wall_particle_type;
+      imgparms[numobjs][1] = verts[i][0];
+      imgparms[numobjs][2] = verts[i][1];
+      imgparms[numobjs][3] = verts[i][2];
+      imgparms[numobjs][4] = verts[i][3];
+      imgparms[numobjs][5] = verts[i][4];
+      imgparms[numobjs][6] = verts[i][5];
+      imgparms[numobjs][7] = verts[i][6];
+      imgparms[numobjs][8] = verts[i][7];
+      imgparms[numobjs][9] = verts[i][8];
+      ++numobjs;
+    }
+  }
+  objs = imgobjs;
+  parms = imgparms;
+  return numobjs;
 }
