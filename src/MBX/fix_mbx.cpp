@@ -42,7 +42,6 @@
 #define _MAX_ATOMS_PER_MONOMER 8
 #define SMALL 1.0e-4
 
-//#define _DEBUG
 
 namespace LAMMPS_NS {
 //PImpl idiom to hide MBX implementation details
@@ -80,6 +79,8 @@ std::string FixMBX::cite_pair_mbx = std::string(
 
 /* ---------------------------------------------------------------------- */
 
+// Parse atom ID or range for dp1 monomer
+// Input can be a single integer (e.g., "5") or a range (e.g., "1*11")
 std::pair<int, int> FixMBX::parse_dp1_range(const std::string &dp1_str)
 {
   try {
@@ -119,6 +120,8 @@ std::pair<int, int> FixMBX::parse_dp1_range(const std::string &dp1_str)
   return {start, end};
 }
 
+// Validate that the input arguments to fix mbx are correct
+// throws specific errors if the arguments are malformed
 bool FixMBX::validateMBXFixParameters(int narg, char **arg)
 {
   if (narg < 2) error->all(FLERR, ("[MBX] Input line too short"));
@@ -168,6 +171,9 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
     for (int i = 1; i <= n_atoms; ++i) current_monomer_atoms.push_back(current_monomer[i]);
     std::vector<std::string> expected_monomer_atom_ids;
 
+    // special handling for dp1 monomer
+    if (current_monomer_name == "dp1") return check_external_dp1(n_atoms, &current_monomer[1]);
+
     try {
       add_monomer_atom_types(const_cast<char *>(current_monomer_name.c_str()),
                              expected_monomer_atom_ids);
@@ -196,6 +202,8 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
       atom_ids.push_back(at);
     }
 
+    // check that number of unique atom IDs is correct
+    // this verifies that the monomer has the expected number of different elements
     std::set<int> unique_atom_ids(atom_ids.begin(), atom_ids.end());
     std::set<std::string> unique_monomer_atom_ids(expected_monomer_atom_ids.begin(),
                                                   expected_monomer_atom_ids.end());
@@ -207,18 +215,20 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
     std::map<int, std::string> atom_mapping;
 
     // check that atom ID mapping is consistent
+    // atom ID mapping must match expected, such as OHH for h2o
     for (size_t i = 0; i < atom_ids.size(); ++i) {
       int at = atom_ids[i];
       if (!atom_mapping.count(at))    // first time seeing this atom ID
         atom_mapping[at] = expected_monomer_atom_ids[i];
-      else if (atom_mapping[at] != expected_monomer_atom_ids[i]) {    // inconsistent mapping
-        std::string monomer_atom_ids_string = "";
-        for (const auto &mat : expected_monomer_atom_ids) { monomer_atom_ids_string += mat + " "; }
+      else if (atom_mapping[at] != expected_monomer_atom_ids[i]) {    // inconsistent mapping detected
+        // construct error message
+        std::string expected_monomer_atom_ids_string = "";
+        for (const auto &mat : expected_monomer_atom_ids) { expected_monomer_atom_ids_string += mat + " "; }
         std::string atom_ids_string = "";
         for (const auto &at2 : atom_ids) { atom_ids_string += std::to_string(at2) + " "; }
         error->all(FLERR,
                    ("[MBX] Incorrect atom ID mapping in " + current_monomer_name + ". Expected " +
-                    monomer_atom_ids_string + "but got " + atom_ids_string));
+                    expected_monomer_atom_ids_string + "but got " + atom_ids_string));
       }
       if (mbx_atom_id_mapping.count(at))    // atom ID already defined in another monomer
         error->all(FLERR,
@@ -226,6 +236,7 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
                     std::to_string(at)));
     }
 
+    // check that atom IDs are contiguous
     int minimum_index = *std::min_element(atom_ids.begin(), atom_ids.end());
     int maximum_index = *std::max_element(atom_ids.begin(), atom_ids.end());
     for (int i = minimum_index; i <= maximum_index; ++i) {
@@ -292,6 +303,7 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
 
 FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 {
+  // Constructor for fix mbx, called interally by pair mbx.
   // Expected arguments:
   // _FIX_MBX_INTERNAL all MBX num_mol_types mon_name atom_mapping <mon_name2> <atom_mapping2> ... json mbx.json
   // num_mol_types = number of monomer types in the system
@@ -455,6 +467,8 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   mbx_aspc_enabled = false;
 
+  // verify that this fix is not called directly
+  // fix mbx should only be called indirectly by pair mbx
   pair_mbx = nullptr;
   pair_mbx = (PairMBX *) force->pair_match("^mbx", 0);
   if (!pair_mbx) error->all(FLERR, "[MBX] Pair mbx is missing");
@@ -658,6 +672,7 @@ void FixMBX::init()
 
 /* ---------------------------------------------------------------------- */
 
+// Fill mol_type and mol_anchor arrays from atom data
 void FixMBX::mbx_fill_system_information_from_atom()
 {
   // mol_type, mol_anchor
@@ -735,7 +750,7 @@ void FixMBX::mbx_fill_system_information_from_atom()
         break;
       }
 
-      isanchor = isanchor and atom->type[idx] == order_in_mol[mtype][j];
+      isanchor = isanchor && atom->type[idx] == order_in_mol[mtype][j];
       if (!isanchor) break;
     }
 
@@ -813,7 +828,7 @@ void FixMBX::post_neighbor()
     delete mbx_impl->ptr_mbx_local;
   }
 
-  // create main instance of MBX object
+  // recreate main instance of MBX object
 
   mbx_impl->ptr_mbx = new bblock::System();
   mbx_impl->ptr_mbx_local = new bblock::System();
@@ -995,8 +1010,7 @@ void FixMBX::mbx_get_dipoles_local()
   tagint *tag = atom->tag;
 
   // conversion factor for e*Anstrom --> Debye
-
-  //    const double qe_Debye = 1.0 / 0.2081943;
+  // const double qe_Debye = 1.0 / 0.2081943;
 
   // zero dipole array
 
@@ -2221,4 +2235,6 @@ void FixMBX::add_monomer_atom_types(char *name, std::vector<std::string> &n)
     n.push_back("X");
     n.push_back("X");
   }
+  else 
+    error->one(FLERR, "Unsupported molecule type in MBX");
 }
