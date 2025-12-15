@@ -1225,9 +1225,9 @@ void DumpImage::create_image()
           if (adiam == NUMERIC) {
             diameter = adiamvalue;
           } else if (adiam == TYPE) {
-            diameter = MIN(diamtype[type[atom1]],diamtype[type[atom1]]);
+            diameter = MIN(diamtype[type[atom1]],diamtype[type[atom2]]);
           } else if (adiam == ELEMENT) {
-            diameter = MIN(diamelement[type[atom1]],diamelement[type[atom1]]);
+            diameter = MIN(diamelement[type[atom2]],diamelement[type[atom2]]);
           } else if (adiam == ATTRIBUTE) {
             diameter = MIN(bufcopy[atom1][1],bufcopy[atom2][1]);
           }
