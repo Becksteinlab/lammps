@@ -79,7 +79,7 @@ captured in the real-space.
 
 .. warning::
 
-    MBX must currently be used with `processors` mapping style `xyz`. If you
+    MBX must currently be used with :doc:`processors <processors>` mapping style `xyz`. If you
     do not, MBX will throw the error:
 
     .. code-block:: LAMMPS
@@ -117,7 +117,7 @@ to specify the mapping of LAMMPS atom IDs to MBX monomers. The syntax is as foll
 
 * num_mon_types = number of monomer types in the system
 * mon_name = name of the monomer type (e.g. h2o, ch4, etc)
-* atom mapping = list of LAMMPS atom types that correspond to the atoms in the monomer
+* atom mapping = list of LAMMPS atom IDs that correspond to the atoms in the monomer
 * *json* arg = specifies the name of the MBX json configuration file, such as mbx.json
 * print/settings = optionally print MBX settings to logfile
 
@@ -127,12 +127,12 @@ monomer types in the system.
 
 For each monomer type, the *mon_name* argument specifies the name of
 the monomer, such as `h2o` for water or `ch4` for methane. The *atom
-mapping* argument specifies then the mapping of LAMMPS atom types to
+mapping* argument specifies then the mapping of LAMMPS atom IDs to
 the atoms in the monomer, such as `1 2 2` for water (O=1, H=2).
 For hybrid simulations, the `dp1` (drude particle) monomer
 should be used to represent the non-MB-nrg molecules. `dp1` is a
 special monomer in MBX in that its *atom_mapping* can be a range of
-LAMMPS atom types, such as `1*11` to represent atom types 1 through 11.
+LAMMPS atom IDs, such as `1*11` to represent atom types 1 through 11.
 For a complete list of available monomers in MBX, please see the
 `MBX documentation <https://mbxsimulations.com/tutorials/pefs-implemented-and-how-to-cite>`_.
 
@@ -179,16 +179,16 @@ ensuring that the settings are being correctly applied.
 Restrictions
 """"""""""""
 
-This pair_style is part of the MBX package.  It is only enabled if
-LAMMPS was built with that package.  See the :doc:`Build package
-<Build_package>` page for more info.
+This pair_style is part of the MBX package.  A pair style is only
+enabled if LAMMPS was built with its corresponding package.
+See the :doc:`Build package <Build_package>` page for more info.
 
 All electrostatic interactions are calculated internally in MBX.
 Therefore one should never calculate coulombic interactions in
 LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
 See the warning above for more details.
 
-MBX currently only supports `processors` mapping style `xyz`.
+MBX currently only supports :doc:`processors <processors>` mapping style `xyz`.
 
 MBX is primarily tested to work with `units real`. If you encounter
 issues with other unit styles, please contact the MBX developers.
