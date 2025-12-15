@@ -221,14 +221,14 @@ whether the cylinder is capped with a sphere at the ends: 0 means no
 caps, 1 means the lower end is capped, 2 means the upper end is capped,
 and 3 means both ends are capped.
 
-The *fflag2* setting allows to adjust the radius of the rendered object
-for spherical indenters, cylindrical indenders, and planar indenters in
-2d systems.  In many cases you want to use a value < 0 to reduce the
-radius of the rendered object to that it does not obscure atoms close to
-it.  For a planar indenter in 2d systems, it should be set to a value >
-0 or the indenter will not be visible since the diameter is set
-internally to zero in that case due to lack of a suitable heuristic for
-deriving a meaningful diameter.
+The *fflag2* setting allows you to adjust the radius of the rendered
+object for spherical indenters, cylindrical indenters, and planar
+indenters in 2d systems.  In many cases you want to use a value < 0 to
+reduce the radius of the rendered object so that it does not obscure
+atoms close to it.  For a planar indenter in 2d systems, it should be
+set to a value > 0 or the indenter will not be visible since the
+diameter is set internally to zero in that case due to lack of a
+suitable heuristic for deriving a meaningful diameter.
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""
