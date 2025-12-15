@@ -181,13 +181,12 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
       error->all(FLERR, ("[MBX] Invalid monomer name " + current_monomer_name));
     }
 
-    if (current_monomer_atoms.size() != n_atoms)
+    if (expected_monomer_atom_ids.size() != n_atoms)
       error->all(FLERR,
-                 ("[MBX] Wrong number of atoms: expected " + std::to_string(n_atoms) + ", got " +
-                  std::to_string(current_monomer_atoms.size())));
+                 ("[MBX] Wrong number of atoms: expected " + std::to_string(expected_monomer_atom_ids.size()) + ", got " +
+                  std::to_string(n_atoms)));
 
-    if (current_monomer_name == "dp1") return check_external_dp1(n_atoms, &current_monomer[1]);
-
+    // validate that atom IDs are positive integers
     std::vector<int> atom_ids;
     for (size_t i = 0; i < expected_monomer_atom_ids.size(); ++i) {
       int at = 0;
@@ -319,7 +318,6 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   // // validate input arguments
   bool validation_result = validateMBXFixParameters(narg - 3, &arg[3]);
-  // if (validation_result) { fprintf(stderr, "MBX fix input validation successful.\n"); }
 
   if (narg < 6) error->all(FLERR, "[MBX] Illegal fix mbx command");
 
@@ -327,13 +325,11 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   if (num_mol_types < 1) error->all(FLERR, "[MBX] Illegal fix mbx command");
 
-  // num_mols = NULL;
   num_atoms_per_mol = NULL;
   mol_names = NULL;
   lower_atom_type_index_in_mol = NULL;
   higher_atom_type_index_in_mol = NULL;
 
-  // memory->create(num_mols, num_mol_types, "fixmbx:num_mols");
   memory->create(num_atoms_per_mol, num_mol_types, "fixmbx:num_atoms_per_mol");
   memory->create(mol_names, num_mol_types, _MAX_SIZE_MOL_NAME, "fixmbx:mol_names");
   memory->create(lower_atom_type_index_in_mol, num_mol_types,
@@ -422,49 +418,6 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
     iarg++;
   }
 
-  // mol_offset = NULL;
-  // memory->create(mol_offset, num_mol_types + 1, "fixmbx:mol_offset");
-
-  // assign # of atoms per molecule based on molecule name
-  // -- use this as first pass whether molecule supported by MBX
-
-  for (int i = 0; i < num_mol_types; ++i)
-    num_atoms_per_mol[i] = get_num_atoms_per_monomer(mol_names[i], is_ext);
-
-  int err = 0;
-  for (int i = 0; i < num_mol_types; ++i)
-    if (num_atoms_per_mol[i] > _MAX_ATOMS_PER_MONOMER) err++;
-
-  if (err)
-    error->all(
-        FLERR,
-        "[MBX] num_atoms_per_mol > _MAX_ATOMS_PER_MONOMER : did developer correctly add support "
-        "for monomer?");
-
-  // check that total number of atoms matches what is expected
-
-  // int na = 0;
-  // for (int i = 0; i < num_mol_types; ++i) na += num_mols[i] * num_atoms_per_mol[i];
-
-  // mol_offset[0] = 0;
-  // mol_offset[1] = num_mols[0] * num_atoms_per_mol[0];
-  // for (int i = 1; i < num_mol_types; ++i) mol_offset[i + 1] = mol_offset[i] + num_mols[i] * num_atoms_per_mol[i];
-
-  // num_molecules = 0;
-  // for (int i = 0; i < num_mol_types; ++i) num_molecules += num_mols[i];
-
-  // if (screen && comm->me == 0) {
-  //     if (use_json) fprintf(screen, "\n[MBX] Using json_file= %s\n", json_file);
-  //     fprintf(screen, "[MBX] # molecule types= %i\n", num_mol_types);
-  //     fprintf(screen, "[MBX] # molecules=      %i\n", num_molecules);
-  //     for (int i = 0; i < num_mol_types; ++i)
-  //         fprintf(screen, "[MBX]  i= %i  # of molecules= %i  name= '%4s'  offset= %i\n", i, num_mols[i],
-  //                 mol_names[i], mol_offset[i]);
-  //     fprintf(screen, "\n");
-  // }
-
-  // if (na != atom->natoms) error->all(FLERR, "[MBX] Inconsistent # of atoms");
-
   mbx_aspc_enabled = false;
 
   // verify that this fix is not called directly
@@ -478,7 +431,6 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   mol_type = NULL;
   mol_anchor = NULL;
   mol_local = NULL;
-  // mol_order = NULL;
 
   grow_arrays(atom->nmax);
 
@@ -588,10 +540,8 @@ FixMBX::~FixMBX()
 
   if (print_dipoles) memory->destroy(mbx_dip);
 
-  // memory->destroy(mol_offset);
   memory->destroy(num_atoms_per_mol);
   memory->destroy(mol_names);
-  // memory->destroy(num_mols);
 
   // unregister callbacks to this fix from Atom class
 
@@ -675,13 +625,10 @@ void FixMBX::init()
 // Fill mol_type and mol_anchor arrays from atom data
 void FixMBX::mbx_fill_system_information_from_atom()
 {
-  // mol_type, mol_anchor
   const int nlocal = atom->nlocal;
   const int nghost = atom->nghost;
   const int nall = nlocal + nghost;
 
-  // printf("\n[MBX] (%i,%i) Inside mbx_fill_system_information_from_atom() natoms = %i \n", universe->iworld, me,
-  // atom->natoms);
 
   bigint natoms = atom->natoms;
 
@@ -704,28 +651,6 @@ void FixMBX::mbx_fill_system_information_from_atom()
                    "[MBX] The atom types in fix mbx do not match the atom types in the data file");
       }
   }
-
-  // Idea of this loop: fill an array that will say the position
-  // of each atom in the monomer
-  // PROBLEM CHRIS: no idea how to get when more than 1 rank is involved
-
-  //    bigint itag = 1;
-  //    while( itag < natoms+1) {
-  //        int indx = atom->map(itag);
-  //        //if (indx < 0) continue;
-  //        mol_order[indx] = 1;
-  //        int mtype = mol_type[indx];
-  //        bool is_ext = strcmp("dp1", mol_names[mtype]) == 0;
-  //        int na = get_num_atoms_per_monomer(mol_names[mtype], is_ext);
-  //        for (int j = 1; j < na; j++) {
-  //            mol_order[atom->map(itag+j)] = j+1;
-  //        }
-  //        itag += na;
-  //    }
-  //
-  //    // Tag must be na at this point:
-  //    if (itag != natoms+1) error->all(FLERR, "[MBX] Inconsistent number of atoms in
-  //    mbx_fill_system_information_from_atom()");
 
   // Reset anchors
   std::fill(mol_anchor, mol_anchor + nall, 0);
@@ -1085,7 +1010,6 @@ int FixMBX::pack_forward_comm(int n, int *list, double *buf, int /*pbc_flag*/, i
   int m = 0;
   for (int i = 0; i < n; ++i) {
     for (int j = 0; j < aspc_per_atom_size; ++j) buf[m++] = aspc_dip_hist[list[i]][j];
-    //  for (int j = 0; j < 9; ++j) buf[m++] = mbx_dip[list[i]][j];
   }
 
   return m;
@@ -1098,7 +1022,6 @@ void FixMBX::unpack_forward_comm(int n, int first, double *buf)
   int m = 0;
   for (int i = first; i < first + n; ++i) {
     for (int j = 0; j < aspc_per_atom_size; ++j) aspc_dip_hist[i][j] = buf[m++];
-    //  for (int j = 0; j < 9; ++j) mbx_dip[i][j] = buf[m++];
   }
 }
 
@@ -1111,7 +1034,6 @@ void FixMBX::grow_arrays(int nmax)
   memory->grow(mol_type, nmax, "fixmbx:mol_type");
   memory->grow(mol_anchor, nmax, "fixmbx:mol_anchor");
   memory->grow(mol_local, nmax, "fixmbx:mol_local");
-  //memory->grow(mol_order, nmax, "fixmbx:mol_order");
 
   if (mbx_aspc_enabled)
     memory->grow(aspc_dip_hist, nmax, aspc_per_atom_size, "fixmbx:mbx_dip_hist");
@@ -1147,10 +1069,6 @@ int FixMBX::pack_exchange(int i, double *buf)
   if (mbx_aspc_enabled)
     for (int j = 0; j < aspc_per_atom_size; ++j) buf[n++] = aspc_dip_hist[i][j];
 
-  // don't need to exchange dipoles that will be written to dump file
-  // if (print_dipoles)
-  //   for(int j = 0; j<9; ++j) buf[n++] = mbx_dip[i][j];
-
   return n;
 }
 
@@ -1167,10 +1085,6 @@ int FixMBX::unpack_exchange(int nlocal, double *buf)
 
   if (mbx_aspc_enabled)
     for (int j = 0; j < aspc_per_atom_size; ++j) aspc_dip_hist[nlocal][j] = buf[n++];
-
-  // don't need to exchange dipoles that will be written to dump file
-  // if (print_dipoles)
-  //   for (int j=0; j<9; ++j) mbx_dip[nlocal][j] = buf[n++];
 
   return n;
 }
@@ -1330,6 +1244,9 @@ void FixMBX::mbx_init()
   std::vector<double> box;
   mbx_impl->ptr_mbx->SetPBC(box);
 
+
+  // check for incompatible pair styles
+  // electrostatics should be handled entirely by MBX
   Pair *pairstyles_coullong = force->pair_match(".*coul/long.*", 0);
   Pair *pairstyles_coulcut = force->pair_match(".*coul/cut.*", 0);
   Pair *pairstyles_coulexclude = force->pair_match("coul/exclude", 0);
@@ -1338,14 +1255,13 @@ void FixMBX::mbx_init()
     error->warning(FLERR,
                    "[MBX] dp1 monomers present, but coul/exclude pair style not found. If using "
                    "special_bonds, please include coul/exclude: ");
-
   if (pairstyles_coulcut) {
-    error->warning(FLERR,
+    error->all(FLERR,
                    "[MBX] Incompatible coul/cut pair style: coulombic interactions should be "
                    "handled internally by MBX: ");
   }
   if (pairstyles_coullong) {
-    error->warning(FLERR,
+    error->all(FLERR,
                    "[MBX] Incompatible  coul/long pair style: coulombic interactions should be "
                    "handled internally by MBX: ");
   }
@@ -1857,7 +1773,6 @@ void FixMBX::mbx_update_xyz_local()
 
 void FixMBX::mbx_init_dipole_history_local()
 {
-  //    mbxt_start(MBXT_LABELS::INIT_DIPOLE_LOCAL);
 
   if (aspc_num_hist == 0) return;
 
@@ -1873,7 +1788,6 @@ void FixMBX::mbx_init_dipole_history_local()
   double **x = atom->x;
 
   if (mbx_num_atoms_local == 0) {
-    //        mbxt_stop(MBXT_LABELS::INIT_DIPOLE_LOCAL);
     return;
   }
 
@@ -1890,13 +1804,6 @@ void FixMBX::mbx_init_dipole_history_local()
   // following debug only works if all ranks contribute
 
   for (int h = 0; h < aspc_num_hist; ++h) {
-    // printf("setting history h= %i / %i  mbx_num_atoms_local= %i  nall=
-    // %i\n",h,aspc_num_hist,mbx_num_atoms_local,nall);
-
-    // for(int i=0; i<nall; ++i) {
-    //      printf("  i= %i  local= %i  aspc_dip_hist= %f %f
-    // %f\n",i,i<nlocal,aspc_dip_hist[i][h*3],aspc_dip_hist[i][h*3+1],aspc_dip_hist[i][h*3+2]);
-    // }
 
     int indx = 0;
     for (int i = 0; i < nall; ++i) {
@@ -1942,7 +1849,6 @@ void FixMBX::mbx_init_dipole_history_local()
 
   }    // for(hist)
 
-  //    mbxt_stop(MBXT_LABELS::UPDATE_INIT_DIPOLE_LOCAL);
 }
 
 /* ----------------------------------------------------------------------
