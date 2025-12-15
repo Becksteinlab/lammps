@@ -450,18 +450,20 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   mbx_num_ext_local = 0;
 
   // check that LAMMPS proc mapping matches PME solver
-
+  // MPI ranks must be mapped in "xyz" order for PME
   if (comm->style != 0) error->all(FLERR, "[MBX] Fix mbx must be used with comm_style brick");
 
   if (comm->layout != Comm::LAYOUT_UNIFORM)
     error->all(FLERR, "[MBX] Fix mbx must be used with comm layout of equal-sized bricks");
 
   {
+    // compute expected proc coordinates for this MPI rank
     int proc_x = me % comm->procgrid[0];
     int proc_y = (me % (comm->procgrid[0] * comm->procgrid[1])) / comm->procgrid[0];
     int proc_z = me / (comm->procgrid[0] * comm->procgrid[1]);
 
     int e = 0;
+    // compare actual location to expected
     if ((proc_x != comm->myloc[0]) || (proc_y != comm->myloc[1]) || (proc_z != comm->myloc[2]))
       e = 1;
     int err = 0;
