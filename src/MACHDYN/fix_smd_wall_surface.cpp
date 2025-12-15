@@ -355,7 +355,7 @@ int FixSMDWallSurface::image(int *&objs, double **&parms)
   memory->create(imgobjs, numobjs, "wall_surface:imgobjs");
   memory->create(imgparms, numobjs, 10, "wall_surface:imgobjs");
 
-  // copy tri objects
+  // copy local tri object info
   numobjs = 0;
   for (int i = 0; i < nlocal; ++i) {
     if (type[i] == wall_particle_type) {
