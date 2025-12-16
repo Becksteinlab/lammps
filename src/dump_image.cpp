@@ -928,7 +928,7 @@ void DumpImage::init_style()
     int nfreq = fixptr->global_freq;
     if ((nfreq == 0) || (nevery % nfreq))
       error->all(FLERR, Error::NOLASTLINE,
-                 "Dump {} and fix {} are not computed at compatible times{}",
+                 "Dump {} and fix {} are not executed at compatible timesteps {}",
                  style, fixptr->style, utils::errorurl(7));
   }
 }
@@ -2666,8 +2666,10 @@ int DumpImage::modify_param(int narg, char **arg)
 
   if (strcmp(arg[0],"fcolor") == 0) {
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    auto *color =  image->color2rgb(arg[2]);
+    if (!color) error->all(FLERR, "Unknown color for dump_modify fcolor: {}", arg[2]);
     for (auto &ifix : fixes) {
-      if (ifix.id == arg[1]) ifix.rgb = image->color2rgb(arg[2]);
+      if (ifix.id == arg[1]) ifix.rgb = color;
     }
     return 3;
   }
