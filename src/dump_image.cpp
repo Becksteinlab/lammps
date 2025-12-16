@@ -282,7 +282,7 @@ using MathConst::DEG2RAD;
 
 static constexpr double BIG = 1.0e20;
 
-enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT};
+enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT };
 enum { STATIC, DYNAMIC };
 enum { NO = 0, YES = 1, AUTO = 2 };
 enum { FILLED, FRAME, POINTS };
@@ -1708,16 +1708,17 @@ void DumpImage::create_image()
 
     int *fixvec = nullptr;
     double **fixarray = nullptr;
+    const int ntypes = atom->ntypes;
     n = ifix.ptr->image(fixvec,fixarray);
     for (i = 0; i < n; i++) {
       if (!fixvec || !fixarray) continue;
 
       // set color
       if (ifix.colorstyle == TYPE) {
-        itype = static_cast<int>(fixarray[i][0]);
+        itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colortype[itype];
       } else if  (ifix.colorstyle == ELEMENT) {
-        itype = static_cast<int>(fixarray[i][0]);
+        itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colorelement[itype];
       } else if  (ifix.colorstyle == CONSTANT) {
         color = ifix.rgb;
@@ -1747,8 +1748,8 @@ void DumpImage::create_image()
       } else if (fixvec[i] == TRIANGLE) {
         image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color);
       } else if (fixvec[i] == BOND) {
-        int type1 = static_cast<int>(fixarray[i][0]);
-        int type2 = static_cast<int>(fixarray[i][1]);
+        int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
+        int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
         double *color1;
         double *color2;
         if (ifix.colorstyle == TYPE) {
