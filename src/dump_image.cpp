@@ -359,7 +359,6 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
   gridflag = NO;
   lineflag = triflag = bodyflag = NO;
 
-  bdiamvalue = 0.5;
   bcolor = ATOM;
   bdiam = NUMERIC;
   bdiamvalue = 0.5;
@@ -927,7 +926,6 @@ void DumpImage::init_style()
     // check if fix data for dump image is available at the required steps.
 
     int nfreq = fixptr->global_freq;
-    if (nfreq == 0) nfreq = fixptr->nevery;
     if ((nfreq == 0) || (nevery % nfreq))
       error->all(FLERR, Error::NOLASTLINE,
                  "Dump {} and fix {} are not computed at compatible times{}",
