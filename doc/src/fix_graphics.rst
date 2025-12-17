@@ -77,6 +77,21 @@ for *all* objects of this fix instance, which can be changed using a
 :doc:`dump modify fcolor <dump_image>` command.  For the *progbar*
 object *two* atom type values must be specified.
 
+The *x*\, *y*\, and *z* parameters correspond to the position of the
+center of the object (*sphere* and *progbar*). *x1*\, *y1*\, and *z1* as
+well as *x2*\, *y2*\, and *z2* are instead representing the top and
+bottom position of a graphics object (*cylinder* and *arrow*).  The *R*
+parameter determines the radius.
+
+The *progbar* object has four additional parameters: *dim* sets the
+direction of the progress bar, "x", "y", or "z"; *length* sets the
+length of the entire object; *ratio* sets the ratio of progress and
+is expected to be between 0.0 and 1.0 (larger or smaller values will
+be reset to 1.0 or 0.0, respectively); and *tics* determines the number
+of tics shown on the progress bar, this must be a number between 0 and 20.
+Unlike for the other graphics objects, all settings except for *ratio*
+are fixed and cannot be a variable reference.
+
 Available graphics objects are (see above for exact command line syntax):
 
 - *sphere* - a sphere defined by its center location and its radius
