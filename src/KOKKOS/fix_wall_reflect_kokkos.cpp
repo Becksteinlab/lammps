@@ -17,6 +17,7 @@
 #include "atom_kokkos.h"
 #include "atom_masks.h"
 #include "input.h"
+#include "fix_wall.h"
 #include "modify.h"
 #include "update.h"
 #include "variable.h"
@@ -58,8 +59,8 @@ void FixWallReflectKokkos<DeviceType>::post_integrate()
   for (int m = 0; m < nwall; m++) {
     if (wallstyle[m] == VARIABLE) {
       coord = input->variable->compute_equal(varindex[m]);
-      if (wallwhich[m] < YLO) coord *= xscale;
-      else if (wallwhich[m] < ZLO) coord *= yscale;
+      if (wallwhich[m] < FixWall::YLO) coord *= xscale;
+      else if (wallwhich[m] < FixWall::ZLO) coord *= yscale;
       else coord *= zscale;
     } else coord = coord0[m];
 
@@ -67,7 +68,7 @@ void FixWallReflectKokkos<DeviceType>::post_integrate()
     side = wallwhich[m] % 2;
 
     // record wall graphics objects for dump image
-    wall_update_objs(m,wallwhich[m],coord);
+    FixWall::update_image_plane(m, wallwhich[m], coord, imgparms, domain);
 
     copymode = 1;
     Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType, TagFixWallReflectPostIntegrate>(0,nlocal),*this);
