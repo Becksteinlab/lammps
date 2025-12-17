@@ -103,7 +103,7 @@ the *elaplong* keyword of :doc:`thermo_style custom <thermo_style>` for
 details.
 
 For example, if a sphere's x-position is specified as v_x, then this
-variable definition will keep it's center at a relative position in the
+variable definition will keep its center at a relative position in the
 simulation box, 1/4 of the way from the left edge to the right edge,
 even if the box size changes:
 

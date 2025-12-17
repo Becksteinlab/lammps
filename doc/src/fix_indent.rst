@@ -137,9 +137,9 @@ fashion.  For the latter, see the *start* and *stop* keywords of the
 :doc:`thermo_style custom <thermo_style>` for details.
 
 For example, if a spherical indenter's x-position is specified as v_x,
-then this variable definition will keep it's center at a relative
-position in the simulation box, 1/4 of the way from the left edge to
-the right edge, even if the box size changes:
+then this variable definition will keep its center at a relative
+position in the simulation box, 1/4 of the way from the left edge to the
+right edge, even if the box size changes:
 
 .. code-block:: LAMMPS
 
