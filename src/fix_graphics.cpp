@@ -197,7 +197,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       progbar.pos[Y] = utils::numeric(FLERR, arg[iarg + 5], false, lmp);
       progbar.pos[Z] = utils::numeric(FLERR, arg[iarg + 6], false, lmp);
       progbar.length = utils::numeric(FLERR, arg[iarg + 7], false, lmp);
-      if ((progbar.length <= 0.0) || (progbar.length > 2.0*domain->prd[progbar.dim]))
+      if ((progbar.length <= 0.0) || (progbar.length > 2.0 * domain->prd[progbar.dim]))
         error->all(FLERR, iarg + 7, "Illegal progress bar length {}", arg[iarg + 7]);
       progbar.diameter = 2.0 * utils::numeric(FLERR, arg[iarg + 8], false, lmp);
       if (strstr(arg[iarg + 9], "v_") == arg[iarg + 9]) {
@@ -226,35 +226,35 @@ FixGraphics::~FixGraphics()
 {
   for (auto &gi : items) {
     switch (gi.style) {
-    case SPHERE:
-      delete[] gi.sphere.xstr;
-      delete[] gi.sphere.ystr;
-      delete[] gi.sphere.zstr;
-      delete[] gi.sphere.dstr;
-      break;
-    case CYLINDER:
-      delete[] gi.cylinder.x1str;
-      delete[] gi.cylinder.y1str;
-      delete[] gi.cylinder.z1str;
-      delete[] gi.cylinder.x2str;
-      delete[] gi.cylinder.y2str;
-      delete[] gi.cylinder.z2str;
-      delete[] gi.cylinder.dstr;
-      break;
-    case ARROW:
-      delete[] gi.arrow.x1str;
-      delete[] gi.arrow.y1str;
-      delete[] gi.arrow.z1str;
-      delete[] gi.arrow.x2str;
-      delete[] gi.arrow.y2str;
-      delete[] gi.arrow.z2str;
-      delete[] gi.arrow.dstr;
-      break;
-    case PROGBAR:
-      delete[] gi.progbar.pstr;
-      break;
-    default:;    // do nothing
-      break;
+      case SPHERE:
+        delete[] gi.sphere.xstr;
+        delete[] gi.sphere.ystr;
+        delete[] gi.sphere.zstr;
+        delete[] gi.sphere.dstr;
+        break;
+      case CYLINDER:
+        delete[] gi.cylinder.x1str;
+        delete[] gi.cylinder.y1str;
+        delete[] gi.cylinder.z1str;
+        delete[] gi.cylinder.x2str;
+        delete[] gi.cylinder.y2str;
+        delete[] gi.cylinder.z2str;
+        delete[] gi.cylinder.dstr;
+        break;
+      case ARROW:
+        delete[] gi.arrow.x1str;
+        delete[] gi.arrow.y1str;
+        delete[] gi.arrow.z1str;
+        delete[] gi.arrow.x2str;
+        delete[] gi.arrow.y2str;
+        delete[] gi.arrow.z2str;
+        delete[] gi.arrow.dstr;
+        break;
+      case PROGBAR:
+        delete[] gi.progbar.pstr;
+        break;
+      default:;    // do nothing
+        break;
     }
   }
 
@@ -541,18 +541,18 @@ void FixGraphics::init()
         imgparms[n][6] = gi.progbar.pos[Z];
         imgparms[n][7] = 1.1 * gi.progbar.diameter;
         switch (gi.progbar.dim) {
-        case X:
-          imgparms[n][1] = lo + delta * i - 0.05 * delta;
-          imgparms[n][4] = lo + delta * i + 0.05 * delta;
-          break;
-        case Y:
-          imgparms[n][2] = lo + delta * i - 0.05 * delta;
-          imgparms[n][5] = lo + delta * i + 0.05 * delta;
-          break;
-        case Z:
-          imgparms[n][3] = lo + delta * i - 0.05 * delta;
-          imgparms[n][6] = lo + delta * i + 0.05 * delta;
-          break;
+          case X:
+            imgparms[n][1] = lo + delta * i - 0.05 * delta;
+            imgparms[n][4] = lo + delta * i + 0.05 * delta;
+            break;
+          case Y:
+            imgparms[n][2] = lo + delta * i - 0.05 * delta;
+            imgparms[n][5] = lo + delta * i + 0.05 * delta;
+            break;
+          case Z:
+            imgparms[n][3] = lo + delta * i - 0.05 * delta;
+            imgparms[n][6] = lo + delta * i + 0.05 * delta;
+            break;
         }
         ++n;
       }
