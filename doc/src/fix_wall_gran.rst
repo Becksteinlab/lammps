@@ -270,7 +270,7 @@ Dump image info
 
 This fix supports the *fix* keyword of :doc:`dump image <dump_image>`.
 The fix will pass geometry information about *xplane*\, *yplane*\, and
-*zplane style walls to *dump image* so that the walls will be included
+*zplane* style walls to *dump image* so that the walls will be included
 in the rendered image.  Please note, that for :doc:`2d systems
 <dimension>`, a wall rendered as a plane would be invisible and it is
 thus rendered as a cylinder.

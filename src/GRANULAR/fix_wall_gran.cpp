@@ -308,16 +308,16 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
   if ((wallstyle == XPLANE) || (wallstyle == YPLANE) || (wallstyle == ZPLANE)) {
     if (domain->dimension == 2) {
       // one cylinder object per wall to draw in 2d
-      memory->create(imgobjs, numwalls, "fix_indent:imgobjs");
-      memory->create(imgparms, numwalls, 8, "fix_indent:imgparms");
+      memory->create(imgobjs, numwalls, "fix_wall:imgobjs");
+      memory->create(imgparms, numwalls, 8, "fix_wall:imgparms");
       for (int m = 0; m < numwalls; ++m) {
         imgobjs[m] = DumpImage::CYLINDER;
         imgparms[m][0] = 1;    // use color of first atom type by default
       }
     } else {
       // two triangle objects per wall to draw in 3d
-      memory->create(imgobjs, 2 * numwalls, "fix_indent:imgobjs");
-      memory->create(imgparms, 2 * numwalls, 10, "fix_indent:imgparms");
+      memory->create(imgobjs, 2 * numwalls, "fix_wall:imgobjs");
+      memory->create(imgparms, 2 * numwalls, 10, "fix_wall:imgparms");
       for (int m = 0; m < numwalls; ++m) {
         imgobjs[2 * m] = DumpImage::TRIANGLE;
         imgobjs[2 * m + 1] = DumpImage::TRIANGLE;
@@ -327,8 +327,8 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     }
   } else if (wallstyle == ZCYLINDER) {
     // one cylinder object per wall to draw
-    memory->create(imgobjs, numwalls, "fix_indent:imgobjs");
-    memory->create(imgparms, numwalls, 8, "fix_indent:imgparms");
+    memory->create(imgobjs, numwalls, "fix_wall:imgobjs");
+    memory->create(imgparms, numwalls, 8, "fix_wall:imgparms");
     for (int m = 0; m < numwalls; ++m) {
       imgobjs[m] = DumpImage::CYLINDER;
       imgparms[m][0] = 1;    // use color of first atom type by default

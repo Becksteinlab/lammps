@@ -146,16 +146,16 @@ FixWallReflect::FixWallReflect(LAMMPS *lmp, int narg, char **arg) :
   // for rendering walls with dump image.
   if (domain->dimension == 2) {
     // one cylinder object per wall to draw in 2d
-    memory->create(imgobjs, nwall, "fix_indent:imgobjs");
-    memory->create(imgparms, nwall, 8, "fix_indent:imgparms");
+    memory->create(imgobjs, nwall, "fix_wall_reflect:imgobjs");
+    memory->create(imgparms, nwall, 8, "fix_wall_reflect:imgparms");
     for (int m = 0; m < nwall; ++m) {
       imgobjs[m] = DumpImage::CYLINDER;
       imgparms[m][0] = 1;    // use color of first atom type by default
     }
   } else {
     // two triangle objects per wall to draw in 3d
-    memory->create(imgobjs, 2 * nwall, "fix_indent:imgobjs");
-    memory->create(imgparms, 2 * nwall, 10, "fix_indent:imgparms");
+    memory->create(imgobjs, 2 * nwall, "fix_wall_reflect:imgobjs");
+    memory->create(imgparms, 2 * nwall, 10, "fix_wall_reflect:imgparms");
     for (int m = 0; m < nwall; ++m) {
       imgobjs[2 * m] = DumpImage::TRIANGLE;
       imgobjs[2 * m + 1] = DumpImage::TRIANGLE;
