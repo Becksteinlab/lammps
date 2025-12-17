@@ -90,7 +90,6 @@ class FixGraphics : public Fix {
     GraphicsItem(const CylinderItem &c) : cylinder(c) {}
     GraphicsItem(const ArrowItem &a) : arrow(a) {}
     GraphicsItem(const ProgbarItem &p) : progbar(p) {}
-    ~GraphicsItem();
 
     int style;
     SphereItem sphere;

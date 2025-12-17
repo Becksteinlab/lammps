@@ -36,43 +36,6 @@ enum { X = 0, Y, Z };
 
 /* ---------------------------------------------------------------------- */
 
-FixGraphics::GraphicsItem::~GraphicsItem()
-{
-  switch (style) {
-    case SPHERE:
-      delete[] sphere.xstr;
-      delete[] sphere.ystr;
-      delete[] sphere.zstr;
-      delete[] sphere.dstr;
-      break;
-    case CYLINDER:
-      delete[] cylinder.x1str;
-      delete[] cylinder.y1str;
-      delete[] cylinder.z1str;
-      delete[] cylinder.x2str;
-      delete[] cylinder.y2str;
-      delete[] cylinder.z2str;
-      delete[] cylinder.dstr;
-      break;
-    case ARROW:
-      delete[] arrow.x1str;
-      delete[] arrow.y1str;
-      delete[] arrow.z1str;
-      delete[] arrow.x2str;
-      delete[] arrow.y2str;
-      delete[] arrow.z2str;
-      delete[] arrow.dstr;
-      break;
-    case PROGBAR:
-      delete[] progbar.pstr;
-      break;
-    default:;    // do nothing
-      break;
-  }
-}
-
-/* ---------------------------------------------------------------------- */
-
 FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), imgobjs(nullptr), imgparms(nullptr)
 {
@@ -230,22 +193,22 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       } else {
         error->all(FLERR, iarg + 3, "Unsupported progress bar dimension string {}", arg[iarg + 3]);
       }
-      progbar.tics = utils::inumeric(FLERR, arg[iarg + 4], false, lmp);
-      if ((progbar.tics < 0) || (progbar.tics > 10))
-        error->all(FLERR, iarg + 4, "Unsupported number of progress bar tics {}", arg[iarg + 4]);
-      progbar.pos[X] = utils::numeric(FLERR, arg[iarg + 5], false, lmp);
-      progbar.pos[Y] = utils::numeric(FLERR, arg[iarg + 6], false, lmp);
-      progbar.pos[Z] = utils::numeric(FLERR, arg[iarg + 7], false, lmp);
+      progbar.pos[X] = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
+      progbar.pos[Y] = utils::numeric(FLERR, arg[iarg + 5], false, lmp);
+      progbar.pos[Z] = utils::numeric(FLERR, arg[iarg + 6], false, lmp);
+      progbar.length = utils::numeric(FLERR, arg[iarg + 7], false, lmp);
+      if ((progbar.length <= 0.0) || (progbar.length > 2.0*domain->prd[progbar.dim]))
+        error->all(FLERR, iarg + 7, "Illegal progress bar length {}", arg[iarg + 7]);
       progbar.diameter = 2.0 * utils::numeric(FLERR, arg[iarg + 8], false, lmp);
-      progbar.length = utils::numeric(FLERR, arg[iarg + 9], false, lmp);
-      if ((progbar.length <= 0.0) || (progbar.length > domain->prd[progbar.dim]))
-        error->all(FLERR, iarg + 9, "Illegal progress bar length {}", arg[iarg + 9]);
-      if (strstr(arg[iarg + 10], "v_") == arg[iarg + 10]) {
+      if (strstr(arg[iarg + 9], "v_") == arg[iarg + 9]) {
         varflag = 1;
-        progbar.pstr = utils::strdup(arg[iarg + 10] + 2);
+        progbar.pstr = utils::strdup(arg[iarg + 9] + 2);
       } else {
-        progbar.progress = utils::numeric(FLERR, arg[iarg + 10], false, lmp);
+        progbar.progress = utils::numeric(FLERR, arg[iarg + 9], false, lmp);
       }
+      progbar.tics = utils::inumeric(FLERR, arg[iarg + 10], false, lmp);
+      if ((progbar.tics < 0) || (progbar.tics > 20))
+        error->all(FLERR, iarg + 10, "Unsupported number of progress bar tics {}", arg[iarg + 10]);
       items.emplace_back(std::move(progbar));
       numobjs += 2 + progbar.tics;
       iarg += 11;
@@ -254,13 +217,47 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
     }
   }
   memory->create(imgobjs, numobjs, "fix_graphics:imgobjs");
-  memory->create(imgparms, numobjs, 10, "fix_graphics:imgparms");
+  memory->create(imgparms, numobjs, 8, "fix_graphics:imgparms");
 }
 
 /* ---------------------------------------------------------------------- */
 
 FixGraphics::~FixGraphics()
 {
+  for (auto &gi : items) {
+    switch (gi.style) {
+    case SPHERE:
+      delete[] gi.sphere.xstr;
+      delete[] gi.sphere.ystr;
+      delete[] gi.sphere.zstr;
+      delete[] gi.sphere.dstr;
+      break;
+    case CYLINDER:
+      delete[] gi.cylinder.x1str;
+      delete[] gi.cylinder.y1str;
+      delete[] gi.cylinder.z1str;
+      delete[] gi.cylinder.x2str;
+      delete[] gi.cylinder.y2str;
+      delete[] gi.cylinder.z2str;
+      delete[] gi.cylinder.dstr;
+      break;
+    case ARROW:
+      delete[] gi.arrow.x1str;
+      delete[] gi.arrow.y1str;
+      delete[] gi.arrow.z1str;
+      delete[] gi.arrow.x2str;
+      delete[] gi.arrow.y2str;
+      delete[] gi.arrow.z2str;
+      delete[] gi.arrow.dstr;
+      break;
+    case PROGBAR:
+      delete[] gi.progbar.pstr;
+      break;
+    default:;    // do nothing
+      break;
+    }
+  }
+
   memory->destroy(imgobjs);
   memory->destroy(imgparms);
 }
@@ -474,6 +471,101 @@ void FixGraphics::init()
       imgparms[n][0] = gi.arrow.type;
       ++n;
     } else if (gi.style == PROGBAR) {
+      imgobjs[n] = DumpImage::CYLINDER;
+      imgparms[n][0] = gi.progbar.type1;
+      imgparms[n][1] = gi.progbar.pos[X];
+      imgparms[n][2] = gi.progbar.pos[Y];
+      imgparms[n][3] = gi.progbar.pos[Z];
+      imgparms[n][4] = gi.progbar.pos[X];
+      imgparms[n][5] = gi.progbar.pos[Y];
+      imgparms[n][6] = gi.progbar.pos[Z];
+      imgparms[n][7] = gi.progbar.diameter;
+      switch (gi.progbar.dim) {
+        case X:
+          imgparms[n][1] -= 0.5 * gi.progbar.length;
+          imgparms[n][4] += 0.5 * gi.progbar.length;
+          break;
+        case Y:
+          imgparms[n][2] -= 0.5 * gi.progbar.length;
+          imgparms[n][5] += 0.5 * gi.progbar.length;
+          break;
+        case Z:
+          imgparms[n][3] -= 0.5 * gi.progbar.length;
+          imgparms[n][6] += 0.5 * gi.progbar.length;
+          break;
+        default:;    // do nothing
+      }
+      ++n;
+      imgobjs[n] = DumpImage::CYLINDER;
+      imgparms[n][0] = gi.progbar.type2;
+      imgparms[n][1] = gi.progbar.pos[X];
+      imgparms[n][2] = gi.progbar.pos[Y];
+      imgparms[n][3] = gi.progbar.pos[Z];
+      imgparms[n][4] = gi.progbar.pos[X];
+      imgparms[n][5] = gi.progbar.pos[Y];
+      imgparms[n][6] = gi.progbar.pos[Z];
+      imgparms[n][7] = 0.75 * gi.progbar.diameter;
+      switch (gi.progbar.dim) {
+        case X:
+          imgparms[n][1] -= 0.5 * gi.progbar.length;
+          imgparms[n][4] -= 0.5 * gi.progbar.length;
+          imgparms[n][3] += 0.2 * gi.progbar.diameter;
+          imgparms[n][6] += 0.2 * gi.progbar.diameter;
+          break;
+        case Y:
+          imgparms[n][2] -= 0.5 * gi.progbar.length;
+          imgparms[n][5] -= 0.5 * gi.progbar.length;
+          imgparms[n][1] += 0.15 * gi.progbar.diameter;
+          imgparms[n][4] += 0.15 * gi.progbar.diameter;
+          break;
+        case Z:
+          imgparms[n][3] -= 0.5 * gi.progbar.length;
+          imgparms[n][6] -= 0.5 * gi.progbar.length;
+          imgparms[n][1] += 0.15 * gi.progbar.diameter;
+          imgparms[n][4] += 0.15 * gi.progbar.diameter;
+          break;
+        default:
+          break;
+      }
+      ++n;
+      double delta = gi.progbar.length / (double) (gi.progbar.tics - 1);
+      double lo = gi.progbar.pos[gi.progbar.dim] - 0.5 * gi.progbar.length;
+      for (int i = 0; i < gi.progbar.tics; ++i) {
+        imgobjs[n] = DumpImage::CYLINDER;
+        imgparms[n][0] = gi.progbar.type1;
+        imgparms[n][1] = gi.progbar.pos[X];
+        imgparms[n][2] = gi.progbar.pos[Y];
+        imgparms[n][3] = gi.progbar.pos[Z];
+        imgparms[n][4] = gi.progbar.pos[X];
+        imgparms[n][5] = gi.progbar.pos[Y];
+        imgparms[n][6] = gi.progbar.pos[Z];
+        imgparms[n][7] = 1.1 * gi.progbar.diameter;
+        switch (gi.progbar.dim) {
+        case X:
+          imgparms[n][1] = lo + delta * i - 0.05 * delta;
+          imgparms[n][4] = lo + delta * i + 0.05 * delta;
+          break;
+        case Y:
+          imgparms[n][2] = lo + delta * i - 0.05 * delta;
+          imgparms[n][5] = lo + delta * i + 0.05 * delta;
+          break;
+        case Z:
+          imgparms[n][3] = lo + delta * i - 0.05 * delta;
+          imgparms[n][6] = lo + delta * i + 0.05 * delta;
+          break;
+        }
+        ++n;
+      }
+      if (gi.progbar.pstr) {
+        int ivar = input->variable->find(gi.progbar.pstr);
+        if (ivar < 0)
+          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
+                     gi.progbar.pstr);
+        if (input->variable->equalstyle(ivar) == 0)
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Fix graphics variable {} is not equal-style variable", gi.progbar.pstr);
+        gi.progbar.pvar = ivar;
+      }
     }
   }
   end_of_step();
@@ -551,9 +643,25 @@ void FixGraphics::end_of_step()
       imgparms[n][7] = gi.arrow.diameter;
       ++n;
     } else if (gi.style == PROGBAR) {
+      ++n;
+      if (gi.progbar.pstr) gi.progbar.progress = input->variable->compute_equal(gi.progbar.pvar);
+      switch (gi.progbar.dim) {
+        case X:
+          imgparms[n][1] = gi.progbar.pos[X] + (gi.progbar.progress - 0.5) * gi.progbar.length;
+          break;
+        case Y:
+          imgparms[n][2] = gi.progbar.pos[Y] + (gi.progbar.progress - 0.5) * gi.progbar.length;
+          break;
+        case Z:
+          imgparms[n][3] = gi.progbar.pos[Z] + (gi.progbar.progress - 0.5) * gi.progbar.length;
+          break;
+        default:
+          break;
+      }
+      ++n;
+      n += gi.progbar.tics;
     }
   }
-
   if (varflag) modify->addstep_compute((update->ntimestep / nevery) * nevery + nevery);
 }
 

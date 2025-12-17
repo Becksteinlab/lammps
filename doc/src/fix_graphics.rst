@@ -34,14 +34,14 @@ Syntax
          R = cylinder radius (distance units)
          ratio = tip to body ratio (unitless)
          any of x1, y1, z1, x2, y2, z2, and R can be a variable (see below)
-       *progbar* args = type1 type2 dim x y z length ratio R tics
+       *progbar* args = type1 type2 dim x y z length R ratio tics
          type1 = an atom type value to select the color of the progress bar body and the tics
          type2 = an atom type value to select the color of the progress indicator
          dim = *x* or *y* or *z*, direction of the progress bar
          x, y, z = position of the progress bar center (distance units)
          length = length of progress bar (distance units)
-         ratio = progress status (unitless)
          R = cylinder radius (distance units)
+         ratio = progress status (unitless)
          tics = number of tics (unitless)
          only the progress ratio value can be a variable (see below)
 
@@ -52,6 +52,7 @@ Examples
 
    fix 1 all graphics 100 sphere 1 0.0 0.0 15.0 3.0 sphere 2 0.0 0.0 5.0 1.0
    fix 1 all graphics 1000 sphere 1 v_x v_y 0.0 v_radius cylinder 1 v_x v_y 0.0 v_x v_y 10.0 3.0
+   fix 2 all graphics 100 progbar 3 1 z 0.012 -0.012 0.0025 0.03 0.0003 v_prog 10
 
 Description
 """""""""""
@@ -79,8 +80,9 @@ Available graphics objects are (see above for exact command line syntax):
 - *sphere* - a sphere defined by its center location and its radius
 - *cylinder* - a cylinder defined by its two center endpoints and its radius
 - *arrow* - a cylinder with a cone at one side
+- *progbar* - progress bar a long a selected axis and with optional tick marks
 
-Most of the quantities defining a graphics object can be specified as an
+Many of the quantities defining a graphics object can be specified as an
 equal-style :doc:`variable <variable>`, namely *x*, *y*, *z*, or *R* for
 a *sphere* or namely *x1*, *y1*, *z1*, *x2*, *y2*, *z2*, or *R* for a
 *cylinder*.  If any of these values is a variable, it should be
@@ -134,9 +136,16 @@ image <dump_image>`.  The fix will pass geometry information about the
 objects listed on the command line to *dump image* so that they are
 included in the rendered image.
 
-.. The *fflag1* setting of *dump image fix* has no impact on rendering a
+The *fflag1* setting of *dump image fix* determines whether cylinder
+elements are capped with spheres:  0 means no caps, 1 means the lower
+end is capped, 2 means the upper end is capped, and 3 means both ends
+are capped.  This applies to the *cylinder* object and also to the
+body of the *arrow* object and the elements of the *progbar* object.
 
-.. The *fflag2* setting allows you to adjust the radius of the rendered
+The *fflag2* setting allows you to adjust the radius of the rendered
+sphere and cylinder items comprising the objects.  Since the radius of
+these objects is an input parameter for this fix, it is recommended to
+set this flag to 0.0.
 
 
 Restart, fix_modify, output, run start/stop, minimize info
