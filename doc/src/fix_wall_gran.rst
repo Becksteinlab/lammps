@@ -165,7 +165,7 @@ keywords are appended.  Both keywords cannot be used together.
 For the *wiggle* keyword, the wall oscillates sinusoidally, similar to
 the oscillations of particles which can be specified by the :doc:`fix move <fix_move>` command.  This is useful in packing simulations of
 granular particles.  The arguments to the *wiggle* keyword specify a
-dimension for the motion, as well as it's *amplitude* and *period*\ .
+dimension for the motion, as well as its *amplitude* and *period*\ .
 Note that if the dimension is in the plane of the wall, this is
 effectively a shearing motion.  If the dimension is perpendicular to
 the wall, it is more of a shaking motion.  A *zcylinder* wall can only
@@ -187,7 +187,7 @@ For the *shear* keyword, the wall moves continuously in the specified
 dimension with velocity *vshear*\ .  The dimension must be tangential to
 walls with a planar *wallstyle*, e.g. in the *y* or *z* directions for
 an *xplane* wall.  For *zcylinder* walls, a dimension of *z* means the
-cylinder is moving in the z-direction along it's axis.  A dimension of
+cylinder is moving in the z-direction along its axis.  A dimension of
 *x* or *y* means the cylinder is spinning around the z-axis, either in
 the clockwise direction for *vshear* > 0 or counter-clockwise for
 *vshear* < 0.  In this case, *vshear* is the tangential velocity of
