@@ -207,7 +207,7 @@ void ellipsoid2wireframe(LAMMPS_NS::Image *img, int level, const double *color, 
 }
 
 void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, const double *center,
-                      const double *radius, LAMMPS_NS::Region *reg)
+                      const double *radius, LAMMPS_NS::Region *reg, double opacity)
 {
   vec3 offset = {center[0], center[1], center[2]};
 
@@ -230,7 +230,7 @@ void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, con
       reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
       reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
       reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color);
+      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
     }
   }
 
@@ -244,7 +244,7 @@ void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, con
         reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
         reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
         reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color);
+        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
       }
     }
   }
@@ -258,7 +258,7 @@ void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, con
         reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
         reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
         reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color);
+        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
       }
     }
   }
@@ -271,7 +271,7 @@ void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, con
       reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
       reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
       reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color);
+      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
     }
   }
 }
@@ -285,7 +285,7 @@ static constexpr double BIG = 1.0e20;
 enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT };
 enum { STATIC, DYNAMIC };
 enum { NO = 0, YES = 1, AUTO = 2 };
-enum { FILLED, FRAME, POINTS };
+enum { FILLED, FRAME, POINTS, TRANSPARENT };
 
 /* ---------------------------------------------------------------------- */
 
@@ -504,17 +504,19 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       if (strcmp(arg[iarg+3],"filled") == 0) drawstyle = FILLED;
       else if (strcmp(arg[iarg+3],"frame") == 0) drawstyle = FRAME;
       else if (strcmp(arg[iarg+3],"points") == 0) drawstyle = POINTS;
+      else if (strcmp(arg[iarg+3],"transparent") == 0) drawstyle = TRANSPARENT;
       else error->all(FLERR, iarg+3, "Unknown region draw style {}", arg[iarg+3]);
       double framediam = 0.5;
+      double opacity = 1.0;
       int npoints = 0;
       if (drawstyle == FRAME) {
-        if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image region", error);
+        if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image region frame", error);
         framediam = utils::numeric(FLERR, arg[iarg+4], false, lmp);
         if (framediam <= 0.0)
           error->all(FLERR, iarg+4, "Dump image region frame diameter must be > 0.0");
         ++iarg;
       } else if (drawstyle == POINTS) {
-        if (iarg+6 > narg) utils::missing_cmd_args(FLERR,"dump image region", error);
+        if (iarg+6 > narg) utils::missing_cmd_args(FLERR,"dump image region points", error);
         npoints = utils::inumeric(FLERR, arg[iarg+4], false, lmp);
         if (npoints < 1)
           error->all(FLERR, iarg+4, "Dump image region number of points must be > 0");
@@ -522,9 +524,15 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
         if (framediam <= 0.0)
           error->all(FLERR, iarg+5, "Dump image region point diameter must be > 0.0");
         iarg += 2;
+      } else if (drawstyle == TRANSPARENT) {
+        if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image region transparent", error);
+        opacity = utils::numeric(FLERR, arg[iarg+5], false, lmp);
+        if ((opacity < 0.0) || (opacity > 1.0))
+          error->all(FLERR, iarg+5, "Dump image region opacity must be in the range 0.0 to 1.0");
+        iarg += 2;
       }
       iarg += 4;
-      regions.emplace_back(regptr->id, regptr, regcolor, drawstyle, framediam, npoints);
+      regions.emplace_back(regptr->id, regptr, regcolor, drawstyle, framediam, opacity, npoints);
 
     } else if (strcmp(arg[iarg],"size") == 0) {
       if (iarg+3 > narg) utils::missing_cmd_args(FLERR,"dump image size", error);
@@ -1697,15 +1705,6 @@ void DumpImage::create_image()
   // render objects provided by fixes
 
   for (const auto &ifix : fixes) {
-    int tridraw = 0;
-    int edgedraw = 0;
-    if (domain->dimension == 3) {
-      tridraw = 1;
-      edgedraw = 1;
-      if ((int) ifix.flag1 == 2) tridraw = 0;
-      if ((int) ifix.flag1 == 1) edgedraw = 0;
-    }
-
     int *fixvec = nullptr;
     double **fixarray = nullptr;
     const int ntypes = atom->ntypes;
@@ -1732,21 +1731,24 @@ void DumpImage::create_image()
         // @sjplimp for consistency this should be:
         // image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag2,ifix.flag1);
         image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag1,3);
-      } else if (fixvec[i] == TRI) {
-        p1 = &fixarray[i][1];
-        p2 = &fixarray[i][4];
-        p3 = &fixarray[i][7];
-        if (tridraw) image->draw_triangle(p1,p2,p3,color);
-        if (edgedraw) {
-          image->draw_cylinder(p1,p2,color,ifix.flag2,3);
-          image->draw_cylinder(p2,p3,color,ifix.flag2,3);
-          image->draw_cylinder(p3,p1,color,ifix.flag2,3);
+      } else if (fixvec[i] == TRI) { // don't render surface meshes in 2d
+        if (domain->dimension == 3) {
+          p1 = &fixarray[i][1];
+          p2 = &fixarray[i][4];
+          p3 = &fixarray[i][7];
+          if (static_cast<int>(ifix.flag1) % 2) {
+            image->draw_triangle(p1,p2,p3,color,ifix.flag2);
+          } else {
+            image->draw_cylinder(p1,p2,color,ifix.flag2,3);
+            image->draw_cylinder(p2,p3,color,ifix.flag2,3);
+            image->draw_cylinder(p3,p1,color,ifix.flag2,3);
+          }
         }
       } else if (fixvec[i] == CYLINDER) {
         image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,
                              fixarray[i][7]+ifix.flag2,(int)ifix.flag1);
       } else if (fixvec[i] == TRIANGLE) {
-        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color);
+        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,ifix.flag2);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
@@ -1882,30 +1884,31 @@ void DumpImage::create_image()
           image->draw_cylinder(block[5],block[6],reg.color,reg.diameter,3);
           image->draw_cylinder(block[4],block[7],reg.color,reg.diameter,3);
           image->draw_cylinder(block[6],block[7],reg.color,reg.diameter,3);
-        } else if (reg.style == FILLED) {
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           if (!myreg->open_faces[0]) {
-            image->draw_triangle(block[0], block[1], block[2], reg.color);
-            image->draw_triangle(block[2], block[3], block[0], reg.color);
+            image->draw_triangle(block[0], block[1], block[2], reg.color, opacity);
+            image->draw_triangle(block[2], block[3], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[1]) {
-            image->draw_triangle(block[4], block[5], block[6], reg.color);
-            image->draw_triangle(block[6], block[7], block[4], reg.color);
+            image->draw_triangle(block[4], block[5], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[7], block[4], reg.color, opacity);
           }
           if (!myreg->open_faces[2]) {
-            image->draw_triangle(block[0], block[4], block[7], reg.color);
-            image->draw_triangle(block[7], block[3], block[0], reg.color);
+            image->draw_triangle(block[0], block[4], block[7], reg.color, opacity);
+            image->draw_triangle(block[7], block[3], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[3]) {
-            image->draw_triangle(block[1], block[2], block[6], reg.color);
-            image->draw_triangle(block[6], block[5], block[1], reg.color);
+            image->draw_triangle(block[1], block[2], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[5], block[1], reg.color, opacity);
           }
           if (!myreg->open_faces[4]) {
-            image->draw_triangle(block[0], block[1], block[5], reg.color);
-            image->draw_triangle(block[5], block[4], block[0], reg.color);
+            image->draw_triangle(block[0], block[1], block[5], reg.color, opacity);
+            image->draw_triangle(block[5], block[4], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[5]) {
-            image->draw_triangle(block[3], block[2], block[6], reg.color);
-            image->draw_triangle(block[6], block[7], block[3], reg.color);
+            image->draw_triangle(block[3], block[2], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[7], block[3], reg.color, opacity);
           }
         }
 
@@ -2004,7 +2007,8 @@ void DumpImage::create_image()
               image->draw_cylinder(p2, p4, reg.color, reg.diameter, 3);
             }
           }
-        } else if (reg.style == FILLED) {
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           for (int i = 0; i < RESOLUTION; ++i) {
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
@@ -2021,11 +2025,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p2, p4, p3, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
 
             } else if (myreg->axis == 'y') {
@@ -2043,11 +2047,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p2, p4, p3, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             } else {  // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
@@ -2064,11 +2068,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p2, p4, p3, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             }
           }
@@ -2157,7 +2161,8 @@ void DumpImage::create_image()
               image->draw_cylinder(p2, p4, reg.color, reg.diameter, 3);
             }
           }
-        } else if (reg.style == FILLED) {
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           for (int i = 0; i < RESOLUTION; ++i) {
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
@@ -2170,11 +2175,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p3, p4, p2, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p3, p4, p2, reg.color, opacity);
               }
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
@@ -2187,11 +2192,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p3, p4, p2, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p3, p4, p2, reg.color, opacity);
               }
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
@@ -2204,11 +2209,11 @@ void DumpImage::create_image()
               myreg->forward_transform(p2[0], p2[1], p2[2]);
               myreg->forward_transform(p3[0], p3[1], p3[2]);
               myreg->forward_transform(p4[0], p4[1], p4[2]);
-              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color);
-              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color);
+              if (!myreg->open_faces[0]) image->draw_triangle(p1, p2, lo, reg.color, opacity);
+              if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
-                image->draw_triangle(p1, p2, p3, reg.color);
-                image->draw_triangle(p2, p4, p3, reg.color);
+                image->draw_triangle(p1, p2, p3, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             }
           }
@@ -2226,8 +2231,9 @@ void DumpImage::create_image()
         double radius[3] = {myreg->a, myreg->b, myreg->c};
         if (reg.style == FRAME) {
           ellipsoid2wireframe(image, 4, reg.color, reg.diameter, center, radius, reg.ptr);
-        } else if (reg.style == FILLED) {
-          ellipsoid2filled(image, 4, reg.color, center, radius, reg.ptr);
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
+          ellipsoid2filled(image, 4, reg.color, center, radius, reg.ptr, opacity);
         }
 
       } else if (regstyle == "prism") {
@@ -2260,30 +2266,31 @@ void DumpImage::create_image()
           image->draw_cylinder(block[5],block[6],reg.color,reg.diameter,3);
           image->draw_cylinder(block[4],block[7],reg.color,reg.diameter,3);
           image->draw_cylinder(block[6],block[7],reg.color,reg.diameter,3);
-        } else if (reg.style == FILLED) {
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           if (!myreg->open_faces[0]) {
-            image->draw_triangle(block[0], block[1], block[2], reg.color);
-            image->draw_triangle(block[2], block[3], block[0], reg.color);
+            image->draw_triangle(block[0], block[1], block[2], reg.color, opacity);
+            image->draw_triangle(block[2], block[3], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[1]) {
-            image->draw_triangle(block[4], block[5], block[6], reg.color);
-            image->draw_triangle(block[6], block[7], block[4], reg.color);
+            image->draw_triangle(block[4], block[5], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[7], block[4], reg.color, opacity);
           }
           if (!myreg->open_faces[2]) {
-            image->draw_triangle(block[0], block[4], block[7], reg.color);
-            image->draw_triangle(block[7], block[3], block[0], reg.color);
+            image->draw_triangle(block[0], block[4], block[7], reg.color, opacity);
+            image->draw_triangle(block[7], block[3], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[3]) {
-            image->draw_triangle(block[1], block[2], block[6], reg.color);
-            image->draw_triangle(block[6], block[5], block[1], reg.color);
+            image->draw_triangle(block[1], block[2], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[5], block[1], reg.color, opacity);
           }
           if (!myreg->open_faces[4]) {
-            image->draw_triangle(block[0], block[1], block[5], reg.color);
-            image->draw_triangle(block[5], block[4], block[0], reg.color);
+            image->draw_triangle(block[0], block[1], block[5], reg.color, opacity);
+            image->draw_triangle(block[5], block[4], block[0], reg.color, opacity);
           }
           if (!myreg->open_faces[5]) {
-            image->draw_triangle(block[3], block[2], block[6], reg.color);
-            image->draw_triangle(block[6], block[7], block[3], reg.color);
+            image->draw_triangle(block[3], block[2], block[6], reg.color, opacity);
+            image->draw_triangle(block[6], block[7], block[3], reg.color, opacity);
           }
         }
       } else if (regstyle == "sphere") {
@@ -2298,9 +2305,10 @@ void DumpImage::create_image()
         if (reg.style == FRAME) {
           double radius[3] = {myreg->radius,myreg->radius,myreg->radius};
           ellipsoid2wireframe(image, 4, reg.color, reg.diameter, center, radius, reg.ptr);
-        } else if (reg.style == FILLED) {
+        } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
+          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           myreg->forward_transform(center[0], center[1], center[2]);
-          image->draw_sphere(center, reg.color, 2.0 * myreg->radius);
+          image->draw_sphere(center, reg.color, 2.0 * myreg->radius, opacity);
         }
       } else {
         if (comm->me == 0)

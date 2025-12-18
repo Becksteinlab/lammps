@@ -43,9 +43,9 @@ class DumpImage : public DumpCustom {
     SPHERE,    // a single sphere with radius provided
     LINE,      // a cylinder with diameter given through fflag2
     TRI,       // a surface mesh as triangles or cylinder mesh based on fflag1, fflag2 sets diameter
-    CYLINDER,  // a cylinder with diameter given by fix, fflag1 choose caps, fflag2 adjusts diameter
-    TRIANGLE,  // a regular triangle, no settings apply
-    BOND       // two connected cylinders with bond diameter, colored by atom types, fflag1 sets cap
+    CYLINDER,    // a cylinder with diameter given by fix, fflag1 choose caps, fflag2 adjusts diameter
+    TRIANGLE,    // a regular triangle, no settings apply
+    BOND    // two connected cylinders with bond diameter, colored by atom types, fflag1 sets cap
   };    // used by some Body and Fix child classes
 
   DumpImage(LAMMPS *, int, char **);
@@ -137,8 +137,9 @@ class DumpImage : public DumpCustom {
   struct RegionInfo {
     RegionInfo() = delete;
     RegionInfo(const std::string &_id, Region *_ptr, double *_color, int _style,
-               double _diameter = 0.5, int _npoints = 0) :
-        ptr(_ptr), id(_id), style(_style), color(_color), diameter(_diameter), npoints(_npoints)
+               double _diameter = 0.5, double _opacity = 1.0, int _npoints = 0) :
+        ptr(_ptr), id(_id), style(_style), color(_color), diameter(_diameter), opacity(_opacity),
+        npoints(_npoints)
     {
     }
 
@@ -147,6 +148,7 @@ class DumpImage : public DumpCustom {
     int style;
     double *color;
     double diameter;
+    double opacity;
     int npoints;
   };
 
