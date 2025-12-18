@@ -55,7 +55,106 @@ enum { CONTINUOUS, DISCRETE, SEQUENTIAL };
 enum { ABSOLUTE, FRACTIONAL };
 enum { NO, YES };
 
-constexpr double transthresh[16][16] = {
+// #define USE_BAYER_MATRIX
+#if defined(USE_BAYER_MATRIX)
+////////////////////////////////////////////////////////////////////////
+// the following regular Bayer threshold matrix can be created for any
+// power of 2 ranks with the following python code.
+// See https://en.wikipedia.org/wiki/Ordered_dithering
+//
+// import numpy as np
+//
+// def bayer_matrix(n: int) -> np.ndarray:
+//     """Generate an n x n Bayer (ordered dither) matrix for n a power of 2."""
+//     if n == 1:
+//         return np.array([[0]], dtype=int)
+//
+//     m = n // 2
+//     B = bayer_matrix(m)
+//
+//     # Standard Bayer recursion
+//     return np.block([
+//         [4 * B + 0, 4 * B + 2],
+//         [4 * B + 3, 4 * B + 1]
+//     ])
+//
+// # set rank
+// n=16
+//
+// # normalized matrix from recursion
+// matrix = (bayer_matrix(n) + 0.5) / (n * n)
+//
+// print("constexpr int TRANK = %d;" % n)
+// print("constexpr double transthresh[TRANK][TRANK] = {")
+// nx, ny = matrix.shape
+// for iy in range(0,ny):
+//     print("{")
+//     for ix in range(0,nx):
+//         if ix < nx -1:
+//             print(f"{matrix[ix][iy]:12.9f},")
+//         else:
+//             print(f"{matrix[ix][iy]:12.9f}")
+//     if iy < ny - 1:
+//         print("},")
+//     else:
+//         print("}")
+//
+// print("};")
+////////////////////////////////////////////////////////////////////////
+constexpr int TRANK = 16;
+constexpr double transthresh[TRANK][TRANK] = {
+    {0.001953125, 0.751953125, 0.189453125, 0.939453125, 0.048828125, 0.798828125, 0.236328125,
+     0.986328125, 0.013671875, 0.763671875, 0.201171875, 0.951171875, 0.060546875, 0.810546875,
+     0.248046875, 0.998046875},
+    {0.501953125, 0.251953125, 0.689453125, 0.439453125, 0.548828125, 0.298828125, 0.736328125,
+     0.486328125, 0.513671875, 0.263671875, 0.701171875, 0.451171875, 0.560546875, 0.310546875,
+     0.748046875, 0.498046875},
+    {0.126953125, 0.876953125, 0.064453125, 0.814453125, 0.173828125, 0.923828125, 0.111328125,
+     0.861328125, 0.138671875, 0.888671875, 0.076171875, 0.826171875, 0.185546875, 0.935546875,
+     0.123046875, 0.873046875},
+    {0.626953125, 0.376953125, 0.564453125, 0.314453125, 0.673828125, 0.423828125, 0.611328125,
+     0.361328125, 0.638671875, 0.388671875, 0.576171875, 0.326171875, 0.685546875, 0.435546875,
+     0.623046875, 0.373046875},
+    {0.033203125, 0.783203125, 0.220703125, 0.970703125, 0.017578125, 0.767578125, 0.205078125,
+     0.955078125, 0.044921875, 0.794921875, 0.232421875, 0.982421875, 0.029296875, 0.779296875,
+     0.216796875, 0.966796875},
+    {0.533203125, 0.283203125, 0.720703125, 0.470703125, 0.517578125, 0.267578125, 0.705078125,
+     0.455078125, 0.544921875, 0.294921875, 0.732421875, 0.482421875, 0.529296875, 0.279296875,
+     0.716796875, 0.466796875},
+    {0.158203125, 0.908203125, 0.095703125, 0.845703125, 0.142578125, 0.892578125, 0.080078125,
+     0.830078125, 0.169921875, 0.919921875, 0.107421875, 0.857421875, 0.154296875, 0.904296875,
+     0.091796875, 0.841796875},
+    {0.658203125, 0.408203125, 0.595703125, 0.345703125, 0.642578125, 0.392578125, 0.580078125,
+     0.330078125, 0.669921875, 0.419921875, 0.607421875, 0.357421875, 0.654296875, 0.404296875,
+     0.591796875, 0.341796875},
+    {0.009765625, 0.759765625, 0.197265625, 0.947265625, 0.056640625, 0.806640625, 0.244140625,
+     0.994140625, 0.005859375, 0.755859375, 0.193359375, 0.943359375, 0.052734375, 0.802734375,
+     0.240234375, 0.990234375},
+    {0.509765625, 0.259765625, 0.697265625, 0.447265625, 0.556640625, 0.306640625, 0.744140625,
+     0.494140625, 0.505859375, 0.255859375, 0.693359375, 0.443359375, 0.552734375, 0.302734375,
+     0.740234375, 0.490234375},
+    {0.134765625, 0.884765625, 0.072265625, 0.822265625, 0.181640625, 0.931640625, 0.119140625,
+     0.869140625, 0.130859375, 0.880859375, 0.068359375, 0.818359375, 0.177734375, 0.927734375,
+     0.115234375, 0.865234375},
+    {0.634765625, 0.384765625, 0.572265625, 0.322265625, 0.681640625, 0.431640625, 0.619140625,
+     0.369140625, 0.630859375, 0.380859375, 0.568359375, 0.318359375, 0.677734375, 0.427734375,
+     0.615234375, 0.365234375},
+    {0.041015625, 0.791015625, 0.228515625, 0.978515625, 0.025390625, 0.775390625, 0.212890625,
+     0.962890625, 0.037109375, 0.787109375, 0.224609375, 0.974609375, 0.021484375, 0.771484375,
+     0.208984375, 0.958984375},
+    {0.541015625, 0.291015625, 0.728515625, 0.478515625, 0.525390625, 0.275390625, 0.712890625,
+     0.462890625, 0.537109375, 0.287109375, 0.724609375, 0.474609375, 0.521484375, 0.271484375,
+     0.708984375, 0.458984375},
+    {0.166015625, 0.916015625, 0.103515625, 0.853515625, 0.150390625, 0.900390625, 0.087890625,
+     0.837890625, 0.162109375, 0.912109375, 0.099609375, 0.849609375, 0.146484375, 0.896484375,
+     0.083984375, 0.833984375},
+    {0.666015625, 0.416015625, 0.603515625, 0.353515625, 0.650390625, 0.400390625, 0.587890625,
+     0.337890625, 0.662109375, 0.412109375, 0.599609375, 0.349609375, 0.646484375, 0.396484375,
+     0.583984375, 0.333984375}};
+#else
+// alternate threshold matrix with a more Floyd-Steinberg like pattern
+constexpr int TRANK = 16;
+constexpr double transthresh[TRANK][TRANK] = {
     192.0 / 256.0, 11.0 / 256.0,  183.0 / 256.0, 125.0 / 256.0, 26.0 / 256.0,  145.0 / 256.0,
     44.0 / 256.0,  244.0 / 256.0, 8.0 / 256.0,   168.0 / 256.0, 139.0 / 256.0, 38.0 / 256.0,
     174.0 / 256.0, 27.0 / 256.0,  141.0 / 256.0, 43.0 / 256.0,  115.0 / 256.0, 211.0 / 256.0,
@@ -99,6 +198,7 @@ constexpr double transthresh[16][16] = {
     72.0 / 256.0,  136.0 / 256.0, 39.0 / 256.0,  250.0 / 256.0, 104.0 / 256.0, 226.0 / 256.0,
     75.0 / 256.0,  112.0 / 256.0, 198.0 / 256.0, 126.0 / 256.0, 66.0 / 256.0,  213.0 / 256.0,
     110.0 / 256.0, 203.0 / 256.0, 89.0 / 256.0,  160.0 / 256.0};
+#endif
 }    // namespace
 // clang-format off
 
@@ -523,7 +623,7 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
   for (int iy = yc - pixelRadius; iy <= yc + pixelRadius; iy++) {
     for (int ix = xc - pixelRadius; ix <= xc + pixelRadius; ix++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0)) continue;
 
       double surface[3];
       surface[1] = ((iy - yc) - height_error) * pixelWidth;
@@ -589,7 +689,7 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
   for (int iy = yc - pixelHalfWidth; iy <= yc + pixelHalfWidth; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0)) continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
@@ -742,7 +842,7 @@ void Image::draw_cylinder(const double *x, const double *y,
   for (int iy = yc - pixelHalfHeight; iy <= yc + pixelHalfHeight; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0)) continue;
 
       double surface[3], normal[3];
       double sy = ((iy - yc) - height_error) * pixelWidth;
@@ -869,7 +969,7 @@ void Image::draw_triangle(const double *x, const double *y, const double *z, con
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0)) continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
