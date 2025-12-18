@@ -61,10 +61,12 @@ particles to *dump image* so that they be included in the rendered
 image.
 
 The *fflag1* setting of *dump image fix* determine whether the wall will
-be rendered as triangles (1) or as a mesh of cylinders (2) or both (3).
+be rendered as a set of connected triangles (1) or as a mesh of cylinders (2).
 
-The *fflag2* setting determines the diameter of the cylinders for an
-*fflag1* setting of either 2 or 3.
+If using triangles, the *fflag2* setting determines the transparency of
+the triangles and must use a value between 0.0 (invisible) and 1.0
+(fully opaque).  If using a mesh of cylinders, the *fflag2* setting
+determines the diameter of the cylinders.
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""

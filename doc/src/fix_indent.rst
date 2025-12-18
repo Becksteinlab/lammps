@@ -228,7 +228,10 @@ reduce the radius of the rendered object so that it does not obscure
 atoms close to it.  For a planar indenter in 2d systems, it should be
 set to a value > 0 or the indenter will not be visible since the
 diameter is set internally to zero in that case due to lack of a
-suitable heuristic for deriving a meaningful diameter.
+suitable heuristic for deriving a meaningful diameter.  For a planar
+indenter in a 3d system, the *fflag2* value sets the transparency of the
+plane.  It should be set to a value between 0.0 (invisible) and 1.0
+(fully opaque).
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""

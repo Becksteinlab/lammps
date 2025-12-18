@@ -81,12 +81,15 @@ Syntax
          axes = *yes* or *no* = do or do not draw xyz axes lines next to simulation box
          length = length of axes lines as fraction of respective box lengths
          diam = diameter of axes lines as fraction of shortest box length
-       *region* values = region-ID color drawstyle [npoints (optional) diameter (optional)]
+       *region* values = region-ID color drawstyle [opacity (optional) npoints (optional) diameter (optional)]
          region-ID = ID of the region to render
          color = color name for region graphics
-         drawstyle = *filled* or *frame* or *points*
+         drawstyle = *filled* or *transparent* or *frame* or *points*
            *filled* = render region as a filled object, with optional open faces
+           *transparent* = same as *filled* but has selectable opacity
            *frame* = render region as a wireframe (like box or subbox)
+           *points* = fill region with spheres at random locations
+         opacity  = level of opacity (from 0.0 to 1.0, only for drawstyle *transparent*)
          npoints  = number of attempted points (only for drawstyle *points*)
          diameter = diameter of wireframe or points (only for drawstyles *frame* and *points*)
        *subbox* values = lines diam = draw outline of processor subdomains
@@ -379,6 +382,9 @@ the mass of both atoms of a pair within the bond cutoff is lower than 3
 atomic mass units, a bond is **not** drawn; this prohibits displaying
 unwanted hydrogen-hydrogen bonds for alkyl or alcohol groups or for
 water with typical cutoffs suitable for displaying covalent bonds.
+For ReaxFF it is also possible to visualize bonds as they are computed
+through using :doc:`fix reaxff/bonds <fix_reaxff_bonds>` with the
+*fix* keyword (see below).
 
 ----------
 
@@ -514,6 +520,7 @@ change this via the dump_modify command.
 The *fix* keyword can be used with a :doc:`fix <fix>` that produces
 objects to be drawn.  Below is a list of supported fixes:
 
+* :doc:`fix graphics <fix_graphics>`
 * :doc:`fix indent <fix_indent>`
 * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
 * :doc:`fix wall/lj93 <fix_wall>`
@@ -543,28 +550,37 @@ fcolor* command (see below).  By default the constant color will be
 "red" (same as the default color for atom type 1).
 
 The *fflag1* and *fflag2* settings are numerical values which are used
-by *dump image* to adjust how the drawing of the objects communicated
-by the fix is done.  See the documentation of the individual fixes for
-a description of what these parameters mean.
+by *dump image* to adjust how the drawing of the objects communicated by
+the fix is done.  See the documentation of the individual fixes for a
+description of what these parameters mean for the graphics objects
+provided by those fixes.
 
 ----------
 
 .. versionadded:: 10Sep2025
 
+.. versionchanged:: TBD
+
+   style *transparency* was added
+
 The *region* keyword can be used to create a graphical representation of
 a :doc:`region <region>`.  This can be helpful in debugging the location
 and extent of regions, especially when those have parameters controlled
 by variables.  Three styles of representing a region are available:
-*filled*, *frame*, and *points*.  With style *filled* the surface of the
-region is drawn.  For region styles that support open faces, surfaces
-are not drawn for such open faces.  Draw style *frame* represents the
-region with a mesh of "wires".  The diameter of these "wires" can be
-set.  Unlike with the *filled* style, you can see what is *inside* the
-region with this draw style.  The third draw style *points* generates a
-random point cloud inside the simulation box and draws only those points
-that are within the region.  Draw styles *filled* and *frame* support
-only "primitive" region style (no unions or intersections), but the
-*points* draw style supports all region styles.
+*filled*\, *transparency*\, *frame*\, and *points*.  With style *filled*
+the surface of the region is triangulated and drawn.  For region styles
+that support open faces, surfaces for such open faces are skipped.  The
+style *transparent* is like *filled* but takes an additional parameter
+in the range of 0.0 to 1.0 that defines the opacity and thus allows to
+see what is inside the region.  Draw style *frame* represents the region
+with a mesh of "wires".  The diameter of these "wires" can be set.
+Unlike with the *filled* style and similar to the *transparent* style,
+you can see what is *inside* the region with this draw style.  The third
+draw style, *points*\, generates a random point cloud inside the
+simulation box and draws only those points that are within the region.
+Draw styles *filled*\, *transparent*\, and *frame* support only
+"primitive" region styles (no unions or intersections), but the *points*
+draw style supports *all* region styles.
 
 ----------
 
