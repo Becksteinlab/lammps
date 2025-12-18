@@ -44,20 +44,70 @@ using MathConst::DEG2RAD;
 using MathConst::MY_PI;
 using MathConst::MY_PI4;
 
-static constexpr int NCOLORS = 140;
-static constexpr int NELEMENTS = 109;
-static constexpr double EPSILON = 1.0e-6;
+// clang-format on
+namespace {
+constexpr int NCOLORS = 140;
+constexpr int NELEMENTS = 109;
+constexpr double EPSILON = 1.0e-6;
 
-enum{NUMERIC,MINVALUE,MAXVALUE};
-enum{CONTINUOUS,DISCRETE,SEQUENTIAL};
-enum{ABSOLUTE,FRACTIONAL};
-enum{NO,YES};
+enum { NUMERIC, MINVALUE, MAXVALUE };
+enum { CONTINUOUS, DISCRETE, SEQUENTIAL };
+enum { ABSOLUTE, FRACTIONAL };
+enum { NO, YES };
+
+constexpr double transthresh[16][16] = {
+    192.0 / 256.0, 11.0 / 256.0,  183.0 / 256.0, 125.0 / 256.0, 26.0 / 256.0,  145.0 / 256.0,
+    44.0 / 256.0,  244.0 / 256.0, 8.0 / 256.0,   168.0 / 256.0, 139.0 / 256.0, 38.0 / 256.0,
+    174.0 / 256.0, 27.0 / 256.0,  141.0 / 256.0, 43.0 / 256.0,  115.0 / 256.0, 211.0 / 256.0,
+    150.0 / 256.0, 68.0 / 256.0,  194.0 / 256.0, 88.0 / 256.0,  177.0 / 256.0, 131.0 / 256.0,
+    61.0 / 256.0,  222.0 / 256.0, 87.0 / 256.0,  238.0 / 256.0, 74.0 / 256.0,  224.0 / 256.0,
+    100.0 / 256.0, 235.0 / 256.0, 59.0 / 256.0,  33.0 / 256.0,  96.0 / 256.0,  239.0 / 256.0,
+    51.0 / 256.0,  232.0 / 256.0, 16.0 / 256.0,  210.0 / 256.0, 117.0 / 256.0, 32.0 / 256.0,
+    187.0 / 256.0, 1.0 / 256.0,   157.0 / 256.0, 121.0 / 256.0, 14.0 / 256.0,  165.0 / 256.0,
+    248.0 / 256.0, 128.0 / 256.0, 217.0 / 256.0, 2.0 / 256.0,   163.0 / 256.0, 105.0 / 256.0,
+    154.0 / 256.0, 81.0 / 256.0,  247.0 / 256.0, 149.0 / 256.0, 97.0 / 256.0,  205.0 / 256.0,
+    52.0 / 256.0,  182.0 / 256.0, 209.0 / 256.0, 84.0 / 256.0,  20.0 / 256.0,  172.0 / 256.0,
+    80.0 / 256.0,  140.0 / 256.0, 202.0 / 256.0, 41.0 / 256.0,  185.0 / 256.0, 55.0 / 256.0,
+    24.0 / 256.0,  197.0 / 256.0, 65.0 / 256.0,  129.0 / 256.0, 252.0 / 256.0, 35.0 / 256.0,
+    70.0 / 256.0,  147.0 / 256.0, 201.0 / 256.0, 63.0 / 256.0,  189.0 / 256.0, 28.0 / 256.0,
+    90.0 / 256.0,  254.0 / 256.0, 116.0 / 256.0, 219.0 / 256.0, 137.0 / 256.0, 107.0 / 256.0,
+    231.0 / 256.0, 17.0 / 256.0,  144.0 / 256.0, 119.0 / 256.0, 228.0 / 256.0, 109.0 / 256.0,
+    46.0 / 256.0,  245.0 / 256.0, 103.0 / 256.0, 229.0 / 256.0, 134.0 / 256.0, 13.0 / 256.0,
+    67.0 / 256.0,  162.0 / 256.0, 6.0 / 256.0,   170.0 / 256.0, 47.0 / 256.0,  178.0 / 256.0,
+    76.0 / 256.0,  193.0 / 256.0, 4.0 / 256.0,   167.0 / 256.0, 133.0 / 256.0, 9.0 / 256.0,
+    159.0 / 256.0, 54.0 / 256.0,  175.0 / 256.0, 124.0 / 256.0, 225.0 / 256.0, 93.0 / 256.0,
+    242.0 / 256.0, 79.0 / 256.0,  214.0 / 256.0, 99.0 / 256.0,  241.0 / 256.0, 56.0 / 256.0,
+    221.0 / 256.0, 92.0 / 256.0,  186.0 / 256.0, 218.0 / 256.0, 78.0 / 256.0,  208.0 / 256.0,
+    37.0 / 256.0,  196.0 / 256.0, 25.0 / 256.0,  188.0 / 256.0, 42.0 / 256.0,  142.0 / 256.0,
+    29.0 / 256.0,  158.0 / 256.0, 21.0 / 256.0,  130.0 / 256.0, 156.0 / 256.0, 40.0 / 256.0,
+    102.0 / 256.0, 31.0 / 256.0,  148.0 / 256.0, 111.0 / 256.0, 234.0 / 256.0, 85.0 / 256.0,
+    151.0 / 256.0, 120.0 / 256.0, 207.0 / 256.0, 113.0 / 256.0, 255.0 / 256.0, 86.0 / 256.0,
+    184.0 / 256.0, 212.0 / 256.0, 69.0 / 256.0,  236.0 / 256.0, 176.0 / 256.0, 73.0 / 256.0,
+    253.0 / 256.0, 0.0 / 256.0,   138.0 / 256.0, 58.0 / 256.0,  249.0 / 256.0, 71.0 / 256.0,
+    10.0 / 256.0,  173.0 / 256.0, 62.0 / 256.0,  200.0 / 256.0, 50.0 / 256.0,  114.0 / 256.0,
+    12.0 / 256.0,  123.0 / 256.0, 23.0 / 256.0,  204.0 / 256.0, 118.0 / 256.0, 191.0 / 256.0,
+    91.0 / 256.0,  181.0 / 256.0, 19.0 / 256.0,  164.0 / 256.0, 216.0 / 256.0, 101.0 / 256.0,
+    233.0 / 256.0, 3.0 / 256.0,   135.0 / 256.0, 169.0 / 256.0, 246.0 / 256.0, 152.0 / 256.0,
+    223.0 / 256.0, 60.0 / 256.0,  143.0 / 256.0, 48.0 / 256.0,  240.0 / 256.0, 34.0 / 256.0,
+    220.0 / 256.0, 82.0 / 256.0,  132.0 / 256.0, 36.0 / 256.0,  146.0 / 256.0, 106.0 / 256.0,
+    227.0 / 256.0, 30.0 / 256.0,  95.0 / 256.0,  49.0 / 256.0,  83.0 / 256.0,  166.0 / 256.0,
+    18.0 / 256.0,  199.0 / 256.0, 98.0 / 256.0,  155.0 / 256.0, 122.0 / 256.0, 53.0 / 256.0,
+    237.0 / 256.0, 179.0 / 256.0, 57.0 / 256.0,  190.0 / 256.0, 77.0 / 256.0,  195.0 / 256.0,
+    127.0 / 256.0, 180.0 / 256.0, 230.0 / 256.0, 108.0 / 256.0, 215.0 / 256.0, 64.0 / 256.0,
+    171.0 / 256.0, 5.0 / 256.0,   206.0 / 256.0, 161.0 / 256.0, 22.0 / 256.0,  94.0 / 256.0,
+    251.0 / 256.0, 15.0 / 256.0,  153.0 / 256.0, 45.0 / 256.0,  243.0 / 256.0, 7.0 / 256.0,
+    72.0 / 256.0,  136.0 / 256.0, 39.0 / 256.0,  250.0 / 256.0, 104.0 / 256.0, 226.0 / 256.0,
+    75.0 / 256.0,  112.0 / 256.0, 198.0 / 256.0, 126.0 / 256.0, 66.0 / 256.0,  213.0 / 256.0,
+    110.0 / 256.0, 203.0 / 256.0, 89.0 / 256.0,  160.0 / 256.0};
+}    // namespace
+// clang-format off
 
 /* ---------------------------------------------------------------------- */
 
 Image::Image(LAMMPS *lmp, int nmap_caller) :
-    Pointers(lmp), depthBuffer(nullptr), surfaceBuffer(nullptr), depthcopy(nullptr),
-    surfacecopy(nullptr), imageBuffer(nullptr), rgbcopy(nullptr), writeBuffer(nullptr)
+  Pointers(lmp), maps(nullptr), depthBuffer(nullptr), surfaceBuffer(nullptr), depthcopy(nullptr),
+  surfacecopy(nullptr), imageBuffer(nullptr), rgbcopy(nullptr), writeBuffer(nullptr),
+  recvcounts(nullptr), displs(nullptr), username(nullptr), userrgb(nullptr), random(nullptr)
 {
   MPI_Comm_rank(world,&me);
   MPI_Comm_size(world,&nprocs);
@@ -80,9 +130,6 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
   // colors
 
   ncolors = 0;
-  username = nullptr;
-  userrgb = nullptr;
-
   boxcolor = color2rgb("yellow");
   background[0] = background[1] = background[2] = 0;
 
@@ -117,13 +164,6 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
   backLightColor[0] = 0.9;
   backLightColor[1] = 0.9;
   backLightColor[2] = 0.9;
-
-  random = nullptr;
-
-  // MPI_Gatherv vectors
-
-  recvcounts = nullptr;
-  displs = nullptr;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -131,7 +171,7 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
 Image::~Image()
 {
   for (int i = 0; i < nmap; i++) delete maps[i];
-  delete [] maps;
+  delete[] maps;
 
   for (int i = 0; i < ncolors; i++) delete [] username[i];
   memory->sfree(username);
@@ -144,7 +184,7 @@ Image::~Image()
   memory->destroy(surfacecopy);
   memory->destroy(rgbcopy);
 
-  if (random) delete random;
+  delete random;
 
   memory->destroy(recvcounts);
   memory->destroy(displs);
@@ -416,20 +456,20 @@ void Image::merge()
    draw simulation bounding box as 12 cylinders
 ------------------------------------------------------------------------- */
 
-void Image::draw_box(double (*corners)[3], double diameter)
+void Image::draw_box(double (*corners)[3], double diameter, double opacity)
 {
-  draw_cylinder(corners[0],corners[1],boxcolor,diameter,3);
-  draw_cylinder(corners[2],corners[3],boxcolor,diameter,3);
-  draw_cylinder(corners[0],corners[2],boxcolor,diameter,3);
-  draw_cylinder(corners[1],corners[3],boxcolor,diameter,3);
-  draw_cylinder(corners[0],corners[4],boxcolor,diameter,3);
-  draw_cylinder(corners[1],corners[5],boxcolor,diameter,3);
-  draw_cylinder(corners[2],corners[6],boxcolor,diameter,3);
-  draw_cylinder(corners[3],corners[7],boxcolor,diameter,3);
-  draw_cylinder(corners[4],corners[5],boxcolor,diameter,3);
-  draw_cylinder(corners[6],corners[7],boxcolor,diameter,3);
-  draw_cylinder(corners[4],corners[6],boxcolor,diameter,3);
-  draw_cylinder(corners[5],corners[7],boxcolor,diameter,3);
+  draw_cylinder(corners[0],corners[1],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[2],corners[3],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[0],corners[2],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[1],corners[3],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[0],corners[4],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[1],corners[5],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[2],corners[6],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[3],corners[7],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[4],corners[5],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[6],corners[7],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[4],corners[6],boxcolor,diameter,3,opacity);
+  draw_cylinder(corners[5],corners[7],boxcolor,diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
@@ -437,11 +477,11 @@ void Image::draw_box(double (*corners)[3], double diameter)
    axes = 4 end points
 ------------------------------------------------------------------------- */
 
-void Image::draw_axes(double (*axes)[3], double diameter)
+void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
 {
-  draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3);
-  draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3);
-  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3);
+  draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3,opacity);
+  draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3,opacity);
+  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3,opacity);
 }
 
 /* ----------------------------------------------------------------------
@@ -449,7 +489,7 @@ void Image::draw_axes(double (*axes)[3], double diameter)
    render pixel by pixel onto image plane with depth buffering
 ------------------------------------------------------------------------- */
 
-void Image::draw_sphere(const double *x, const double *surfaceColor, double diameter)
+void Image::draw_sphere(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
   double xlocal[3];
 
@@ -483,8 +523,9 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
   for (int iy = yc - pixelRadius; iy <= yc + pixelRadius; iy++) {
     for (int ix = xc - pixelRadius; ix <= xc + pixelRadius; ix++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      double surface[3];
+      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
 
+      double surface[3];
       surface[1] = ((iy - yc) - height_error) * pixelWidth;
       surface[0] = ((ix - xc) - width_error) * pixelWidth;
       double projRad = surface[0]*surface[0] + surface[1]*surface[1];
@@ -509,7 +550,7 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
    render pixel by pixel onto image plane with depth buffering
 ------------------------------------------------------------------------- */
 
-void Image::draw_cube(const double *x, const double *surfaceColor, double diameter)
+void Image::draw_cube(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
   double xlocal[3],surface[3];
   double normal[3] = {0.0, 0.0, 1.0};
@@ -548,6 +589,7 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
   for (int iy = yc - pixelHalfWidth; iy <= yc + pixelHalfWidth; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
@@ -619,7 +661,7 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
 ------------------------------------------------------------------------- */
 
 void Image::draw_cylinder(const double *x, const double *y,
-                          const double *surfaceColor, double diameter, int sflag)
+                          const double *surfaceColor, double diameter, int sflag, double opacity)
 {
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
   double camLDir[3], camLRight[3], camLUp[3];
@@ -700,6 +742,7 @@ void Image::draw_cylinder(const double *x, const double *y,
   for (int iy = yc - pixelHalfHeight; iy <= yc + pixelHalfHeight; iy ++) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
 
       double surface[3], normal[3];
       double sy = ((iy - yc) - height_error) * pixelWidth;
@@ -744,10 +787,11 @@ void Image::draw_cylinder(const double *x, const double *y,
 }
 
 /* ----------------------------------------------------------------------
-   draw triangle with 3 corner points x,y,z and surfaceColor
+   draw triangle with 3 corner points x,y,z, surfaceColor
 ------------------------------------------------------------------------- */
 
-void Image::draw_triangle(const double *x, const double *y, const double *z, const double *surfaceColor)
+void Image::draw_triangle(const double *x, const double *y, const double *z, const double *surfaceColor,
+                          const double opacity)
 {
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
@@ -825,6 +869,7 @@ void Image::draw_triangle(const double *x, const double *y, const double *z, con
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (((opacity < 1.0) && (transthresh[ix % 16][iy % 16] > opacity)) || (opacity <= 0.0)) continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
       double sx = ((ix - xc) - width_error) * pixelWidth;
