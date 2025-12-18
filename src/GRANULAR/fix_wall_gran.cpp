@@ -49,7 +49,7 @@ static constexpr double BIG = 1.0e20;
 
 // XYZ PLANE need to be 0,1,2
 
-enum {NOSTYLE=-1,XPLANE=0,YPLANE=1,ZPLANE=2,ZCYLINDER,REGION};
+enum {NOSTYLE=-1,XPLANE=0,YPLANE=1,ZPLANE=2,REGION};
 enum {NONE,CONSTANT,EQUAL};
 
 /* ---------------------------------------------------------------------- */
@@ -185,12 +185,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     }
     iarg += 3;
   } else if (strcmp(arg[iarg],"zcylinder") == 0) {
-    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran command");
-    wallstyle = ZCYLINDER;
-    numwalls = 1;
-    lo = hi = 0.0;
-    cylradius = utils::numeric(FLERR,arg[iarg+1],false,lmp);
     iarg += 2;
+    error->all(FLERR, iarg, "The zcylinder keyword has been removed. "
+               "Please use fix wall/gran/region instead.");
   } else if (strcmp(arg[iarg],"region") == 0) {
     if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/gran command");
     wallstyle = REGION;
@@ -259,13 +256,9 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Cannot use wall in periodic dimension");
   if (wallstyle == ZPLANE && domain->zperiodic)
     error->all(FLERR,"Cannot use wall in periodic dimension");
-  if (wallstyle == ZCYLINDER && (domain->xperiodic || domain->yperiodic))
-    error->all(FLERR,"Cannot use wall in periodic dimension");
 
   if (wiggle && wshear)
     error->all(FLERR,"Cannot wiggle and shear fix wall/gran");
-  if (wiggle && wallstyle == ZCYLINDER && axis != 2)
-    error->all(FLERR,"Invalid wiggle direction for fix wall/gran");
   if (wshear && wallstyle == XPLANE && axis == 0)
     error->all(FLERR,"Invalid shear direction for fix wall/gran");
   if (wshear && wallstyle == YPLANE && axis == 1)
@@ -324,14 +317,6 @@ FixWallGran::FixWallGran(LAMMPS *lmp, int narg, char **arg) :
         imgparms[2 * m][0] = 1;        // use color of first atom type by default
         imgparms[2 * m + 1][0] = 1;    // use color of first atom type by default
       }
-    }
-  } else if (wallstyle == ZCYLINDER) {
-    // one cylinder object per wall to draw
-    memory->create(imgobjs, numwalls, "fix_wall:imgobjs");
-    memory->create(imgparms, numwalls, 8, "fix_wall:imgparms");
-    for (int m = 0; m < numwalls; ++m) {
-      imgobjs[m] = DumpImage::CYLINDER;
-      imgparms[m][0] = 1;    // use color of first atom type by default
     }
   }
 }
@@ -541,23 +526,6 @@ void FixWallGran::post_force(int /*vflag*/)
       del2 = whi - x[i][2];
       if (del1 < del2) dz = del1;
       else dz = -del2;
-    } else if (wallstyle == ZCYLINDER) {
-      delxy = sqrt(x[i][0] * x[i][0] + x[i][1] * x[i][1]);
-      delr = cylradius - delxy;
-      if (delr > radius[i]) {
-        dz = cylradius;
-        rwall = 0.0;
-      } else {
-        dx = -delr / delxy * x[i][0];
-        dy = -delr / delxy * x[i][1];
-        // rwall = -2r_c if inside cylinder, 2r_c outside
-        rwall = (delxy < cylradius) ? -2 * cylradius : 2 * cylradius;
-        if (wshear && axis != 2) {
-          vwall[0] += vshear * x[i][1] / delxy;
-          vwall[1] += -vshear * x[i][0] / delxy;
-          vwall[2] = 0.0;
-        }
-      }
     }
 
     // Reset model and copy initial geometric data
@@ -847,9 +815,6 @@ int FixWallGran::image(int *&objs, double **&parms)
       } else {
         return 2 * numwalls;
       }
-      break;
-    case ZCYLINDER:
-      return 0;
       break;
     case REGION:    // can visualize region directly
       return 0;

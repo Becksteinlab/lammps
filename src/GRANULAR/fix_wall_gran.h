@@ -60,7 +60,7 @@ class FixWallGran : public Fix {
   int nlevels_respa;
   bigint time_origin;
 
-  double lo, hi, cylradius;
+  double lo, hi;
   double amplitude, period, omega, vshear;
   double dt;
   double Twall;
