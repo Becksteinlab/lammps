@@ -521,7 +521,7 @@ zero due to lack of a suitable heuristic for deriving a meaningful
 diameter for all types of walls and unit settings.
 
 For 3d systems, the *fflag1* setting is ignored, but the *fflag2*
-setting determines the transparency of the wall.  It must bet set to a
+setting determines the transparency of the wall.  It must be set to a
 value between 0.0 (invisible) and 1.0 (fully opaque).
 
 -----------------
