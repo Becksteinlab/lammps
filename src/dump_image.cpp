@@ -742,9 +742,6 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       else if (i % 6 == 5) bcolortype[i] = image->color2rgb("aqua");
       else if (i % 6 == 0) bcolortype[i] = image->color2rgb("cyan");
     }
-  } else {
-    bdiamtype = nullptr;
-    bcolortype = nullptr;
   }
 
   // viewflag = DYNAMIC if any view parameter is dynamic
