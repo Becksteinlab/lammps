@@ -64,8 +64,8 @@ BodyRoundedPolyhedron::BodyRoundedPolyhedron(LAMMPS *lmp, int narg, char **arg) 
                                 3*nmax+2*nmax+MAX_FACE_SIZE*nmax+1+1);
   maxexchange = 3 + 3*nmax+2*nmax+MAX_FACE_SIZE*nmax+1+1;  // icp max + dcp max
 
-  memory->create(imflag,2*nmax,"body/rounded/polyhedron:imflag");
-  memory->create(imdata,3*nmax,10,"body/polyhedron:imdata");
+  memory->create(imflag,3*nmax,"body/rounded/polyhedron:imflag");
+  memory->create(imdata,3*nmax,9,"body/polyhedron:imdata");
 }
 
 /* ---------------------------------------------------------------------- */
