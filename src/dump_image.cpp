@@ -1413,6 +1413,8 @@ void DumpImage::create_image()
         else if (bodyvec[k] == LINE)
           image->draw_cylinder(&bodyarray[k][0],&bodyarray[k][3],
                                color,bodyarray[k][6],3);
+        else if (bodyvec[k] == TRI)
+          image->draw_triangle(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],color);
       }
 
       m += size_one;

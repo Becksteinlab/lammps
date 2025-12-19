@@ -66,7 +66,7 @@ BodyRoundedPolyhedron::BodyRoundedPolyhedron(LAMMPS *lmp, int narg, char **arg) 
   maxexchange = 3 + 3*nmax+2*nmax+MAX_FACE_SIZE*nmax+1+1;  // icp max + dcp max
 
   memory->create(imflag,2*nmax,"body/rounded/polyhedron:imflag");
-  memory->create(imdata,2*nmax,7,"body/polyhedron:imdata");
+  memory->create(imdata,3*nmax,10,"body/polyhedron:imdata");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -624,14 +624,12 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double /*flag2*/,
       if (flag1 <= 0) imdata[i][3] = 2.0*rrad;
       else imdata[i][3] = flag1;
     }
-
     nelements = nvertices;
   } else {
-    //int nfaces = bonus->ivalue[2];
-    int nedges = bonus->ivalue[1]; //nvertices + nfaces - 2;
+    int nedges = bonus->ivalue[1]; // nvertices + nfaces - 2;
     if (nvertices == 2) nedges = 1; // special case: rods
     double* edge_ends = &bonus->dvalue[3*nvertices];
-    int pt1, pt2;
+    int pt1, pt2, pt3, pt4;
 
     MathExtra::quat_to_mat(bonus->quat,p);
     for (int i = 0; i < nedges; i++) {
@@ -655,8 +653,67 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double /*flag2*/,
       if (flag1 <= 0) imdata[i][6] = 2.0*rrad;
       else imdata[i][6] = flag1;
     }
-
     nelements = nedges;
+
+    int nfaces = bonus->ivalue[2];
+    edge_ends = &bonus->dvalue[3*nvertices+2*nedges];
+    for (int i = 0; i < nfaces; i++) {
+      pt1 = static_cast<int>(edge_ends[4*i]);
+      pt2 = static_cast<int>(edge_ends[4*i+1]);
+      pt3 = static_cast<int>(edge_ends[4*i+2]);
+      pt4 = static_cast<int>(edge_ends[4*i+3]);
+
+      if (pt4 >= 0) {
+        // two triangles to form a quadrilinear face
+        int idx = nedges + 2*i;
+        imflag[idx] = TRI;
+        MathExtra::matvec(p,&bonus->dvalue[3*pt1],imdata[idx]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[idx][3]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[idx][6]);
+        imdata[idx][0] += x[0];
+        imdata[idx][1] += x[1];
+        imdata[idx][2] += x[2];
+        imdata[idx][3] += x[0];
+        imdata[idx][4] += x[1];
+        imdata[idx][5] += x[2];
+        imdata[idx][6] += x[0];
+        imdata[idx][7] += x[1];
+        imdata[idx][8] += x[2];
+        ++nelements;
+
+        ++idx;
+        imflag[idx] = TRI;
+        MathExtra::matvec(p,&bonus->dvalue[3*pt3],imdata[idx]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt4],&imdata[idx][3]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt1],&imdata[idx][6]);
+        imdata[idx][0] += x[0];
+        imdata[idx][1] += x[1];
+        imdata[idx][2] += x[2];
+        imdata[idx][3] += x[0];
+        imdata[idx][4] += x[1];
+        imdata[idx][5] += x[2];
+        imdata[idx][6] += x[0];
+        imdata[idx][7] += x[1];
+        imdata[idx][8] += x[2];
+        ++nelements;
+      } else {
+        int idx = nedges + i;
+        imflag[idx] = TRI;
+        MathExtra::matvec(p,&bonus->dvalue[3*pt1],imdata[idx]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[idx][3]);
+        MathExtra::matvec(p,&bonus->dvalue[3*pt3],&imdata[idx][6]);
+        imdata[idx][0] += x[0];
+        imdata[idx][1] += x[1];
+        imdata[idx][2] += x[2];
+        imdata[idx][3] += x[0];
+        imdata[idx][4] += x[1];
+        imdata[idx][5] += x[2];
+        imdata[idx][6] += x[0];
+        imdata[idx][7] += x[1];
+        imdata[idx][8] += x[2];
+        ++nelements;
+      }
+    }
   }
 
   ivec = imflag;
