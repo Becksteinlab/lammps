@@ -68,6 +68,13 @@ parameter of the :doc:`dump <dump>` image command.  LAMMPS will stop
 with an error message if the settings for this fix and the dump command
 are not compatible.
 
+Available graphics objects are (see above for exact command line syntax):
+
+- *sphere* - a sphere defined by its center location and its radius
+- *cylinder* - a cylinder defined by its two center endpoints and its radius
+- *arrow* - a cylinder with a cone at one side (see note below)
+- *progbar* - progress bar a long a selected axis and with optional tick marks
+
 The *type* quantity determines the color of the object.  Its represents
 an *atom* type and the object will be colored the same as the
 corresponding atom type when the *type* coloring scheme is used in the
@@ -91,13 +98,6 @@ be reset to 1.0 or 0.0, respectively); and *tics* determines the number
 of tics shown on the progress bar, this must be a number between 0 and 20.
 Unlike for the other graphics objects, all settings except for *ratio*
 are fixed and cannot be a variable reference.
-
-Available graphics objects are (see above for exact command line syntax):
-
-- *sphere* - a sphere defined by its center location and its radius
-- *cylinder* - a cylinder defined by its two center endpoints and its radius
-- *arrow* - a cylinder with a cone at one side (see note below)
-- *progbar* - progress bar a long a selected axis and with optional tick marks
 
 .. admonition:: Work in progress notice
    :class: note

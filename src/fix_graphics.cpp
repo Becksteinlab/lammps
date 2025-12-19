@@ -46,6 +46,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
   nevery = utils::inumeric(FLERR, arg[3], false, lmp);
   if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics nevery value {}", nevery);
   global_freq = nevery;
+  dynamic_group_allow = 1;
 
   numobjs = 0;
   varflag = 0;
@@ -129,7 +130,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       ++numobjs;
       iarg += 9;
     } else if (strcmp(arg[iarg], "arrow") == 0) {
-      if (iarg + 9 > narg) utils::missing_cmd_args(FLERR, "fix graphics arrow", error);
+      if (iarg + 10 > narg) utils::missing_cmd_args(FLERR, "fix graphics arrow", error);
       // clang-format off
       ArrowItem arrow{ARROW, 1, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0.0, 0.1,
                             nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
