@@ -606,7 +606,8 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
   int nelements = 0;
   AtomVecBody::Bonus *const bonus = &avec->bonus[ibonus];
   const double *const x = atom->x[bonus->ilocal];
-  const double rrad = enclosing_radius(bonus);
+  const double diam = (flag1 <= 0.0) ? 2.0 * enclosing_radius(bonus) : flag1;
+
   MathExtra::quat_to_mat(bonus->quat,p); // get rotation matrix for body frame to box frame
 
   int nvertices = bonus->ivalue[0];
@@ -614,12 +615,12 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
     imflag[0] = DumpImage::SPHERE;
     // transform body frame position to box frame
     MathExtra::matvec(p,&bonus->dvalue[0],imdata[0]);
-    // translate
+    // translate and set diameter
     imdata[0][0] += x[0];
     imdata[0][1] += x[1];
     imdata[0][2] += x[2];
-    if (flag1 <= 0) imdata[0][3] = rrad;
-    else imdata[0][3] = flag1;
+    imdata[0][3] = diam;
+
     nelements = 1;
   } else {
 
@@ -644,17 +645,15 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
         MathExtra::matvec(p,&bonus->dvalue[3*pt1],imdata[nelements]);
         MathExtra::matvec(p,&bonus->dvalue[3*pt2],&imdata[nelements][3]);
 
-        // translate
+        // translate and set diameter
         imdata[nelements][0] += x[0];
         imdata[nelements][1] += x[1];
         imdata[nelements][2] += x[2];
         imdata[nelements][3] += x[0];
         imdata[nelements][4] += x[1];
         imdata[nelements][5] += x[2];
+        imdata[nelements][6] = diam;
 
-        // set cylinder radius
-        if (flag1 <= 0.0) imdata[nelements][6] = rrad;
-        else imdata[nelements][6] = flag1;
         ++nelements;
       }
     }
