@@ -1794,7 +1794,7 @@ void DumpImage::create_image()
 
         // draw bond cylinder in 2 pieces
 
-        int capflag = ifix.flag1 ? 3 : 0;
+        int capflag = (ifix.flag1 != 0.0) ? 3 : 0;
         delx = fixarray[i][5] - fixarray[i][2];
         dely = fixarray[i][6] - fixarray[i][3];
         delz = fixarray[i][7] - fixarray[i][4];
