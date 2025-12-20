@@ -124,8 +124,8 @@ class DumpImage : public DumpCustom {
     {
     }
 
-    Fix *ptr;
     std::string id;
+    Fix *ptr;
     int colorstyle;
     double flag1;
     double flag2;
