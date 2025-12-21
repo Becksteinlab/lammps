@@ -18,6 +18,7 @@
 #include "atom.h"
 #include "atom_vec.h"
 #include "atom_vec_body.h"
+#include "atom_vec_ellipsoid.h"
 #include "atom_vec_line.h"
 #include "atom_vec_tri.h"
 #include "body.h"
@@ -256,7 +257,8 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
     colorelement(nullptr), bcolortype(nullptr), aopacity(nullptr), bopacity(nullptr),
     grid2d(nullptr), grid3d(nullptr), id_grid_compute(nullptr), id_grid_fix(nullptr),
     grid_compute(nullptr), grid_fix(nullptr), gbuf(nullptr), avec_line(nullptr), avec_tri(nullptr),
-    avec_body(nullptr), image(nullptr), chooseghost(nullptr), bufcopy(nullptr)
+    avec_ellipsoid(nullptr), avec_body(nullptr), image(nullptr), chooseghost(nullptr),
+    bufcopy(nullptr)
 {
   if (binary || multiproc) error->all(FLERR, 4, "Invalid dump image filename {}", filename);
 
@@ -317,7 +319,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
 
   atomflag = YES;
   gridflag = NO;
-  lineflag = triflag = bodyflag = NO;
+  lineflag = triflag = bodyflag = ellipsoidflag = NO;
 
   bcolor = ATOM;
   bdiam = NUMERIC;
@@ -430,6 +432,21 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       tstyle = utils::inumeric(FLERR,arg[iarg+2],false,lmp);
       tdiamvalue = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       iarg += 4;
+
+    } else if (strcmp(arg[iarg],"ellipsoid") == 0) {
+      if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image ellipsoid", error);
+      ellipsoidflag = YES;
+      if (strcmp(arg[iarg+1],"type") == 0) ecolor = TYPE;
+      else error->all(FLERR, iarg+1, "Dump image ellipsoid only supports color by type");
+      estyle = utils::inumeric(FLERR,arg[iarg+2],false,lmp);
+      if ((estyle < 0) || (estyle > 3))
+        error->all(FLERR, iarg+2, "Dump image ellipsoid only supports style setting 1, 2, or 3");
+      elevel = utils::inumeric(FLERR,arg[iarg+3],false,lmp);
+      if (elevel == 0) elevel = 4; // default setting
+      if (elevel > 6)
+        error->all(FLERR, iarg+3, "Dump image ellipsoid mesh refinement level is too large");
+      ediamvalue = utils::numeric(FLERR,arg[iarg+4],false,lmp);
+      iarg += 5;
 
     } else if (strcmp(arg[iarg],"body") == 0) {
       if (iarg+4 > narg) utils::missing_cmd_args(FLERR,"dump image body", error);
@@ -656,6 +673,12 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
     if (!avec_tri)
       error->all(FLERR, Error::NOLASTLINE, "Dump image tri requires atom style tri");
   }
+
+  if (ellipsoidflag) {
+    avec_ellipsoid = dynamic_cast<AtomVecEllipsoid *>(atom->style_match("ellipsoid"));
+    if (!avec_ellipsoid)
+      error->all(FLERR, Error::NOLASTLINE, "Dump image ellipsoid requires atom style ellipsoid");
+  }
   if (bodyflag) {
     avec_body = dynamic_cast<AtomVecBody *>(atom->style_match("body"));
     if (!avec_body)
@@ -663,7 +686,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
   }
 
   extraflag = 0;
-  if (lineflag || triflag || bodyflag) extraflag = 1;
+  if (lineflag || triflag || ellipsoidflag || bodyflag) extraflag = 1;
 
   // allocate image buffer now that image size is known
 
@@ -1204,6 +1227,7 @@ void DumpImage::create_image()
     double **x = atom->x;
     int *line = atom->line;
     int *tri = atom->tri;
+    int *ellipsoid = atom->ellipsoid;
     int *body = atom->body;
 
     m = 0;
@@ -1238,6 +1262,7 @@ void DumpImage::create_image()
       if (extraflag) {
         if (lineflag && line[j] >= 0) drawflag = 0;
         if (triflag && tri[j] >= 0) drawflag = 0;
+        if (ellipsoidflag && ellipsoid[j] >= 0) drawflag = 0;
         if (bodyflag && body[j] >= 0) drawflag = 0;
       }
 
@@ -1377,6 +1402,26 @@ void DumpImage::create_image()
         image->draw_cylinder(pt2,pt3,color,tdiamvalue,3,opacity);
         image->draw_cylinder(pt3,pt1,color,tdiamvalue,3,opacity);
       }
+    }
+  }
+
+  // render atoms that are ellipsoids
+  // tstyle = 1 for tri only
+
+  if (ellipsoidflag) {
+    double **x = atom->x;
+    int *ellipsoid = atom->ellipsoid;
+    int *type = atom->type;
+    for (i = 0; i < nchoose; i++) {
+      j = clist[i];
+      if (ellipsoid[j] < 0) continue;
+
+      if (ecolor == TYPE) {
+        color = colortype[type[j]];
+      }
+
+      draw_ellipsoid(image, elevel, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
+                     avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, aopacity[type[j]]);
     }
   }
 
