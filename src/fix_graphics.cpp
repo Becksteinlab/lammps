@@ -210,8 +210,8 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       progbar.tics = utils::inumeric(FLERR, arg[iarg + 10], false, lmp);
       if ((progbar.tics < 0) || (progbar.tics > 20))
         error->all(FLERR, iarg + 10, "Unsupported number of progress bar tics {}", arg[iarg + 10]);
-      numobjs += 2 + progbar.tics;
       items.emplace_back(progbar);
+      numobjs += 2 + progbar.tics;
       iarg += 11;
     } else {
       error->all(FLERR, iarg, "Unknown fix graphics keyword {}", arg[iarg]);
