@@ -503,8 +503,8 @@ For the *rounded/polygon* body style, each body is drawn as a polygon
 and for *rounded/polyhedron* as a polyhedron.  The *bflag2* argument
 selects whether a wireframe mesh (2) is drawn or the faces (1) or both
 (3).  A value of 0 selects the default, which is currently the same as
-option 3.  The drawn diameter of each wireframe line is determined by
-the *bflag1* parameter for the *body* keyword.
+option 3.  The diameter of each wireframe line is determined by the
+*bflag1* parameter for the *body* keyword.
 
 Note that for both the *rounded/polygon* and *rounded/polyhedron*
 styles, line segments are drawn between the pairs of vertices.

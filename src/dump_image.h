@@ -125,8 +125,9 @@ class DumpImage : public DumpCustom {
   struct FixInfo {
     FixInfo() = delete;
     FixInfo(const std::string &_id, Fix *_ptr, int _colorstyle, double _flag1, double _flag2,
-            double *_rgb) :
-        id(_id), ptr(_ptr), colorstyle(_colorstyle), flag1(_flag1), flag2(_flag2), rgb(_rgb)
+            double *_rgb, double _opacity = 1.0) :
+        id(_id), ptr(_ptr), colorstyle(_colorstyle), flag1(_flag1), flag2(_flag2), rgb(_rgb),
+        opacity(_opacity)
     {
     }
 
@@ -136,6 +137,7 @@ class DumpImage : public DumpCustom {
     double flag1;
     double flag2;
     double *rgb;
+    double opacity;
   };
 
   std::vector<FixInfo> fixes;

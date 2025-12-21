@@ -142,15 +142,19 @@ FixIndent::FixIndent(LAMMPS *lmp, int narg, char **arg) :
       memory->create(imgobjs, 1, "fix_indent:imgobjs");
       memory->create(imgparms, 1, 8, "fix_indent:imgparms");
       imgobjs[0] = DumpImage::CYLINDER;
-      imgparms[0][0] = 1;    // use color of first atom type
+      // use color of first atom type with color style "type" or "element"
+      // use color style "const" and dump_modify fcolor to override
+      imgparms[0][0] = 1;
     } else {
       // two triangle objects to draw in 3d
       memory->create(imgobjs, 2, "fix_indent:imgobjs");
       memory->create(imgparms, 2, 10, "fix_indent:imgparms");
       imgobjs[0] = DumpImage::TRIANGLE;
       imgobjs[1] = DumpImage::TRIANGLE;
-      imgparms[0][0] = 1;    // use color of first atom type by default
-      imgparms[1][0] = 1;    // use color of first atom type by default
+      // use color of first atom type with color style "type" or "element"
+      // use color style "const" and dump_modify fcolor to override
+      imgparms[0][0] = 1;
+      imgparms[1][0] = 1;
     }
   }
 }

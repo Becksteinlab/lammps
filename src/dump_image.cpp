@@ -1726,60 +1726,73 @@ void DumpImage::create_image()
     for (i = 0; i < n; i++) {
       if (!fixvec || !fixarray) continue;
 
-      // set color
+      // set color and transparency
+      double opacity;
       if (ifix.colorstyle == TYPE) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colortype[itype];
+        opacity = aopacity[itype];
       } else if  (ifix.colorstyle == ELEMENT) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colorelement[itype];
+        opacity = aopacity[itype];
       } else if  (ifix.colorstyle == CONSTANT) {
         color = ifix.rgb;
+        opacity = ifix.opacity;
       } else {
-        color = image->color2rgb("red");
+        color = image->color2rgb("white");
+        opacity = 1.0;
       }
 
       if (fixvec[i] == SPHERE) {
-        image->draw_sphere(&fixarray[i][1],color,fixarray[i][4]+ifix.flag2);
+        image->draw_sphere(&fixarray[i][1],color,fixarray[i][4]+ifix.flag2,opacity);
       } else if (fixvec[i] == LINE) {
         // @sjplimp for consistency this should be:
         // image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag2,ifix.flag1);
-        image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag1,3);
+        image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag1,3,opacity);
       } else if (fixvec[i] == TRI) { // don't render surface meshes in 2d
         if (domain->dimension == 3) {
           p1 = &fixarray[i][1];
           p2 = &fixarray[i][4];
           p3 = &fixarray[i][7];
           if (static_cast<int>(ifix.flag1) % 2) {
-            image->draw_triangle(p1,p2,p3,color,ifix.flag2);
+            image->draw_triangle(p1,p2,p3,color,opacity);
           } else {
-            image->draw_cylinder(p1,p2,color,ifix.flag2,3);
-            image->draw_cylinder(p2,p3,color,ifix.flag2,3);
-            image->draw_cylinder(p3,p1,color,ifix.flag2,3);
+            image->draw_cylinder(p1,p2,color,ifix.flag2,3,opacity);
+            image->draw_cylinder(p2,p3,color,ifix.flag2,3,opacity);
+            image->draw_cylinder(p3,p1,color,ifix.flag2,3,opacity);
           }
         }
       } else if (fixvec[i] == CYLINDER) {
         image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,
-                             fixarray[i][7]+ifix.flag2,(int)ifix.flag1);
+                             fixarray[i][7]+ifix.flag2,(int)ifix.flag1,opacity);
       } else if (fixvec[i] == TRIANGLE) {
-        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,ifix.flag2);
+        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,opacity);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
-        double *color1;
-        double *color2;
+        double *color1, *color2;
+        double opacity1, opacity2;
         if (ifix.colorstyle == TYPE) {
           color1 = colortype[type1];
           color2 = colortype[type2];
+          opacity1 = aopacity[type1];
+          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == ELEMENT) {
           color1 = colorelement[type1];
           color2 = colorelement[type2];
+          opacity1 = aopacity[type1];
+          opacity2 = aopacity[type2];
         } else if  (ifix.colorstyle == CONSTANT) {
           color1 = ifix.rgb;
           color2 = ifix.rgb;
+          opacity1 = ifix.opacity;
+          opacity2 = ifix.opacity;
         } else {
           color1 = image->color2rgb("white");
           color2 = image->color2rgb("white");
+          opacity1 = 1.0;
+          opacity2 = 1.0;
         }
 
         double diameter = 0.5;
@@ -1811,11 +1824,11 @@ void DumpImage::create_image()
         xmid[0] = fixarray[i][2] + 0.5*delx;
         xmid[1] = fixarray[i][3] + 0.5*dely;
         xmid[2] = fixarray[i][4] + 0.5*delz;
-        image->draw_cylinder(&fixarray[i][2],xmid,color1,diameter,capflag);
+        image->draw_cylinder(&fixarray[i][2],xmid,color1,diameter,capflag,opacity1);
         xmid[0] = fixarray[i][5] - 0.5*delx;
         xmid[1] = fixarray[i][6] - 0.5*dely;
         xmid[2] = fixarray[i][7] - 0.5*delz;
-        image->draw_cylinder(xmid,&fixarray[i][5],color2,diameter,capflag);
+        image->draw_cylinder(xmid,&fixarray[i][5],color2,diameter,capflag,opacity2);
       }
     }
   }
@@ -2739,6 +2752,17 @@ int DumpImage::modify_param(int narg, char **arg)
     if (!color) error->all(FLERR, "Unknown color for dump_modify fcolor: {}", arg[2]);
     for (auto &ifix : fixes) {
       if (ifix.id == arg[1]) ifix.rgb = color;
+    }
+    return 3;
+  }
+
+  if (strcmp(arg[0],"ftrans") == 0) {
+    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    double opacity = utils::numeric(FLERR,arg[2],false,lmp);
+    if ((opacity < 0.0) || (opacity > 1.0))
+      error->all(FLERR, "Illegal transparency value for dump_modify ftrans: {}", arg[2]);
+    for (auto &ifix : fixes) {
+      if (ifix.id == arg[1]) ifix.opacity = opacity;
     }
     return 3;
   }

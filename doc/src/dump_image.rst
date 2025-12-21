@@ -181,6 +181,9 @@ Syntax
        *fcolor* args = fix-ID color
          fix-ID = ID of the fix
          color = name of color for image objects provided by this fix
+       *ftrans* args = fix-ID transparency
+         fix-ID = ID of the fix
+         transparency = transparency for image objects provided by this fix when using "const" color style
        *bitrate* arg = rate
          rate = target bitrate for movie in kbps
        *framerate* arg = fps
@@ -634,8 +637,8 @@ Draw styles *filled*\, *transparent*\, and *frame* support only
 "primitive" region styles (no unions or intersections), but the *points*
 draw style supports *all* region styles.
 
-Recommended transparency settings are the values of 0.25, 0.5, or 0.75
-when used in combination with *fsaa on*.
+Recommended transparency values are 0.25, 0.5, or 0.75 when used in
+combination with *fsaa on*.
 
 ----------
 
@@ -1135,18 +1138,27 @@ written to the image.  This can be controlled with various
 must be between 0.0 (invisible) and 1.0 (fully opaque).  The default
 setting for all is 1.0.
 
-Recommended transparency settings are the values of 0.25, 0.5, or 0.75
-when used in combination with *fsaa on*.
+Recommended transparency values are 0.25, 0.5, or 0.75 when used in
+combination with *fsaa on*.
 
 ----------
 
 .. versionadded:: TBD
 
 The *fcolor* keyword sets the color of any image objects created by a
-fix.  The first argument is the fix ID used with the *dump image fix*
-command and the second argument is the color name.  The color name can
-be any of the 140 pre-defined colors (see below) or a color name defined
-by the *dump_modify color* option.
+fix when using the color style "const.  The first argument is the fix ID
+used with the *dump image fix* command and the second argument is the
+color name.  The color name can be any of the 140 pre-defined colors
+(see below) or a color name defined by the *dump_modify color* option.
+
+The *ftrans* keyword sets the transparency of any image objects created
+by a fix when using the color style "const".  The first argument is the
+fix ID used with the *dump image fix* command and the second argument is
+the transparency value.  The transparency value must be between 0.0
+(invisible) and 1.0 (fully opaque).  The default setting is 1.0.
+
+Recommended transparency values are 0.25, 0.5, or 0.75 when used in
+combination with *fsaa on*.
 
 ----------
 
