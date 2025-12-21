@@ -78,9 +78,9 @@ Available graphics objects are (see above for exact command line syntax):
 The *type* quantity determines the color of the object.  Its represents
 an *atom* type and the object will be colored the same as the
 corresponding atom type when the *type* coloring scheme is used in the
-:doc:`dump image fix <dump_image>` command is used.  The color may also
-be that of the atom type's element or just a globally set constant color
-for *all* objects of this fix instance, which can be changed using a
+:doc:`dump image fix <dump_image>` command.  The color may also be that
+of the atom type's element or just a globally set constant color for
+*all* objects of this fix instance, which can be changed using a
 :doc:`dump modify fcolor <dump_image>` command.  For the *progbar*
 object *two* atom type values must be specified.
 
