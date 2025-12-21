@@ -489,9 +489,9 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
         iarg += 2;
       } else if (drawstyle == TRANSPARENT) {
         if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image region transparent", error);
-        opacity = utils::numeric(FLERR, arg[iarg+5], false, lmp);
+        opacity = utils::numeric(FLERR, arg[iarg+4], false, lmp);
         if ((opacity < 0.0) || (opacity > 1.0))
-          error->all(FLERR, iarg+5, "Dump image region opacity must be in the range 0.0 to 1.0");
+          error->all(FLERR, iarg+4, "Dump image region opacity must be in the range 0.0 to 1.0");
         iarg += 2;
       }
       iarg += 4;
