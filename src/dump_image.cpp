@@ -2207,7 +2207,7 @@ void DumpImage::create_image()
               if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
                 image->draw_triangle(p1, p2, p3, reg.color, opacity);
-                image->draw_triangle(p3, p4, p2, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
@@ -2224,7 +2224,7 @@ void DumpImage::create_image()
               if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
                 image->draw_triangle(p1, p2, p3, reg.color, opacity);
-                image->draw_triangle(p3, p4, p2, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
