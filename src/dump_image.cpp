@@ -231,17 +231,18 @@ void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *co
     // set shape
     for (int i = 0; i < 3; ++i) {
       auto &t = tri[i];
-      const auto scale = t = radscale(radius, t) * t;
+      t = radscale(radius, t) * t;
     }
+
     // rotate
     MathExtra::matvec(p, tri[0].data(), e1.data());
     MathExtra::matvec(p, tri[1].data(), e2.data());
     MathExtra::matvec(p, tri[2].data(), e3.data());
+
     // translate
     e1 = e1 + offs;
     e2 = e2 + offs;
     e3 = e3 + offs;
-    vec3{center[0], center[1], center[2]};
     if (dotri) img->draw_triangle(e1.data(), e2.data(), e3.data(), color, opacity);
     if (doframe) {
       img->draw_cylinder(e1.data(), e2.data(), color, diameter, 3, opacity);
