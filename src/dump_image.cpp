@@ -509,7 +509,8 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
         opacity = utils::numeric(FLERR, arg[iarg+4], false, lmp);
         if ((opacity < 0.0) || (opacity > 1.0))
           error->all(FLERR, iarg+4, "Dump image region opacity must be in the range 0.0 to 1.0");
-        iarg += 2;
+
+        ++iarg;
       }
       iarg += 4;
       regions.emplace_back(regptr->id, regptr, regcolor, drawstyle, framediam, opacity, npoints);
