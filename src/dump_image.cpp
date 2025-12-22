@@ -68,6 +68,8 @@ namespace {
 using LAMMPS_NS::MathConst::MY_2PI;
 constexpr int RESOLUTION = 36;
 constexpr double RADINC = MY_2PI / RESOLUTION;
+constexpr double RADOVERLAP = 0.00001;
+constexpr double SMALL = 1.0e-10;
 
 using vec3 = std::array<double, 3>;
 using triangle = std::array<vec3, 3>;
@@ -1979,12 +1981,12 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[1] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[1] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[1] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[1] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -1998,12 +2000,12 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2017,12 +2019,12 @@ void DumpImage::create_image()
             } else {  // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[1] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[1] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[1] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[1] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2041,12 +2043,12 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[1] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[1] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[1] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[1] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2063,12 +2065,12 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2084,12 +2086,12 @@ void DumpImage::create_image()
             } else {  // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[1] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[1] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[1] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[1] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2145,8 +2147,8 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = p3[1] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[1] = p3[1] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = p4[1] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2160,8 +2162,8 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2175,8 +2177,8 @@ void DumpImage::create_image()
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[1] = p3[1] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = p3[1] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = p4[1] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2195,8 +2197,8 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = p3[1] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[1] = p3[1] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = p4[1] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2212,8 +2214,8 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2229,8 +2231,8 @@ void DumpImage::create_image()
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[1] = p3[1] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = p3[1] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = p4[1] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
