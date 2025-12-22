@@ -219,8 +219,7 @@ type when using color styles "type" or "element".  With color style
 "const" the default value of "white" can be changed using
 :doc:`dump_modify fcolor <dump_image>`.  Similarly, the transparency
 follows the first atom type or can be changed for color style "const"
-with *dump\_modify ftrans* except for a planar indenter where the
-transparency is set with the *fflag2* setting (see below).
+with *dump\_modify ftrans*\ .
 
 The *fflag1* setting of *dump image fix* has no impact on rendering a
 spherical indenter or a planar indenter in 3d systems.  For a
@@ -234,11 +233,9 @@ object for spherical indenters, cylindrical indenters, and planar
 indenters in 2d systems.  In many cases you want to use a negative value
 to reduce the radius of the rendered object so that it does not obscure
 atoms close to it.  For a planar indenter in 2d systems, it should be
-set to a positive or the indenter will not be visible since there is not
-radius parameter associated with it (unlike for spherical or cylindrical
-indenters) and thus set to zero by default.  For a planar indenter in a
-3d system, the *fflag2* value sets the transparency of the plane.  It
-should be set to a value between 0.0 (invisible) and 1.0 (fully opaque).
+set to a positive value or the indenter will not be visible since there
+is no radius parameter associated with it (unlike for spherical or
+cylindrical indenters) and thus its radius set to zero internally.
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""

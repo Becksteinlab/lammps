@@ -1146,7 +1146,7 @@ combination with *fsaa on*.
 .. versionadded:: TBD
 
 The *fcolor* keyword sets the color of any image objects created by a
-fix when using the color style "const.  The first argument is the fix ID
+fix when using the color style "const".  The first argument is the fix ID
 used with the *dump image fix* command and the second argument is the
 color name.  The color name can be any of the 140 pre-defined colors
 (see below) or a color name defined by the *dump_modify color* option.
