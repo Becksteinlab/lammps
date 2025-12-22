@@ -66,7 +66,7 @@
 namespace {
 
 using LAMMPS_NS::MathConst::MY_2PI;
-constexpr int RESOLUTION = 50;
+constexpr int RESOLUTION = 36;
 constexpr double RADINC = MY_2PI / RESOLUTION;
 
 using vec3 = std::array<double, 3>;
