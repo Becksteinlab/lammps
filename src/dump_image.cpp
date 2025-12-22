@@ -71,9 +71,11 @@ constexpr double RADINC = MY_2PI / RESOLUTION;
 constexpr double RADOVERLAP = 0.00001;
 constexpr double SMALL = 1.0e-10;
 
+// custom data types for positions and triangles
 using vec3 = std::array<double, 3>;
 using triangle = std::array<vec3, 3>;
 
+// some basic math operations for positions/vectors
 inline vec3 operator+(const vec3 &a, const vec3 &b)
 {
   return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
@@ -90,31 +92,38 @@ inline vec3 operator*(const vec3 &v, double s)
 {
   return s * v;
 }
+
+// dot product of two vectors
 inline double vec3dot(const vec3 &a, const vec3 &b)
 {
   return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
+
+// dot product of two vectors
 inline vec3 vec3cross(const vec3 &a, const vec3 &b)
 {
   return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
 }
 
+// length of vector
 inline double vec3len(const vec3 &v)
 {
   return std::sqrt(vec3dot(v, v));
 }
 
+// return normalized vector
 inline vec3 vec3norm(const vec3 &v)
 {
   double n = vec3len(v);
   return (n > 0.0) ? (1.0 / n) * v : vec3{0.0, 0.0, 0.0};
 }
 
-double radscale(const double *radius, const vec3 &pos)
+// scale factor to move position back the surface of a "unit ellipsoid"
+double radscale(const double *shape, const vec3 &pos)
 {
   return sqrt(1.0 /
-              (pos[0] / radius[0] * pos[0] / radius[0] + pos[1] / radius[1] * pos[1] / radius[1] +
-               pos[2] / radius[2] * pos[2] / radius[2]));
+              (pos[0] / shape[0] * pos[0] / shape[0] + pos[1] / shape[1] * pos[1] / shape[1] +
+               pos[2] / shape[2] * pos[2] / shape[2]));
 }
 
 // refine the list of triangles.
@@ -134,12 +143,12 @@ std::vector<triangle> refine_triangle_list(const std::vector<triangle> &inlist)
   return outlist;
 }
 
-void scale_and_displace_triangle(triangle &tri, const double *radius, const vec3 &offs)
+void scale_and_displace_triangle(triangle &tri, const double *shape, const vec3 &offs)
 {
   // scale and displace
   for (int i = 0; i < 3; ++i) {
     auto &t = tri[i];
-    const auto scale = radscale(radius, t);
+    const auto scale = radscale(shape, t);
     t = t * scale + offs;
   }
 }
@@ -234,8 +243,7 @@ void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *co
       for (int i = 0; i < 3; ++i) {
         auto &t = tri[i];
         if (doframe && dotri) {
-          double shapeplus[3] = {shape[0] + diameter, shape[1] + diameter,
-                                  shape[1] + diameter};
+          double shapeplus[3] = {shape[0] + diameter, shape[1] + diameter, shape[1] + diameter};
           t = radscale(shapeplus, t) * t;
         } else {
           t = radscale(shape, t) * t;
