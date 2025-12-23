@@ -634,7 +634,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       else error->all(FLERR, iarg+2, "Unsupported color style for dump image fix {}", arg[iarg+2]);
       double fixflag1 = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       double fixflag2 = utils::numeric(FLERR,arg[iarg+4],false,lmp);
-      fixes.emplace_back(id_fix, fixptr, fixcolor, fixflag1, fixflag2, image->color2rgb("red"));
+      fixes.emplace_back(id_fix, fixptr, fixcolor, fixflag1, fixflag2, image->color2rgb("white"));
       iarg += 5;
 
     } else if (strcmp(arg[iarg],"region") == 0) {
