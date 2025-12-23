@@ -18,6 +18,7 @@
 #include "atom.h"
 #include "atom_vec.h"
 #include "atom_vec_body.h"
+#include "atom_vec_ellipsoid.h"
 #include "atom_vec_line.h"
 #include "atom_vec_tri.h"
 #include "body.h"
@@ -65,38 +66,64 @@
 namespace {
 
 using LAMMPS_NS::MathConst::MY_2PI;
-constexpr int RESOLUTION = 50;
+constexpr int RESOLUTION = 36;
 constexpr double RADINC = MY_2PI / RESOLUTION;
+constexpr double RADOVERLAP = 0.00001;
+constexpr double SMALL = 1.0e-10;
 
+// custom data types for positions and triangles
 using vec3 = std::array<double, 3>;
 using triangle = std::array<vec3, 3>;
 
-vec3 vecadd(const vec3 &a, const vec3 &b)
+// some basic math operations for positions/vectors
+inline vec3 operator+(const vec3 &a, const vec3 &b)
 {
-  vec3 sum(a);
-  sum[0] += b[0];
-  sum[1] += b[1];
-  sum[2] += b[2];
-  return sum;
+  return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
+}
+inline vec3 operator-(const vec3 &a, const vec3 &b)
+{
+  return {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
+}
+inline vec3 operator*(double s, const vec3 &v)
+{
+  return {s * v[0], s * v[1], s * v[2]};
+}
+inline vec3 operator*(const vec3 &v, double s)
+{
+  return s * v;
 }
 
-vec3 vecnorm(const vec3 &a)
+// dot product of two vectors
+inline double vec3dot(const vec3 &a, const vec3 &b)
 {
-  vec3 norm(a);
-  const double val = a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
-  double scale = 1.0;
-  if (val > 0.0) scale = 1.0 / sqrt(val);
-  norm[0] *= scale;
-  norm[1] *= scale;
-  norm[2] *= scale;
-  return norm;
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-double radscale(const double *radius, const vec3 &pos)
+// dot product of two vectors
+inline vec3 vec3cross(const vec3 &a, const vec3 &b)
+{
+  return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
+}
+
+// length of vector
+inline double vec3len(const vec3 &v)
+{
+  return std::sqrt(vec3dot(v, v));
+}
+
+// return normalized vector
+inline vec3 vec3norm(const vec3 &v)
+{
+  double n = vec3len(v);
+  return (n > 0.0) ? (1.0 / n) * v : vec3{0.0, 0.0, 0.0};
+}
+
+// scale factor to move position back the surface of a "unit ellipsoid"
+double radscale(const double *shape, const vec3 &pos)
 {
   return sqrt(1.0 /
-              (pos[0] / radius[0] * pos[0] / radius[0] + pos[1] / radius[1] * pos[1] / radius[1] +
-               pos[2] / radius[2] * pos[2] / radius[2]));
+              (pos[0] / shape[0] * pos[0] / shape[0] + pos[1] / shape[1] * pos[1] / shape[1] +
+               pos[2] / shape[2] * pos[2] / shape[2]));
 }
 
 // refine the list of triangles.
@@ -105,9 +132,9 @@ std::vector<triangle> refine_triangle_list(const std::vector<triangle> &inlist)
 {
   std::vector<triangle> outlist;
   for (const auto &tri : inlist) {
-    vec3 posa = vecnorm(vecadd(tri[0], tri[2]));
-    vec3 posb = vecnorm(vecadd(tri[0], tri[1]));
-    vec3 posc = vecnorm(vecadd(tri[1], tri[2]));
+    vec3 posa = vec3norm(tri[0] + tri[2]);
+    vec3 posb = vec3norm(tri[0] + tri[1]);
+    vec3 posc = vec3norm(tri[1] + tri[2]);
     outlist.push_back({tri[0], posb, posa});
     outlist.push_back({posb, tri[1], posc});
     outlist.push_back({posa, posb, posc});
@@ -116,165 +143,264 @@ std::vector<triangle> refine_triangle_list(const std::vector<triangle> &inlist)
   return outlist;
 }
 
-void scale_and_displace_triangle(triangle &tri, const double *radius, const vec3 &offs)
+void scale_and_displace_triangle(triangle &tri, const double *shape, const vec3 &offs)
 {
   // scale and displace
   for (int i = 0; i < 3; ++i) {
     auto &t = tri[i];
-    const auto scale = radscale(radius, t);
-    t[0] = t[0] * scale + offs[0];
-    t[1] = t[1] * scale + offs[1];
-    t[2] = t[2] * scale + offs[2];
+    const auto scale = radscale(shape, t);
+    t = t * scale + offs;
   }
 }
+
+// define edges of an octahedron
+
+constexpr vec3 OCT1 = {-1.0, 0.0, 0.0};
+constexpr vec3 OCT2 = {1.0, 0.0, 0.0};
+constexpr vec3 OCT3 = {0.0, -1.0, 0.0};
+constexpr vec3 OCT4 = {0.0, 1.0, 0.0};
+constexpr vec3 OCT5 = {0.0, 0.0, -1.0};
+constexpr vec3 OCT6 = {0.0, 0.0, 1.0};
 
 void ellipsoid2wireframe(LAMMPS_NS::Image *img, int level, const double *color, double diameter,
                          const double *center, const double *radius, LAMMPS_NS::Region *reg)
 {
-  vec3 offset = {center[0], center[1], center[2]};
-
-  // define edges of an octahedron
-  vec3 pos1 = {-1.0, 0.0, 0.0};
-  vec3 pos2 = {1.0, 0.0, 0.0};
-  vec3 pos3 = {0.0, -1.0, 0.0};
-  vec3 pos4 = {0.0, 1.0, 0.0};
-  vec3 pos5 = {0.0, 0.0, -1.0};
-  vec3 pos6 = {0.0, 0.0, 1.0};
+  if (diameter <= 0.0) return;
 
   // define level 1 octahedron triangle mesh
-  std::vector<triangle> trilist = {{pos1, pos4, pos5}, {pos5, pos4, pos2}, {pos2, pos4, pos6},
-                                   {pos6, pos4, pos1}, {pos5, pos3, pos1}, {pos2, pos3, pos5},
-                                   {pos6, pos3, pos2}, {pos1, pos3, pos6}};
+  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
+                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
+                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
 
-  // draw level 1 triangle mesh
-  if (level <= 1) {
-    for (auto &tri : trilist) {
-      scale_and_displace_triangle(tri, radius, offset);
-      reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-      reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-      reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
-      img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
-      img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
-    }
-  }
+  // refine the list of triangles to the desired level
+  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
 
-  if (level >= 2) {
-    trilist = refine_triangle_list(trilist);
+  // draw wire mesh
 
-    if (level == 2) {
-      for (auto &tri : trilist) {
-        scale_and_displace_triangle(tri, radius, offset);
-        reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-        reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-        reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
-        img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
-        img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
-      }
-    }
-  }
-
-  if (level >= 3) {
-    trilist = refine_triangle_list(trilist);
-
-    if (level == 3) {
-      for (auto &tri : trilist) {
-        scale_and_displace_triangle(tri, radius, offset);
-        reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-        reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-        reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
-        img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
-        img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
-      }
-    }
-  }
-
-  if (level == 4) {
-    trilist = refine_triangle_list(trilist);
-
-    for (auto &tri : trilist) {
-      scale_and_displace_triangle(tri, radius, offset);
-      reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-      reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-      reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
-      img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
-      img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
-    }
+  for (auto &tri : trilist) {
+    scale_and_displace_triangle(tri, radius, {center[0], center[1], center[2]});
+    reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
+    reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
+    reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
+    img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
+    img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
+    img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
   }
 }
 
 void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, const double *center,
                       const double *radius, LAMMPS_NS::Region *reg, double opacity)
 {
-  vec3 offset = {center[0], center[1], center[2]};
-
-  // define edges of an octahedron
-  vec3 pos1 = {-1.0, 0.0, 0.0};
-  vec3 pos2 = {1.0, 0.0, 0.0};
-  vec3 pos3 = {0.0, -1.0, 0.0};
-  vec3 pos4 = {0.0, 1.0, 0.0};
-  vec3 pos5 = {0.0, 0.0, -1.0};
-  vec3 pos6 = {0.0, 0.0, 1.0};
-
   // define level 1 octahedron triangle mesh
-  std::vector<triangle> trilist = {{pos1, pos4, pos5}, {pos5, pos4, pos2}, {pos2, pos4, pos6},
-                                   {pos6, pos4, pos1}, {pos5, pos3, pos1}, {pos2, pos3, pos5},
-                                   {pos6, pos3, pos2}, {pos1, pos3, pos6}};
+  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
+                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
+                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
 
-  if (level <= 1) {
-    for (auto &tri : trilist) {
-      scale_and_displace_triangle(tri, radius, offset);
-      reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-      reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-      reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
-    }
+  // refine the list of triangles to the desired level
+  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
+
+  // draw triangles
+  for (auto &tri : trilist) {
+    scale_and_displace_triangle(tri, radius, {center[0], center[1], center[2]});
+    reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
+    reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
+    reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
+    img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
   }
+}
 
-  // refine the list of triangles
-  if (level >= 2) {
-    trilist = refine_triangle_list(trilist);
+void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *color,
+                    const double *center, const double *shape, const double *quat, double diameter,
+                    double opacity)
+{
+  bool doframe = true;
+  bool dotri = true;
+  if (flag == 1) doframe = false;
+  if (flag == 2) dotri = false;
+  if (diameter <= 0.0) doframe = false;
+  if (!dotri && !doframe) return;    // nothing to do
 
-    if (level == 2) {
-      for (auto &tri : trilist) {
-        scale_and_displace_triangle(tri, radius, offset);
-        reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-        reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-        reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+  double p[3][3];
+  vec3 e1, e2, e3;
+  const vec3 offs{center[0], center[1], center[2]};
+
+  // optimization: just draw a sphere if a filled surface is requested and the object is a sphere
+  if (dotri && (shape[0] == shape[1]) && (shape[0] == shape[2])) {
+    img->draw_sphere(center, color, 2.0 * shape[0] + (doframe ? diameter : 0.0), opacity);
+    return;
+  }
+  // define level 1 octahedron triangle mesh
+  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
+                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
+                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
+
+  MathExtra::quat_to_mat(quat, p);    // get rotation matrix for body frame to box frame
+
+  // refine the list of triangles to the desired level
+  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
+
+  // draw triangles and edges as requested
+  for (auto &tri : trilist) {
+
+    if (dotri) {
+
+      // set shape
+      for (int i = 0; i < 3; ++i) {
+        auto &t = tri[i];
+        if (doframe && dotri) {
+          double shapeplus[3] = {shape[0] + diameter, shape[1] + diameter, shape[1] + diameter};
+          t = radscale(shapeplus, t) * t;
+        } else {
+          t = radscale(shape, t) * t;
+        }
       }
+
+      // rotate
+      MathExtra::matvec(p, tri[0].data(), e1.data());
+      MathExtra::matvec(p, tri[1].data(), e2.data());
+      MathExtra::matvec(p, tri[2].data(), e3.data());
+
+      // translate
+      e1 = e1 + offs;
+      e2 = e2 + offs;
+      e3 = e3 + offs;
+      img->draw_triangle(e1.data(), e2.data(), e3.data(), color, opacity);
     }
-  }
 
-  if (level >= 3) {
-    trilist = refine_triangle_list(trilist);
-
-    if (level == 3) {
-      for (auto &tri : trilist) {
-        scale_and_displace_triangle(tri, radius, offset);
-        reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-        reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-        reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-        img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+    if (doframe) {
+      // set shape
+      for (int i = 0; i < 3; ++i) {
+        auto &t = tri[i];
+        t = radscale(shape, t) * t;
       }
-    }
-  }
 
-  if (level == 4) {
-    trilist = refine_triangle_list(trilist);
+      // rotate
+      MathExtra::matvec(p, tri[0].data(), e1.data());
+      MathExtra::matvec(p, tri[1].data(), e2.data());
+      MathExtra::matvec(p, tri[2].data(), e3.data());
 
-    for (auto &tri : trilist) {
-      scale_and_displace_triangle(tri, radius, offset);
-      reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-      reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-      reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+      // translate
+      e1 = e1 + offs;
+      e2 = e2 + offs;
+      e3 = e3 + offs;
+      img->draw_cylinder(e1.data(), e2.data(), color, diameter, 3, opacity);
+      img->draw_cylinder(e2.data(), e3.data(), color, diameter, 3, opacity);
+      img->draw_cylinder(e3.data(), e1.data(), color, diameter, 3, opacity);
     }
   }
 }
+
+// construct an arrow from primitives, mostly triangles and a cylinder, and draw them
+
+class ArrowObj {
+ public:
+  // build the list of triangles and positions in (1.0, 0.0, 0.0) direction.
+  void construct(double _tipl = 0.2, double _tipw = 0.1, double radius = 0.1, int res = RESOLUTION)
+  {
+    triangles.clear();
+
+    // we want at least 2 iterations.
+    if (res < 2) return;
+
+    // store settings for arrow template
+
+    tiplength = _tipl;
+    tipwidth = _tipw;
+    diameter = 2.0 * radius;
+    resolution = res;
+
+    vec3 tip{0.5, 0.0, 0.0};
+    vec3 mid{0.5 - tiplength, 0.0, 0.0};
+    vec3 bot{-0.5, 0.0, 0.0};
+
+    // construct list of triangles for the tip of the arrow. p1, p2 are the points on the "rim".
+
+    const double radinc = MY_2PI / resolution;
+    vec3 p1{0.5 - tiplength, 0.0, 0.0};
+    vec3 p2{0.5 - tiplength, 0.0, 0.0};
+    for (int i = 0; i < resolution; ++i) {
+      p1[1] = (radius + tipwidth) * sin(radinc * i - RADOVERLAP);
+      p1[2] = (radius + tipwidth) * cos(radinc * i - RADOVERLAP);
+      p2[1] = (radius + tipwidth) * sin(radinc * (i + 1));
+      p2[2] = (radius + tipwidth) * cos(radinc * (i + 1));
+      triangles.emplace_back(triangle{p1, tip, p2});
+      triangles.emplace_back(triangle{p1, mid, p2});
+    }
+
+    // construct list of triangles for the cap at the bottom
+
+    p1[0] = -0.5;
+    p2[0] = -0.5;
+    for (int i = 0; i < resolution; ++i) {
+      p1[1] = radius * sin(radinc * i);
+      p1[2] = radius * cos(radinc * i);
+      p2[1] = radius * sin(radinc * (i + 1));
+      p2[2] = radius * cos(radinc * (i + 1));
+      triangles.emplace_back(triangle{p1, bot, p2});
+    }
+  }
+
+  // transform build the list of triangles and positions in (1.0, 0.0, 0.0) direction.
+
+  std::vector<triangle> transform(const vec3 &dir, const vec3 &offs, double len, double width)
+  {
+    std::vector<triangle> arrow;
+
+    // normalize direction vector
+    vec3 u = vec3norm(dir);
+
+    // vector is too short. can't draw anything. return empty list
+    if (vec3len(u) < SMALL) return arrow;
+
+    // construct orthonormal basis around vector
+    vec3 a = (std::fabs(u[0]) < 0.9) ? vec3{1.0, 0.0, 0.0} : vec3{0.0, 1.0, 0.0};
+    vec3 v = vec3norm(vec3cross(u, a));
+    vec3 w = vec3cross(u, v);
+
+    // now process the arrow template triangles
+    arrow.reserve(triangles.size());
+    for (const auto &tri : triangles) {
+      vec3 p1 = (len * tri[0][0] * u) + (width * tri[0][1] * v) + (width * tri[0][2] * w) + offs;
+      vec3 p2 = (len * tri[1][0] * u) + (width * tri[1][1] * v) + (width * tri[1][2] * w) + offs;
+      vec3 p3 = (len * tri[2][0] * u) + (width * tri[2][1] * v) + (width * tri[2][2] * w) + offs;
+      arrow.push_back({p1, p2, p3});
+    }
+    return arrow;
+  }
+
+  void draw(LAMMPS_NS::Image *img, const double *color, const double *center, double length,
+            const double *data, double scale, double opacity)
+  {
+    // construct arrow template with default settings if not already done
+    if (!triangles.size()) construct();
+
+    // transform template
+    double lscale = vec3len({data[0], data[1], data[2]}) * length;
+    double wscale = scale / diameter;
+    auto arrow =
+        transform({data[0], data[1], data[2]}, {center[0], center[1], center[2]}, lscale, wscale);
+
+    // nothing to draw
+    if (!arrow.size()) return;
+
+    for (const auto &tri : arrow) {
+      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+    }
+
+    // infer cylinder end points from list of triangles
+    if (arrow.size() > resolution + 2)
+      img->draw_cylinder(arrow[resolution + 1][1].data(), arrow[arrow.size() - 2][1].data(), color,
+                         scale, 0, opacity);
+  }
+
+ private:
+  double tiplength;
+  double tipwidth;
+  double diameter;
+  std::vector<triangle> triangles;
+  int resolution;
+};
+
 }    // namespace
 
 using namespace LAMMPS_NS;
@@ -296,7 +422,8 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
     colorelement(nullptr), bcolortype(nullptr), aopacity(nullptr), bopacity(nullptr),
     grid2d(nullptr), grid3d(nullptr), id_grid_compute(nullptr), id_grid_fix(nullptr),
     grid_compute(nullptr), grid_fix(nullptr), gbuf(nullptr), avec_line(nullptr), avec_tri(nullptr),
-    avec_body(nullptr), image(nullptr), chooseghost(nullptr), bufcopy(nullptr)
+    avec_ellipsoid(nullptr), avec_body(nullptr), image(nullptr), chooseghost(nullptr),
+    bufcopy(nullptr)
 {
   if (binary || multiproc) error->all(FLERR, 4, "Invalid dump image filename {}", filename);
 
@@ -357,7 +484,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
 
   atomflag = YES;
   gridflag = NO;
-  lineflag = triflag = bodyflag = NO;
+  lineflag = triflag = bodyflag = ellipsoidflag = NO;
 
   bcolor = ATOM;
   bdiam = NUMERIC;
@@ -471,11 +598,26 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       tdiamvalue = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       iarg += 4;
 
+    } else if (strcmp(arg[iarg],"ellipsoid") == 0) {
+      if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image ellipsoid", error);
+      ellipsoidflag = YES;
+      if (strcmp(arg[iarg+1],"type") == 0) ecolor = TYPE;
+      else error->all(FLERR, iarg+1, "Dump image ellipsoid only supports color by type");
+      estyle = utils::inumeric(FLERR,arg[iarg+2],false,lmp);
+      if ((estyle < 0) || (estyle > 3))
+        error->all(FLERR, iarg+2, "Dump image ellipsoid only supports style setting 1, 2, or 3");
+      elevel = utils::inumeric(FLERR,arg[iarg+3],false,lmp);
+      if (elevel == 0) elevel = 4; // default setting
+      if (elevel > 6)
+        error->all(FLERR, iarg+3, "Dump image ellipsoid mesh refinement level is too large");
+      ediamvalue = utils::numeric(FLERR,arg[iarg+4],false,lmp);
+      iarg += 5;
+
     } else if (strcmp(arg[iarg],"body") == 0) {
       if (iarg+4 > narg) utils::missing_cmd_args(FLERR,"dump image body", error);
       bodyflag = YES;
       if (strcmp(arg[iarg+1],"type") == 0) bodycolor = TYPE;
-      else error->all(FLERR, iarg+1, "Dump image body only support color by type");
+      else error->all(FLERR, iarg+1, "Dump image body only supports color by type");
       bodyflag1 = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       bodyflag2 = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       iarg += 4;
@@ -492,7 +634,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       else error->all(FLERR, iarg+2, "Unsupported color style for dump image fix {}", arg[iarg+2]);
       double fixflag1 = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       double fixflag2 = utils::numeric(FLERR,arg[iarg+4],false,lmp);
-      fixes.emplace_back(id_fix, fixptr, fixcolor, fixflag1, fixflag2, image->color2rgb("red"));
+      fixes.emplace_back(id_fix, fixptr, fixcolor, fixflag1, fixflag2, image->color2rgb("white"));
       iarg += 5;
 
     } else if (strcmp(arg[iarg],"region") == 0) {
@@ -529,10 +671,11 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
         iarg += 2;
       } else if (drawstyle == TRANSPARENT) {
         if (iarg+5 > narg) utils::missing_cmd_args(FLERR,"dump image region transparent", error);
-        opacity = utils::numeric(FLERR, arg[iarg+5], false, lmp);
+        opacity = utils::numeric(FLERR, arg[iarg+4], false, lmp);
         if ((opacity < 0.0) || (opacity > 1.0))
-          error->all(FLERR, iarg+5, "Dump image region opacity must be in the range 0.0 to 1.0");
-        iarg += 2;
+          error->all(FLERR, iarg+4, "Dump image region opacity must be in the range 0.0 to 1.0");
+
+        ++iarg;
       }
       iarg += 4;
       regions.emplace_back(regptr->id, regptr, regcolor, drawstyle, framediam, opacity, npoints);
@@ -696,6 +839,12 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
     if (!avec_tri)
       error->all(FLERR, Error::NOLASTLINE, "Dump image tri requires atom style tri");
   }
+
+  if (ellipsoidflag) {
+    avec_ellipsoid = dynamic_cast<AtomVecEllipsoid *>(atom->style_match("ellipsoid"));
+    if (!avec_ellipsoid)
+      error->all(FLERR, Error::NOLASTLINE, "Dump image ellipsoid requires atom style ellipsoid");
+  }
   if (bodyflag) {
     avec_body = dynamic_cast<AtomVecBody *>(atom->style_match("body"));
     if (!avec_body)
@@ -703,7 +852,7 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
   }
 
   extraflag = 0;
-  if (lineflag || triflag || bodyflag) extraflag = 1;
+  if (lineflag || triflag || ellipsoidflag || bodyflag) extraflag = 1;
 
   // allocate image buffer now that image size is known
 
@@ -1230,7 +1379,7 @@ void DumpImage::create_image()
 {
   int i,j,k,m,n,itype,atom1,atom2,imol,iatom,btype,ibonus,drawflag;
   tagint tagprev;
-  double diameter,delx,dely,delz,opacity;
+  double diameter,delx,dely,delz;
   int *bodyvec;
   double **bodyarray;
   double *color,*color1,*color2;
@@ -1244,6 +1393,7 @@ void DumpImage::create_image()
     double **x = atom->x;
     int *line = atom->line;
     int *tri = atom->tri;
+    int *ellipsoid = atom->ellipsoid;
     int *body = atom->body;
 
     m = 0;
@@ -1278,6 +1428,7 @@ void DumpImage::create_image()
       if (extraflag) {
         if (lineflag && line[j] >= 0) drawflag = 0;
         if (triflag && tri[j] >= 0) drawflag = 0;
+        if (ellipsoidflag && ellipsoid[j] >= 0) drawflag = 0;
         if (bodyflag && body[j] >= 0) drawflag = 0;
       }
 
@@ -1403,13 +1554,13 @@ void DumpImage::create_image()
       }
       double opacity = aopacity[atom->type[j]];
 
-      MathExtra::quat_to_mat(avec_tri->bonus[tri[i]].quat,mat);
-      MathExtra::matvec(mat,avec_tri->bonus[tri[i]].c1,pt1);
-      MathExtra::matvec(mat,avec_tri->bonus[tri[i]].c2,pt2);
-      MathExtra::matvec(mat,avec_tri->bonus[tri[i]].c3,pt3);
-      MathExtra::add3(pt1,x[i],pt1);
-      MathExtra::add3(pt2,x[i],pt2);
-      MathExtra::add3(pt3,x[i],pt3);
+      MathExtra::quat_to_mat(avec_tri->bonus[tri[j]].quat,mat);
+      MathExtra::matvec(mat,avec_tri->bonus[tri[j]].c1,pt1);
+      MathExtra::matvec(mat,avec_tri->bonus[tri[j]].c2,pt2);
+      MathExtra::matvec(mat,avec_tri->bonus[tri[j]].c3,pt3);
+      MathExtra::add3(pt1,x[j],pt1);
+      MathExtra::add3(pt2,x[j],pt2);
+      MathExtra::add3(pt3,x[j],pt3);
 
       if (tridraw) image->draw_triangle(pt1,pt2,pt3,color,opacity);
       if (edgedraw) {
@@ -1417,6 +1568,26 @@ void DumpImage::create_image()
         image->draw_cylinder(pt2,pt3,color,tdiamvalue,3,opacity);
         image->draw_cylinder(pt3,pt1,color,tdiamvalue,3,opacity);
       }
+    }
+  }
+
+  // render atoms that are ellipsoids
+  // tstyle = 1 for tri only
+
+  if (ellipsoidflag) {
+    double **x = atom->x;
+    int *ellipsoid = atom->ellipsoid;
+    int *type = atom->type;
+    for (i = 0; i < nchoose; i++) {
+      j = clist[i];
+      if (ellipsoid[j] < 0) continue;
+
+      if (ecolor == TYPE) {
+        color = colortype[type[j]];
+      }
+
+      draw_ellipsoid(image, elevel, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
+                     avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, aopacity[type[j]]);
     }
   }
 
@@ -1444,6 +1615,8 @@ void DumpImage::create_image()
           image->draw_sphere(bodyarray[k],color,bodyarray[k][3],opacity);
         else if (bodyvec[k] == LINE)
           image->draw_cylinder(&bodyarray[k][0],&bodyarray[k][3],color,bodyarray[k][6],3,opacity);
+        else if (bodyvec[k] == TRI)
+          image->draw_triangle(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],color,opacity);
       }
 
       m += size_one;
@@ -1719,60 +1892,76 @@ void DumpImage::create_image()
     for (i = 0; i < n; i++) {
       if (!fixvec || !fixarray) continue;
 
-      // set color
+      // set color and transparency
+      double opacity;
       if (ifix.colorstyle == TYPE) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colortype[itype];
+        opacity = aopacity[itype];
       } else if  (ifix.colorstyle == ELEMENT) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colorelement[itype];
+        opacity = aopacity[itype];
       } else if  (ifix.colorstyle == CONSTANT) {
         color = ifix.rgb;
+        opacity = ifix.opacity;
       } else {
-        color = image->color2rgb("red");
+        color = image->color2rgb("white");
+        opacity = 1.0;
       }
 
       if (fixvec[i] == SPHERE) {
-        image->draw_sphere(&fixarray[i][1],color,fixarray[i][4]+ifix.flag2);
+        image->draw_sphere(&fixarray[i][1],color,fixarray[i][4]+ifix.flag2,opacity);
       } else if (fixvec[i] == LINE) {
         // @sjplimp for consistency this should be:
         // image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag2,ifix.flag1);
-        image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag1,3);
+        image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag1,3,opacity);
       } else if (fixvec[i] == TRI) { // don't render surface meshes in 2d
         if (domain->dimension == 3) {
           p1 = &fixarray[i][1];
           p2 = &fixarray[i][4];
           p3 = &fixarray[i][7];
           if (static_cast<int>(ifix.flag1) % 2) {
-            image->draw_triangle(p1,p2,p3,color,ifix.flag2);
+            image->draw_triangle(p1,p2,p3,color,opacity);
           } else {
-            image->draw_cylinder(p1,p2,color,ifix.flag2,3);
-            image->draw_cylinder(p2,p3,color,ifix.flag2,3);
-            image->draw_cylinder(p3,p1,color,ifix.flag2,3);
+            image->draw_cylinder(p1,p2,color,ifix.flag2,3,opacity);
+            image->draw_cylinder(p2,p3,color,ifix.flag2,3,opacity);
+            image->draw_cylinder(p3,p1,color,ifix.flag2,3,opacity);
           }
         }
       } else if (fixvec[i] == CYLINDER) {
         image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,
-                             fixarray[i][7]+ifix.flag2,(int)ifix.flag1);
+                             fixarray[i][7]+ifix.flag2,(int)ifix.flag1,opacity);
       } else if (fixvec[i] == TRIANGLE) {
-        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,ifix.flag2);
+        image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,opacity);
+      } else if (fixvec[i] == ARROW) {
+        ArrowObj().draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4],
+                        fixarray[i][8], opacity);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
-        double *color1;
-        double *color2;
+        double *color1, *color2;
+        double opacity1, opacity2;
         if (ifix.colorstyle == TYPE) {
           color1 = colortype[type1];
           color2 = colortype[type2];
+          opacity1 = aopacity[type1];
+          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == ELEMENT) {
           color1 = colorelement[type1];
           color2 = colorelement[type2];
+          opacity1 = aopacity[type1];
+          opacity2 = aopacity[type2];
         } else if  (ifix.colorstyle == CONSTANT) {
           color1 = ifix.rgb;
           color2 = ifix.rgb;
+          opacity1 = ifix.opacity;
+          opacity2 = ifix.opacity;
         } else {
           color1 = image->color2rgb("white");
           color2 = image->color2rgb("white");
+          opacity1 = 1.0;
+          opacity2 = 1.0;
         }
 
         double diameter = 0.5;
@@ -1794,7 +1983,7 @@ void DumpImage::create_image()
 
         // draw bond cylinder in 2 pieces
 
-        int capflag = ifix.flag1 ? 3 : 0;
+        int capflag = (ifix.flag1 != 0.0) ? 3 : 0;
         delx = fixarray[i][5] - fixarray[i][2];
         dely = fixarray[i][6] - fixarray[i][3];
         delz = fixarray[i][7] - fixarray[i][4];
@@ -1804,11 +1993,11 @@ void DumpImage::create_image()
         xmid[0] = fixarray[i][2] + 0.5*delx;
         xmid[1] = fixarray[i][3] + 0.5*dely;
         xmid[2] = fixarray[i][4] + 0.5*delz;
-        image->draw_cylinder(&fixarray[i][2],xmid,color1,diameter,capflag);
+        image->draw_cylinder(&fixarray[i][2],xmid,color1,diameter,capflag,opacity1);
         xmid[0] = fixarray[i][5] - 0.5*delx;
         xmid[1] = fixarray[i][6] - 0.5*dely;
         xmid[2] = fixarray[i][7] - 0.5*delz;
-        image->draw_cylinder(xmid,&fixarray[i][5],color2,diameter,capflag);
+        image->draw_cylinder(xmid,&fixarray[i][5],color2,diameter,capflag,opacity2);
       }
     }
   }
@@ -1958,12 +2147,12 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[1] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[1] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[1] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[1] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -1977,12 +2166,12 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -1996,12 +2185,12 @@ void DumpImage::create_image()
             } else {  // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[1] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[1] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[1] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[1] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2020,12 +2209,12 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[1] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[1] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[1] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[1] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2042,12 +2231,12 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[2] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[2] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[2] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[2] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2063,12 +2252,12 @@ void DumpImage::create_image()
             } else {  // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = myreg->radiuslo * sin(RADINC * i) + myreg->c1;
-              p1[1] = myreg->radiuslo * cos(RADINC * i) + myreg->c2;
+              p1[0] = myreg->radiuslo * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = myreg->radiuslo * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = myreg->radiuslo * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = myreg->radiuslo * cos(RADINC * (i+1)) + myreg->c2;
-              p3[0] = myreg->radiushi * sin(RADINC * i) + myreg->c1;
-              p3[1] = myreg->radiushi * cos(RADINC * i) + myreg->c2;
+              p3[0] = myreg->radiushi * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p3[1] = myreg->radiushi * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p4[0] = myreg->radiushi * sin(RADINC * (i+1)) + myreg->c1;
               p4[1] = myreg->radiushi * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2124,8 +2313,8 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = p3[1] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[1] = p3[1] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = p4[1] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2139,8 +2328,8 @@ void DumpImage::create_image()
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2154,8 +2343,8 @@ void DumpImage::create_image()
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[1] = p3[1] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = p3[1] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = p4[1] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2174,8 +2363,8 @@ void DumpImage::create_image()
             if (myreg->axis == 'x') {
               p1[0] = p2[0] = myreg->lo;
               p3[0] = p4[0] = myreg->hi;
-              p1[1] = p3[1] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[1] = p3[1] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[1] = p4[1] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2186,13 +2375,13 @@ void DumpImage::create_image()
               if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
                 image->draw_triangle(p1, p2, p3, reg.color, opacity);
-                image->draw_triangle(p3, p4, p2, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             } else if (myreg->axis == 'y') {
               p1[1] = p2[1] = myreg->lo;
               p3[1] = p4[1] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[2] = p3[2] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[2] = p3[2] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[2] = p4[2] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2203,13 +2392,13 @@ void DumpImage::create_image()
               if (!myreg->open_faces[1]) image->draw_triangle(p3, p4, hi, reg.color, opacity);
               if (!myreg->open_faces[2]) {
                 image->draw_triangle(p1, p2, p3, reg.color, opacity);
-                image->draw_triangle(p3, p4, p2, reg.color, opacity);
+                image->draw_triangle(p2, p4, p3, reg.color, opacity);
               }
             } else { // if (myreg->axis == 'z')
               p1[2] = p2[2] = myreg->lo;
               p3[2] = p4[2] = myreg->hi;
-              p1[0] = p3[0] = myreg->radius * sin(RADINC * i) + myreg->c1;
-              p1[1] = p3[1] = myreg->radius * cos(RADINC * i) + myreg->c2;
+              p1[0] = p3[0] = myreg->radius * sin(RADINC * i - RADOVERLAP) + myreg->c1;
+              p1[1] = p3[1] = myreg->radius * cos(RADINC * i - RADOVERLAP) + myreg->c2;
               p2[0] = p4[0] = myreg->radius * sin(RADINC * (i+1)) + myreg->c1;
               p2[1] = p4[1] = myreg->radius * cos(RADINC * (i+1)) + myreg->c2;
               myreg->forward_transform(p1[0], p1[1], p1[2]);
@@ -2224,8 +2413,39 @@ void DumpImage::create_image()
               }
             }
           }
-        }
 
+          // draw an additional uncapped cylinder on top for a smoother image
+          if (myreg->axis == 'x') {
+            p1[0] = myreg->lo;
+            p2[0] = myreg->hi;
+            p1[1] = p2[1] = myreg->c1;
+            p1[2] = p2[2] = myreg->c2;
+            myreg->forward_transform(p1[0], p1[1], p1[2]);
+            myreg->forward_transform(p2[0], p2[1], p2[2]);
+            if (!myreg->open_faces[2])
+              image->draw_cylinder(p1, p2, reg.color, 2.0*myreg->radius, 0, opacity);
+
+          } else if (myreg->axis == 'y') {
+            p1[1] = myreg->lo;
+            p2[1] = myreg->hi;
+            p1[0] = p2[0] = myreg->c1;
+            p1[2] = p2[2] = myreg->c2;
+            myreg->forward_transform(p1[0], p1[1], p1[2]);
+            myreg->forward_transform(p2[0], p2[1], p2[2]);
+            if (!myreg->open_faces[2])
+              image->draw_cylinder(p1, p2, reg.color, 2.0*myreg->radius, 0, opacity);
+
+          } else { // if (myreg->axis == 'z')
+            p1[2] = myreg->lo;
+            p2[2] = myreg->hi;
+            p1[0] = p2[0] = myreg->c1;
+            p1[1] = p2[1] = myreg->c2;
+            myreg->forward_transform(p1[0], p1[1], p1[2]);
+            myreg->forward_transform(p2[0], p2[1], p2[2]);
+            if (!myreg->open_faces[2])
+              image->draw_cylinder(p1, p2, reg.color, 2.0*myreg->radius, 0, opacity);
+          }
+        }
       } else if (regstyle == "ellipsoid") {
         auto *myreg = dynamic_cast<RegEllipsoid *>(reg.ptr);
         // inconsistent style. should not happen.
@@ -2732,6 +2952,17 @@ int DumpImage::modify_param(int narg, char **arg)
     if (!color) error->all(FLERR, "Unknown color for dump_modify fcolor: {}", arg[2]);
     for (auto &ifix : fixes) {
       if (ifix.id == arg[1]) ifix.rgb = color;
+    }
+    return 3;
+  }
+
+  if (strcmp(arg[0],"ftrans") == 0) {
+    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    double opacity = utils::numeric(FLERR,arg[2],false,lmp);
+    if ((opacity < 0.0) || (opacity > 1.0))
+      error->all(FLERR, "Illegal transparency value for dump_modify ftrans: {}", arg[2]);
+    for (auto &ifix : fixes) {
+      if (ifix.id == arg[1]) ifix.opacity = opacity;
     }
     return 3;
   }

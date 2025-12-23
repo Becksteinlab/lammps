@@ -202,6 +202,7 @@ atype
 augt
 AuO
 automagically
+autoscale
 Auvergne
 Avalos
 avalue
@@ -2831,6 +2832,7 @@ obabo
 ochre
 ocl
 octahedral
+octahedron
 octants
 Odegard
 Og
@@ -4289,6 +4291,7 @@ wildcard
 Wildcard
 wildcards
 Winkler
+wireframe
 Wirnsberger
 wirtes
 witin

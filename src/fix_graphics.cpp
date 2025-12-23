@@ -80,7 +80,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
         sphere.dstr = utils::strdup(arg[iarg + 5] + 2);
       } else
         sphere.diameter = 2.0 * utils::numeric(FLERR, arg[iarg + 5], false, lmp);
-      items.emplace_back(std::move(sphere));
+      items.emplace_back(sphere);
       ++numobjs;
       iarg += 6;
     } else if (strcmp(arg[iarg], "cylinder") == 0) {
@@ -126,7 +126,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
         cylinder.dstr = utils::strdup(arg[iarg + 8] + 2);
       } else
         cylinder.diameter = 2.0 * utils::numeric(FLERR, arg[iarg + 8], false, lmp);
-      items.emplace_back(std::move(cylinder));
+      items.emplace_back(cylinder);
       ++numobjs;
       iarg += 9;
     } else if (strcmp(arg[iarg], "arrow") == 0) {
@@ -175,7 +175,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       arrow.ratio = utils::numeric(FLERR, arg[iarg + 9], false, lmp);
       if ((arrow.ratio < 0.1) || (arrow.ratio > 0.5))
         error->all(FLERR, iarg + 9, "Arrow tip ratio must be between 0.1 and 0.5");
-      items.emplace_back(std::move(arrow));
+      items.emplace_back(arrow);
       numobjs += 2;
       iarg += 10;
     } else if (strcmp(arg[iarg], "progbar") == 0) {
@@ -210,7 +210,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       progbar.tics = utils::inumeric(FLERR, arg[iarg + 10], false, lmp);
       if ((progbar.tics < 0) || (progbar.tics > 20))
         error->all(FLERR, iarg + 10, "Unsupported number of progress bar tics {}", arg[iarg + 10]);
-      items.emplace_back(std::move(progbar));
+      items.emplace_back(progbar);
       numobjs += 2 + progbar.tics;
       iarg += 11;
     } else {
@@ -218,7 +218,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
     }
   }
   memory->create(imgobjs, numobjs, "fix_graphics:imgobjs");
-  memory->create(imgparms, numobjs, 8, "fix_graphics:imgparms");
+  memory->create(imgparms, numobjs, 9, "fix_graphics:imgparms");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -395,7 +395,7 @@ void FixGraphics::init()
       }
       ++n;
     } else if (gi.style == ARROW) {
-      imgobjs[n] = DumpImage::CYLINDER;
+      imgobjs[n] = DumpImage::ARROW;
       imgparms[n][0] = gi.arrow.type;
       if (gi.arrow.x1str) {
         int ivar = input->variable->find(gi.arrow.x1str);
@@ -467,9 +467,6 @@ void FixGraphics::init()
                      "Fix graphics variable {} is not equal-style variable", gi.arrow.dstr);
         gi.arrow.dvar = ivar;
       }
-      ++n;
-      imgobjs[n] = DumpImage::CYLINDER;
-      imgparms[n][0] = gi.arrow.type;
       ++n;
     } else if (gi.style == PROGBAR) {
       imgobjs[n] = DumpImage::CYLINDER;
@@ -625,29 +622,24 @@ void FixGraphics::end_of_step()
       if (gi.arrow.dstr) gi.arrow.diameter = 2.0 * input->variable->compute_equal(gi.arrow.dvar);
 
       double mid[3], vec[3];
-      MathExtra::sub3(gi.arrow.bot, gi.arrow.tip, vec);
-      MathExtra::scaleadd3(gi.arrow.ratio, vec, gi.arrow.tip, mid);
-      imgparms[n][1] = gi.arrow.tip[X];
-      imgparms[n][2] = gi.arrow.tip[Y];
-      imgparms[n][3] = gi.arrow.tip[Z];
-      imgparms[n][4] = mid[X];
-      imgparms[n][5] = mid[Y];
-      imgparms[n][6] = mid[Z];
-      imgparms[n][7] = gi.arrow.diameter * (1.0 + 5.0 * gi.arrow.ratio);
-      ++n;
-      imgparms[n][1] = mid[X];
-      imgparms[n][2] = mid[Y];
-      imgparms[n][3] = mid[Z];
-      imgparms[n][4] = gi.arrow.bot[X];
-      imgparms[n][5] = gi.arrow.bot[Y];
-      imgparms[n][6] = gi.arrow.bot[Z];
-      imgparms[n][7] = gi.arrow.diameter;
+      MathExtra::add3(gi.arrow.tip, gi.arrow.bot, vec);
+      MathExtra::scale3(0.5,vec,mid);
+      MathExtra::sub3(gi.arrow.tip, gi.arrow.bot, vec);
+      imgparms[n][1] = mid[0];
+      imgparms[n][2] = mid[1];
+      imgparms[n][3] = mid[2];
+      imgparms[n][7] = MathExtra::len3(vec);
+      MathExtra::norm3(vec);
+      imgparms[n][4] = vec[0];
+      imgparms[n][5] = vec[1];
+      imgparms[n][6] = vec[2];
+      imgparms[n][8] = gi.arrow.diameter;
       ++n;
     } else if (gi.style == PROGBAR) {
       ++n;
       if (gi.progbar.pstr) gi.progbar.progress = input->variable->compute_equal(gi.progbar.pvar);
       // bracket into [0.0;1.0] rather than throwing an error for just a viz item
-      gi.progbar.progress = std::max(std::min(gi.progbar.progress, 1.0), 0.0);
+      gi.progbar.progress = std::max(std::min(gi.progbar.progress, 1.0), 0.01);
       switch (gi.progbar.dim) {
         case X:
           imgparms[n][1] = gi.progbar.pos[X] + (gi.progbar.progress - 0.5) * gi.progbar.length;
