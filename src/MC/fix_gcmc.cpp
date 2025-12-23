@@ -2593,7 +2593,7 @@ void FixGCMC::write_restart(FILE *fp)
   list[n++] = ninsertion_successes;
   list[n++] = ubuf(update->ntimestep).d;
   list[n++] = nlocalvals;
-  
+
   double state = random_unequal->state();
   MPI_Gather(&state, 1, MPI_DOUBLE, &list[n], 1, MPI_DOUBLE, 0, world);
 
@@ -2633,7 +2633,7 @@ void FixGCMC::restart(char *buf)
 
   // read stored state of RNG unique to this process
   // if nprocs changed, use state of proc 0
-  
+
   int nlocalvals = comm->nprocs;
   int ntmp = list[n++];
   if (nlocalvals == ntmp) n += comm->me;
