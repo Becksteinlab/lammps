@@ -1191,8 +1191,10 @@ void Variable::compute_atom(int ivar, int igroup, double *result, int stride, in
   Tree *tree = nullptr;
   double *vstore;
 
-  if (eval_in_progress[ivar])
-    print_var_error(FLERR,"has a circular dependency",ivar);
+  // index out of range. do nothing.
+  if ((ivar < 0) || (ivar >= maxvar)) return;
+
+  if (eval_in_progress[ivar]) print_var_error(FLERR, "has a circular dependency",ivar);
 
   eval_in_progress[ivar] = 1;
 
@@ -1279,8 +1281,7 @@ int Variable::compute_vector(int ivar, double **result)
 
   // evaluate vector variable afresh
 
-  if (eval_in_progress[ivar])
-    print_var_error(FLERR,"has a circular dependency",ivar);
+  if (eval_in_progress[ivar]) print_var_error(FLERR,"has a circular dependency",ivar);
 
   eval_in_progress[ivar] = 1;
 
@@ -1288,10 +1289,8 @@ int Variable::compute_vector(int ivar, double **result)
   evaluate(data[ivar][0],&tree,ivar);
   collapse_tree(tree);
   int nlen = size_tree_vector(tree);
-  if (nlen == 0)
-    print_var_error(FLERR,"Vector-style variable has zero length",ivar);
-  if (nlen < 0)
-    print_var_error(FLERR,"Inconsistent lengths in vector-style variable",ivar);
+  if (nlen == 0) print_var_error(FLERR,"Vector-style variable has zero length",ivar);
+  if (nlen < 0) print_var_error(FLERR,"Inconsistent lengths in vector-style variable",ivar);
 
   // (re)allocate space for results if necessary
 
@@ -5385,7 +5384,7 @@ char *Variable::find_next_comma(char *str)
 void Variable::print_var_error(const std::string &srcfile, const int lineno,
                                const std::string &errmsg, int ivar, int global)
 {
-  if ((ivar >= 0) && (ivar < nvar)) {
+  if ((ivar >= 0) && (ivar < maxvar)) {
     std::string msg = fmt::format("Variable {}: ",names[ivar]) + errmsg;
     if (global)
       error->all(srcfile, lineno, Error::NOLASTLINE, msg);
@@ -5393,9 +5392,9 @@ void Variable::print_var_error(const std::string &srcfile, const int lineno,
       error->one(srcfile, lineno, Error::NOLASTLINE, msg);
   } else {
     if (global)
-      error->all(srcfile,lineno, Error::NOLASTLINE, errmsg);
+      error->all(srcfile,lineno, Error::NOLASTLINE, "Variable index {} out of range", ivar);
     else
-      error->one(srcfile,lineno, Error::NOLASTLINE, errmsg);
+      error->one(srcfile,lineno, Error::NOLASTLINE, "variable index {} out of range", ivar);
   }
 }
 
