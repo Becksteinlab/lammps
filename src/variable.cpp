@@ -5384,7 +5384,7 @@ char *Variable::find_next_comma(char *str)
 void Variable::print_var_error(const std::string &srcfile, const int lineno,
                                const std::string &errmsg, int ivar, int global)
 {
-  if ((ivar >= 0) && (ivar < maxvar)) {
+  if ((ivar >= 0) && (ivar < nvar)) {
     std::string msg = fmt::format("Variable {}: ",names[ivar]) + errmsg;
     if (global)
       error->all(srcfile, lineno, Error::NOLASTLINE, msg);
@@ -5392,9 +5392,9 @@ void Variable::print_var_error(const std::string &srcfile, const int lineno,
       error->one(srcfile, lineno, Error::NOLASTLINE, msg);
   } else {
     if (global)
-      error->all(srcfile,lineno, Error::NOLASTLINE, "Variable index {} out of range", ivar);
+      error->all(srcfile,lineno, Error::NOLASTLINE, errmsg);
     else
-      error->one(srcfile,lineno, Error::NOLASTLINE, "variable index {} out of range", ivar);
+      error->one(srcfile,lineno, Error::NOLASTLINE, errmsg);
   }
 }
 
