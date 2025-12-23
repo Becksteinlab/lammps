@@ -37,12 +37,23 @@ Syntax
        vecval = ID of a per-chunk compute or fix that computes the arrow vector for the chunk
        radius = radius for arrows (length units)
 
+* zero or more keyword/value pairs may be appended
+* keyword = *autoscale*
+
+  .. parsed-literal::
+
+       *autoscale* value = automatically scale arrows so they have an average length of "value"
+
+..       *units* value = *lattice* or *box*
+..         lattice = the geometry is defined in lattice units
+..         box = the geometry is defined in simulation box units
+
 Examples
 """"""""
 
 .. code-block:: LAMMPS
 
-   fix vec all graphics/arrows 10 velocity 20.0 0.066
+   fix vec all graphics/arrows 10 velocity 20.0 0.066 autoscale 1.5
    fix vec all graphics/arrows 100 variable v_xnorm v_znorm 0.0 0.066
 
 Description
@@ -87,6 +98,12 @@ can be seen well.
 
 The *radius* quantity determines the width of the arrows.
 
+The optional *autoscale* keyword allows to dynamically determine the
+*scale* quantity so that the average length of the arrows is set to the
+value of the keyword's argument.  The computed scale factor can be
+accessed by various :doc:`output commands <Howto_output>` as a global
+scalar (see below).
+
 -----------
 
 Dump image info
@@ -116,10 +133,19 @@ No information about this fix is written to :doc:`binary restart files
 
 None of the :doc:`fix_modify <fix_modify>` options apply to this fix.
 
+This fix computes a global scalar representing the current scale factor
+for displaying the arrows, which can be accessed by various
+:doc:`output commands <Howto_output>`.  This is the *autoscale*
+keyword argument value divided by the average length of the selected
+vector property.  If the *autoscale* keyword is not used, it is the
+scale value set by the *fix graphics/arrows* command or 1.0.
+The scalar value calculated by this fix is "intensive".
+
 Restrictions
 """"""""""""
 
-None
+The *dipole* mode requires the use of :doc:`atom style dipole
+<atom_style>` or a hybrid atom style that includes it.
 
 Related commands
 """"""""""""""""
@@ -129,4 +155,4 @@ Related commands
 Default
 """""""
 
-none
+autoscale is off by default

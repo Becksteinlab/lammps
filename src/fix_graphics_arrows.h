@@ -32,6 +32,7 @@ class FixGraphicsArrows : public Fix {
   void init() override;
   void end_of_step() override;
 
+  double compute_scalar() override;
   int image(int *&, double **&) override;
 
  protected:
@@ -48,6 +49,8 @@ class FixGraphicsArrows : public Fix {
   char *id_pos;
   char *id_vec;
 
+  bool autoscale;
+  bool autovalue;
   int numobjs;
   int *imgobjs;
   double **imgparms;

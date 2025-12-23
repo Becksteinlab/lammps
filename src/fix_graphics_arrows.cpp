@@ -47,11 +47,17 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
   if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics/arrows nevery value");
   global_freq = nevery;
   dynamic_group_allow = 1;
+  scalar_flag = 1;
+  extscalar = 0;
 
   mode = NONE;
+  numobjs = 0;
   varflag = 0;
   scale = 1.0;
+  autoscale = false;
+  autovalue = 1.0;
 
+  int iarg = 7;
   if (strcmp(arg[4], "dipole") == 0) {
     mode = DIPOLE;
   } else if (strcmp(arg[4], "force") == 0) {
@@ -61,6 +67,7 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
   } else if (strcmp(arg[4], "variable") == 0) {
     mode = VARIABLE;
     if (narg < 9) utils::missing_cmd_args(FLERR, "fix graphics/arrows variable", error);
+    iarg = 9;
     if (strstr(arg[5], "v_") == arg[5]) {
       varflag = 1;
       xstr = utils::strdup(arg[5] + 2);
@@ -84,6 +91,7 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
   } else if (strcmp(arg[4], "chunk") == 0) {
     mode = CHUNK;
     if (narg < 11) utils::missing_cmd_args(FLERR, "fix graphics/arrows chunk", error);
+    iarg = 11;
 
     scale = utils::numeric(FLERR, arg[8], false, lmp);
     radius = utils::numeric(FLERR, arg[9], false, lmp);
@@ -99,11 +107,25 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     if (radius <= 0.0) error->all(FLERR, 6, "Arrow radius must be > 0");
   }
 
-  if ((mode == DIPOLE) && !atom->mu_flag)
-    error->all(FLERR, 4, "Fix graphics/arrows dipole mode requires atom attribute mu");
+  // parse optional keywords
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "autoscale") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/arrows autoscale", error);
+      autoscale = true;
+      autovalue = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      if (autovalue <= 0.0)
+        error->all(FLERR, iarg + 1, "Fix graphics/arrow autoscale value must be > 0");
+      iarg += 2;
+    } else {
+      error->all(FLERR, iarg, "Unknown fix graphics/arrows keyword: {}", arg[iarg]);
+    }
+  }
 
   // checks
-  numobjs = 0;
+
+  if ((mode == DIPOLE) && !atom->mu_flag)
+    error->all(FLERR, 4, "Fix graphics/arrows dipole mode requires atom attribute mu");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -198,7 +220,7 @@ void FixGraphicsArrows::end_of_step()
     double *ydata = nullptr;
     double *zdata = nullptr;
 
-    // compute variable data
+    // update variable data, if needed
     if (mode == VARIABLE) {
       if (xstr) {
         if (input->variable->atomstyle(xvar)) {
@@ -224,6 +246,48 @@ void FixGraphicsArrows::end_of_step()
           val[2] = input->variable->compute_equal(zvar);
         }
       }
+    }
+
+    // determine autovalue for enabled automatic scaling of vectors, if needed
+
+    auto num = group->count(igroup);
+    if (autoscale && (num > 0)) {
+      double mysum = 0.0;
+      for (int i = 0; i < nlocal; ++i) {
+        if (mask[i] & groupbit) {
+          if (mode == DIPOLE) {
+            mysum += MathExtra::len3(mu[i]);
+          } else if (mode == FORCE) {
+            mysum += MathExtra::len3(f[i]);
+          } else if (mode == VELOCITY) {
+            mysum += MathExtra::len3(v[i]);
+          } else if (mode == VARIABLE) {
+            double myval[3];
+            if (xdata)
+              myval[0] = xdata[i];
+            else
+              myval[0] = val[0];
+            if (ydata)
+              myval[1] = ydata[i];
+            else
+              myval[1] = val[1];
+            if (zdata)
+              myval[2] = zdata[i];
+            else
+              myval[2] = val[2];
+            mysum += MathExtra::len3(myval);
+          }
+        }
+      }
+
+      // compute average across all processors and invert (num was checked for != 0 above)
+      MPI_Allreduce(&mysum, &scale, 1, MPI_DOUBLE, MPI_SUM, world);
+      if (scale != 0.0)
+        scale = autovalue / (scale / static_cast<double>(num));
+      else
+        scale = 1.0;
+    } else {
+      autovalue = 1.0;
     }
 
     n = 0;
@@ -271,6 +335,15 @@ void FixGraphicsArrows::end_of_step()
   }
 
   if (varflag) modify->addstep_compute((update->ntimestep / nevery) * nevery + nevery);
+}
+
+/* ----------------------------------------------------------------------
+   current scale value determined for autoscalar or set statically
+------------------------------------------------------------------------- */
+
+double FixGraphicsArrows::compute_scalar()
+{
+  return scale;
 }
 
 /* ----------------------------------------------------------------------
