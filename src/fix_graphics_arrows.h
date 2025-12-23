@@ -39,7 +39,6 @@ class FixGraphicsArrows : public Fix {
   int varflag;
   double scale;
   double radius;
-  double trans;
   double val[3];
   char *xstr;
   char *ystr;

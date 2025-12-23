@@ -44,7 +44,7 @@ Examples
 
 .. code-block:: LAMMPS
 
-   fix sf1 water graphics/arrows 200 dipole 100.0 0.1
+   fix vec all graphics/arrows 10 velocity 20.0 0.066
 
 Description
 """""""""""
@@ -64,23 +64,18 @@ parameter of the :doc:`dump <dump>` image command.  LAMMPS will stop
 with an error message if the settings for this fix and the dump command
 are not compatible.
 
-There are two keywords available that determine what is shown: *display*
-and *average*.  With *display* all atoms from all arrows and are in the
-fix group will be displayed.  With *average* only the average position
-of the atoms with the same atom-ID across all arrows will be shown.
+There are five keywords available that determine what is shown: *dipole*
+will show the per-atom dipole vector, *force* the per-atom force, *velocity*
+the per-atom velocity, *variable* a custom vector constructed from three
+constants or atom-style variables. With the *chunk* keyword per-chunk vectors
+will be shown.
 
-The *type* quantity determines the color of the objects.  Its represents
-an *atom* type and the atoms will be colored the same as the
-corresponding atom type when the *type* coloring scheme is used in the
-:doc:`dump image fix <dump_image>` command.  If the value of *type* is
-0 then the atom type of the individual atoms is used.
+The *scale* quantity determines the length of the arrows.  It should be
+chosen so that when multiplied with the per-atom vector quantity the result
+is of the same order of magnitude as atom positions, so that the vectors
+can be seen well.
 
-The *radius* quantity determines the radius of the atoms.  The value of
-*radius* is 0 then largest distance of an atom to the average position
-from all arrowss is used.
-
-The *transparency* quantity determines the transparency of the objects.
-Its value must be between 0 (invisible) and 1 (fully opaque).
+The *radius* quantity determines the width of the arrows.
 
 -----------
 
@@ -94,11 +89,14 @@ Fix graphics/arrows is designed to be used with the *fix* keyword of
 atoms in the fix group across all arrows to *dump image* so that they
 are included in the rendered image.
 
-The *fflag1* setting of *dump image fix* are currently ignored.
+The color of the arrows is by default that of the atoms when using color
+styles "type" or "element".  With color style "const" the default value
+of "white" can be changed using :doc:`dump_modify fcolor <dump_image>`.
+Similarly, the transparency follows the atom type or can be changed for
+color style "const" with *dump\_modify ftrans*\ .
 
-and *fflag2* setting of *dump image fix* is used as an adjustment
-to the radius of the rendered sphere.  Since the radius is already
-determined by this fix, it is recommended to set this flag to 0.0.
+
+The *fflag1* and *fflag2* settings of *dump image fix* are currently ignored.
 
 Restart, fix_modify, output, run start/stop, minimize info
 ==========================================================

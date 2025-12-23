@@ -20,6 +20,7 @@
 #include "error.h"
 #include "group.h"
 #include "input.h"
+#include "math_extra.h"
 #include "memory.h"
 #include "modify.h"
 #include "update.h"
@@ -38,7 +39,7 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), val{0.0, 0.0, 0.0}, xstr(nullptr), ystr(nullptr), zstr(nullptr),
     id_chunk(nullptr), id_pos(nullptr), id_vec(nullptr), imgobjs(nullptr), imgparms(nullptr)
 {
-  if (narg < 8) utils::missing_cmd_args(FLERR, "fix graphics/arrows", error);
+  if (narg < 7) utils::missing_cmd_args(FLERR, "fix graphics/arrows", error);
 
   // parse mandatory arg
 
@@ -71,7 +72,7 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     } else {
       val[1] = utils::numeric(FLERR, arg[6], false, lmp);
     }
-    if (strstr(arg[77], "v_") == arg[7]) {
+    if (strstr(arg[7], "v_") == arg[7]) {
       varflag = 1;
       ystr = utils::strdup(arg[7] + 2);
     } else {
@@ -79,9 +80,6 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     }
     radius = utils::numeric(FLERR, arg[8], false, lmp);
     if (radius <= 0.0) error->all(FLERR, 6, "Arrow radius must be > 0");
-    trans = utils::numeric(FLERR, arg[9], false, lmp);
-    if ((trans < 0) || (trans > 1.0))
-      error->all(FLERR, 7, "Arrow transparency must be between 0 and 1");
   } else if (strcmp(arg[4], "chunk") == 0) {
     mode = CHUNK;
     if (narg < 11) utils::missing_cmd_args(FLERR, "fix graphics/arrows chunk", error);
@@ -89,9 +87,6 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     scale = utils::numeric(FLERR, arg[8], false, lmp);
     radius = utils::numeric(FLERR, arg[9], false, lmp);
     if (radius <= 0.0) error->all(FLERR, 9, "Arrow radius must be > 0");
-    trans = utils::numeric(FLERR, arg[10], false, lmp);
-    if ((trans < 0) || (trans > 1.0))
-      error->all(FLERR, 10, "Arrow transparency must be between 0 and 1");
   } else {
     error->all(FLERR, 4, "Unknown fix graphics/arrows keyword: {}", arg[4]);
   }
@@ -101,9 +96,6 @@ FixGraphicsArrows::FixGraphicsArrows(LAMMPS *lmp, int narg, char **arg) :
     scale = utils::numeric(FLERR, arg[5], false, lmp);
     radius = utils::numeric(FLERR, arg[6], false, lmp);
     if (radius <= 0.0) error->all(FLERR, 6, "Arrow radius must be > 0");
-    trans = utils::numeric(FLERR, arg[7], false, lmp);
-    if ((trans < 0) || (trans > 1.0))
-      error->all(FLERR, 7, "Arrow transparency must be between 0 and 1");
   }
 
   if ((mode == DIPOLE) && !atom->mu_flag)
@@ -183,7 +175,51 @@ void FixGraphicsArrows::end_of_step()
 
   if (varflag) modify->clearstep_compute();
 
-  int n = 0;
+  const auto *const *const x = atom->x;
+  const auto *const *const f = atom->f;
+  const auto *const *const v = atom->v;
+  const auto *const *const mu = atom->mu;
+  const auto *const mask = atom->mask;
+  const auto *const type = atom->type;
+  const auto nlocal = atom->nlocal;
+
+  // count (local) number of arrows
+
+  if (mode != CHUNK) {
+    int n = 0;
+    for (int i = 0; i < nlocal; ++i)
+      if (mask[i] & groupbit) ++n;
+
+    numobjs = n;
+    memory->create(imgobjs, numobjs, "fix_graphics_arrows:imgobjs");
+    memory->create(imgparms, numobjs, 9, "fix_graphics_arrows:imgparms");
+
+    n = 0;
+    for (int i = 0; i < nlocal; ++i)
+      if (mask[i] & groupbit) {
+        imgobjs[n] = DumpImage::ARROW;
+        imgparms[n][0] = type[i];
+        imgparms[n][1] = x[i][0];
+        imgparms[n][2] = x[i][1];
+        imgparms[n][3] = x[i][2];
+        if (mode == DIPOLE) {
+          imgparms[n][4] = mu[i][0];
+          imgparms[n][5] = mu[i][1];
+          imgparms[n][6] = mu[i][2];
+        } else if (mode == FORCE) {
+          imgparms[n][4] = f[i][0];
+          imgparms[n][5] = f[i][1];
+          imgparms[n][6] = f[i][2];
+        } else if (mode == VELOCITY) {
+          imgparms[n][4] = v[i][0];
+          imgparms[n][5] = v[i][1];
+          imgparms[n][6] = v[i][2];
+        }
+        imgparms[n][7] = scale;
+        imgparms[n][8] = 2.0 * radius;
+        ++n;
+      }
+  }
 
   if (varflag) modify->addstep_compute((update->ntimestep / nevery) * nevery + nevery);
 }
