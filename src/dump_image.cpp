@@ -309,9 +309,9 @@ class ArrowObj {
     diameter = 2.0 * radius;
     resolution = res;
 
-    vec3 tip = vec3{0.5, 0.0, 0.0};
-    vec3 mid = vec3{0.5 - tiplength, 0.0, 0.0};
-    vec3 bot = vec3{-0.5, 0.0, 0.0};
+    vec3 tip{0.5, 0.0, 0.0};
+    vec3 mid{0.5 - tiplength, 0.0, 0.0};
+    vec3 bot{-0.5, 0.0, 0.0};
 
     // construct list of triangles for the tip of the arrow. p1, p2 are the points on the "rim".
 
