@@ -118,101 +118,128 @@ inline vec3 vec3norm(const vec3 &v)
   return (n > 0.0) ? (1.0 / n) * v : vec3{0.0, 0.0, 0.0};
 }
 
-// scale factor to move position back the surface of a "unit ellipsoid"
-double radscale(const double *shape, const vec3 &pos)
+// scale factor to move a position to the surface of an ellipsoid with given shape parameters
+inline double radscale(const double *shape, const vec3 &pos)
 {
   return sqrt(1.0 /
               (pos[0] / shape[0] * pos[0] / shape[0] + pos[1] / shape[1] * pos[1] / shape[1] +
                pos[2] / shape[2] * pos[2] / shape[2]));
 }
 
-// refine the list of triangles.
-// each triangle is replaced by 4 triangles with positions on the surface of a unit sphere
-std::vector<triangle> refine_triangle_list(const std::vector<triangle> &inlist)
+// construct an ellipsoid from primitives, mostly triangles and cylinders, and draw them
+
+class EllipsoidObj {
+ public:
+  // construct triangle mesh by refinining the triangles of an octahedron
+  void construct(int level = 3);
+
+  // draw ellipsoid from triangle mesh for ellipsoid particles
+  void draw(LAMMPS_NS::Image *, int, const double *, const double *, const double *, const double *,
+            double, double opacity = 1.0);
+
+  // draw ellipsoid from triangle mesh for regions
+  void draw(LAMMPS_NS::Image *, int, const double *, const double *, const double *,
+            LAMMPS_NS::Region *, double, double opacity = 1.0);
+
+ private:
+  std::vector<triangle> triangles;
+
+  // refine triangle mesh
+  void refine();
+};
+
+// refine triangle mesh by replacing each triangle with four triangles
+//
+//    /\            /\
+//   /  \          /__\
+//  /    \   -->  /\  /\
+// /______\      /__\/__\
+
+void EllipsoidObj::refine()
 {
-  std::vector<triangle> outlist;
-  for (const auto &tri : inlist) {
+  std::vector<triangle> newlist;
+  for (const auto &tri : triangles) {
     vec3 posa = vec3norm(tri[0] + tri[2]);
     vec3 posb = vec3norm(tri[0] + tri[1]);
     vec3 posc = vec3norm(tri[1] + tri[2]);
-    outlist.push_back({tri[0], posb, posa});
-    outlist.push_back({posb, tri[1], posc});
-    outlist.push_back({posa, posb, posc});
-    outlist.push_back({posa, posc, tri[2]});
+    newlist.push_back({tri[0], posb, posa});
+    newlist.push_back({posb, tri[1], posc});
+    newlist.push_back({posa, posb, posc});
+    newlist.push_back({posa, posc, tri[2]});
   }
-  return outlist;
+  triangles = std::move(newlist);
 }
 
-void scale_and_displace_triangle(triangle &tri, const double *shape, const vec3 &offs)
+// build list of triangles by refinining the triangles of an octahedron
+
+void EllipsoidObj::construct(int level)
 {
-  // scale and displace
-  for (int i = 0; i < 3; ++i) {
-    auto &t = tri[i];
-    const auto scale = radscale(shape, t);
-    t = t * scale + offs;
-  }
-}
-
-// define edges of an octahedron
-
-constexpr vec3 OCT1 = {-1.0, 0.0, 0.0};
-constexpr vec3 OCT2 = {1.0, 0.0, 0.0};
-constexpr vec3 OCT3 = {0.0, -1.0, 0.0};
-constexpr vec3 OCT4 = {0.0, 1.0, 0.0};
-constexpr vec3 OCT5 = {0.0, 0.0, -1.0};
-constexpr vec3 OCT6 = {0.0, 0.0, 1.0};
-
-void ellipsoid2wireframe(LAMMPS_NS::Image *img, int level, const double *color, double diameter,
-                         const double *center, const double *radius, LAMMPS_NS::Region *reg)
-{
-  if (diameter <= 0.0) return;
+  // define edges of an octahedron
+  constexpr vec3 OCT1 = {-1.0, 0.0, 0.0};
+  constexpr vec3 OCT2 = {1.0, 0.0, 0.0};
+  constexpr vec3 OCT3 = {0.0, -1.0, 0.0};
+  constexpr vec3 OCT4 = {0.0, 1.0, 0.0};
+  constexpr vec3 OCT5 = {0.0, 0.0, -1.0};
+  constexpr vec3 OCT6 = {0.0, 0.0, 1.0};
 
   // define level 1 octahedron triangle mesh
-  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
-                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
-                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
+  triangles = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2}, {OCT1, OCT4, OCT6},
+               {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2}, {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
 
   // refine the list of triangles to the desired level
-  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
-
-  // draw wire mesh
-
-  for (auto &tri : trilist) {
-    scale_and_displace_triangle(tri, radius, {center[0], center[1], center[2]});
-    reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
-    reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
-    reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-    img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3);
-    img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3);
-    img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3);
-  }
+  for (int i = 1; i < level; ++i) refine();
 }
 
-void ellipsoid2filled(LAMMPS_NS::Image *img, int level, const double *color, const double *center,
-                      const double *radius, LAMMPS_NS::Region *reg, double opacity)
+// draw method for drawing ellipsoids from a region which has its own transformation function
+void EllipsoidObj::draw(LAMMPS_NS::Image *img, int flag, const double *color, const double *center,
+                        const double *shape, LAMMPS_NS::Region *reg, double diameter,
+                        double opacity)
 {
-  // define level 1 octahedron triangle mesh
-  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
-                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
-                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
+  // select between triangles or cylinders
+  bool doframe = false;
+  bool dotri = false;
+  if (flag == 1) dotri = true;
+  if (flag == 2) doframe = true;
+  if (diameter <= 0.0) doframe = false;
+  if (!dotri && !doframe) return;    // nothing to do
 
-  // refine the list of triangles to the desired level
-  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
+  // optimization: just draw a sphere if a filled surface is requested and the object is a sphere
+  if (dotri && (shape[0] == shape[1]) && (shape[0] == shape[2])) {
+    img->draw_sphere(center, color, 2.0 * shape[0], opacity);
+    return;
+  }
+
+  // construct ellipsoid template with default settings if not already done
+  if (!triangles.size()) construct();
 
   // draw triangles
-  for (auto &tri : trilist) {
-    scale_and_displace_triangle(tri, radius, {center[0], center[1], center[2]});
+
+  const vec3 offs{center[0], center[1], center[2]};
+  for (auto tri : triangles) {
+
+    // set shape and move
+    tri[0] = tri[0] * radscale(shape, tri[0]) + offs;
     reg->forward_transform(tri[0][0], tri[0][1], tri[0][2]);
+    tri[1] = tri[1] * radscale(shape, tri[1]) + offs;
     reg->forward_transform(tri[1][0], tri[1][1], tri[1][2]);
+    tri[2] = tri[2] * radscale(shape, tri[2]) + offs;
     reg->forward_transform(tri[2][0], tri[2][1], tri[2][2]);
-    img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+
+    if (dotri) img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+    if (doframe) {
+      img->draw_cylinder(tri[0].data(), tri[1].data(), color, diameter, 3, opacity);
+      img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3, opacity);
+      img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3, opacity);
+    }
   }
 }
 
-void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *color,
-                    const double *center, const double *shape, const double *quat, double diameter,
-                    double opacity)
+// draw method for drawing ellipsoids from per-atom data which has a quaternion
+// and the shape list to define the orientation and stretch
+void EllipsoidObj::draw(LAMMPS_NS::Image *img, int flag, const double *color, const double *center,
+                        const double *shape, const double *quat, double diameter, double opacity)
 {
+  // select between triangles or cylinders or both
   bool doframe = true;
   bool dotri = true;
   if (flag == 1) doframe = false;
@@ -229,25 +256,22 @@ void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *co
     img->draw_sphere(center, color, 2.0 * shape[0] + (doframe ? diameter : 0.0), opacity);
     return;
   }
-  // define level 1 octahedron triangle mesh
-  std::vector<triangle> trilist = {{OCT5, OCT4, OCT1}, {OCT2, OCT4, OCT5}, {OCT6, OCT4, OCT2},
-                                   {OCT1, OCT4, OCT6}, {OCT1, OCT3, OCT5}, {OCT5, OCT3, OCT2},
-                                   {OCT2, OCT3, OCT6}, {OCT6, OCT3, OCT1}};
 
-  MathExtra::quat_to_mat(quat, p);    // get rotation matrix for body frame to box frame
+  // construct ellipsoid template with default settings if not already done
+  if (!triangles.size()) construct();
 
-  // refine the list of triangles to the desired level
-  for (int i = 1; i < level; ++i) trilist = refine_triangle_list(trilist);
+  // get rotation matrix for body frame to box frame
+  MathExtra::quat_to_mat(quat, p);
 
-  // draw triangles and edges as requested
-  for (auto &tri : trilist) {
+  // draw triangles and edges as requested, work on copy of triangle since we modify it
+  for (auto tri : triangles) {
 
     if (dotri) {
-
-      // set shape
+      // set shape by shifting each corner to the surface
       for (int i = 0; i < 3; ++i) {
         auto &t = tri[i];
         if (doframe && dotri) {
+          // add extra shift when using cylinders and triangles for a smoother surface
           double shapeplus[3] = {shape[0] + diameter, shape[1] + diameter, shape[1] + diameter};
           t = radscale(shapeplus, t) * t;
         } else {
@@ -264,6 +288,7 @@ void draw_ellipsoid(LAMMPS_NS::Image *img, int level, int flag, const double *co
       e1 = e1 + offs;
       e2 = e2 + offs;
       e3 = e3 + offs;
+
       img->draw_triangle(e1.data(), e2.data(), e3.data(), color, opacity);
     }
 
@@ -1572,7 +1597,7 @@ void DumpImage::create_image()
   }
 
   // render atoms that are ellipsoids
-  // tstyle = 1 for tri only
+  // estyle = 1 for tri only, estyle 2 for wireframe only, estyle 3 for both
 
   if (ellipsoidflag) {
     double **x = atom->x;
@@ -1585,9 +1610,10 @@ void DumpImage::create_image()
       if (ecolor == TYPE) {
         color = colortype[type[j]];
       }
-
-      draw_ellipsoid(image, elevel, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
-                     avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, aopacity[type[j]]);
+      EllipsoidObj e;
+      e.construct(elevel);
+      e.draw(image, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
+             avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, aopacity[type[j]]);
     }
   }
 
@@ -2456,11 +2482,13 @@ void DumpImage::create_image()
         center[1] = myreg->yc;
         center[2] = myreg->zc;
         double radius[3] = {myreg->a, myreg->b, myreg->c};
+        EllipsoidObj e;
+        e.construct(4);
         if (reg.style == FRAME) {
-          ellipsoid2wireframe(image, 4, reg.color, reg.diameter, center, radius, reg.ptr);
+          e.draw(image, 2, reg.color, center, radius, reg.ptr, reg.diameter, 1.0);
         } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
           double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
-          ellipsoid2filled(image, 4, reg.color, center, radius, reg.ptr, opacity);
+          e.draw(image, 1, reg.color, center, radius, reg.ptr, reg.diameter, opacity);
         }
 
       } else if (regstyle == "prism") {
@@ -2530,8 +2558,11 @@ void DumpImage::create_image()
         center[1] = myreg->yc;
         center[2] = myreg->zc;
         if (reg.style == FRAME) {
-          double radius[3] = {myreg->radius,myreg->radius,myreg->radius};
-          ellipsoid2wireframe(image, 4, reg.color, reg.diameter, center, radius, reg.ptr);
+          // use wireframe mode of ellipsoid with three identical radii
+          double radius[3] = {myreg->radius, myreg->radius, myreg->radius};
+          EllipsoidObj e;
+          e.construct(4);
+          e.draw(image, 2, reg.color, center, radius, reg.ptr, reg.diameter, 1.0);
         } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
           double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
           myreg->forward_transform(center[0], center[1], center[2]);
