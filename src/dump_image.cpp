@@ -315,108 +315,21 @@ void EllipsoidObj::draw(LAMMPS_NS::Image *img, int flag, const double *color, co
   }
 }
 
+// construct a truncated cone object from primitives, mostly triangles and cylinders, and draw them
+
 // construct an arrow from primitives, mostly triangles and a cylinder, and draw them
 
 class ArrowObj {
  public:
-  // build the list of triangles and positions in (1.0, 0.0, 0.0) direction.
-  void construct(double _tipl = 0.2, double _tipw = 0.1, double radius = 0.1, int res = RESOLUTION)
-  {
-    triangles.clear();
+  // build an arrow template with length 1 in (1.0, 0.0, 0.0) direction as list of triangles
+  void construct(double _tipl = 0.2, double _tipw = 0.1, double radius = 0.1, int res = RESOLUTION);
 
-    // we want at least 2 iterations.
-    if (res < 2) return;
+  // construct a custom arrow from the template by scaling, rotating, and translating it.
+  std::vector<triangle> transform(const vec3 &, const vec3 &, double, double);
 
-    // store settings for arrow template
-
-    tiplength = _tipl;
-    tipwidth = _tipw;
-    diameter = 2.0 * radius;
-    resolution = res;
-
-    vec3 tip{0.5, 0.0, 0.0};
-    vec3 mid{0.5 - tiplength, 0.0, 0.0};
-    vec3 bot{-0.5, 0.0, 0.0};
-
-    // construct list of triangles for the tip of the arrow. p1, p2 are the points on the "rim".
-
-    const double radinc = MY_2PI / resolution;
-    vec3 p1{0.5 - tiplength, 0.0, 0.0};
-    vec3 p2{0.5 - tiplength, 0.0, 0.0};
-    for (int i = 0; i < resolution; ++i) {
-      p1[1] = (radius + tipwidth) * sin(radinc * i - RADOVERLAP);
-      p1[2] = (radius + tipwidth) * cos(radinc * i - RADOVERLAP);
-      p2[1] = (radius + tipwidth) * sin(radinc * (i + 1));
-      p2[2] = (radius + tipwidth) * cos(radinc * (i + 1));
-      triangles.emplace_back(triangle{p1, tip, p2});
-      triangles.emplace_back(triangle{p1, mid, p2});
-    }
-
-    // construct list of triangles for the cap at the bottom
-
-    p1[0] = -0.5;
-    p2[0] = -0.5;
-    for (int i = 0; i < resolution; ++i) {
-      p1[1] = radius * sin(radinc * i);
-      p1[2] = radius * cos(radinc * i);
-      p2[1] = radius * sin(radinc * (i + 1));
-      p2[2] = radius * cos(radinc * (i + 1));
-      triangles.emplace_back(triangle{p1, bot, p2});
-    }
-  }
-
-  // transform build the list of triangles and positions in (1.0, 0.0, 0.0) direction.
-
-  std::vector<triangle> transform(const vec3 &dir, const vec3 &offs, double len, double width)
-  {
-    std::vector<triangle> arrow;
-
-    // normalize direction vector
-    vec3 u = vec3norm(dir);
-
-    // vector is too short. can't draw anything. return empty list
-    if (vec3len(u) < SMALL) return arrow;
-
-    // construct orthonormal basis around vector
-    vec3 a = (std::fabs(u[0]) < 0.9) ? vec3{1.0, 0.0, 0.0} : vec3{0.0, 1.0, 0.0};
-    vec3 v = vec3norm(vec3cross(u, a));
-    vec3 w = vec3cross(u, v);
-
-    // now process the arrow template triangles
-    arrow.reserve(triangles.size());
-    for (const auto &tri : triangles) {
-      vec3 p1 = (len * tri[0][0] * u) + (width * tri[0][1] * v) + (width * tri[0][2] * w) + offs;
-      vec3 p2 = (len * tri[1][0] * u) + (width * tri[1][1] * v) + (width * tri[1][2] * w) + offs;
-      vec3 p3 = (len * tri[2][0] * u) + (width * tri[2][1] * v) + (width * tri[2][2] * w) + offs;
-      arrow.push_back({p1, p2, p3});
-    }
-    return arrow;
-  }
-
-  void draw(LAMMPS_NS::Image *img, const double *color, const double *center, double length,
-            const double *data, double scale, double opacity)
-  {
-    // construct arrow template with default settings if not already done
-    if (!triangles.size()) construct();
-
-    // transform template
-    double lscale = vec3len({data[0], data[1], data[2]}) * length;
-    double wscale = scale / diameter;
-    auto arrow =
-        transform({data[0], data[1], data[2]}, {center[0], center[1], center[2]}, lscale, wscale);
-
-    // nothing to draw
-    if (!arrow.size()) return;
-
-    for (const auto &tri : arrow) {
-      img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
-    }
-
-    // infer cylinder end points from list of triangles
-    if (arrow.size() > resolution + 2)
-      img->draw_cylinder(arrow[resolution + 1][1].data(), arrow[arrow.size() - 2][1].data(), color,
-                         scale, 0, opacity);
-  }
+  // draw custom arrow from unit template
+  void draw(LAMMPS_NS::Image *, const double *, const double *, double, const double *, double,
+            double);
 
  private:
   double tiplength;
@@ -426,6 +339,121 @@ class ArrowObj {
   int resolution;
 };
 
+// construct arrow template by placing sets of triangles with two corners on a circle at "mid"
+// and the third corner in the center either at "mid" or at "tip". A third set of triangles
+// it at "bot". The resolution parameter determines how many triangles per set (36 by default)
+// "bot" to "tip" is 1.0, "tiplength is "mid" to "tip". "diameter" is the width at "bot"
+// "tipwidth" is the additional width at "mid".
+//
+//          |\
+// |--------| \
+// |--------| /
+//          |/
+// ^        ^  ^
+// bot    mid tip
+
+void ArrowObj::construct(double _tipl, double _tipw, double radius, int res)
+{
+  triangles.clear();
+
+  // we want at least 2 iterations.
+  if (res < 2) return;
+
+  // store settings for arrow template
+
+  tiplength = _tipl;
+  tipwidth = _tipw;
+  diameter = 2.0 * radius;
+  resolution = res;
+
+  vec3 tip{0.5, 0.0, 0.0};
+  vec3 mid{0.5 - tiplength, 0.0, 0.0};
+  vec3 bot{-0.5, 0.0, 0.0};
+
+  // construct list of triangles for the tip of the arrow. p1, p2 are the points on the "rim".
+
+  const double radinc = MY_2PI / resolution;
+  vec3 p1{0.5 - tiplength, 0.0, 0.0};
+  vec3 p2{0.5 - tiplength, 0.0, 0.0};
+  for (int i = 0; i < resolution; ++i) {
+    p1[1] = (radius + tipwidth) * sin(radinc * i - RADOVERLAP);
+    p1[2] = (radius + tipwidth) * cos(radinc * i - RADOVERLAP);
+    p2[1] = (radius + tipwidth) * sin(radinc * (i + 1));
+    p2[2] = (radius + tipwidth) * cos(radinc * (i + 1));
+    triangles.emplace_back(triangle{p1, tip, p2});
+    triangles.emplace_back(triangle{p1, mid, p2});
+  }
+
+  // construct list of triangles for the cap at the bottom
+
+  p1[0] = -0.5;
+  p2[0] = -0.5;
+  for (int i = 0; i < resolution; ++i) {
+    p1[1] = radius * sin(radinc * i);
+    p1[2] = radius * cos(radinc * i);
+    p2[1] = radius * sin(radinc * (i + 1));
+    p2[2] = radius * cos(radinc * (i + 1));
+    triangles.emplace_back(triangle{p1, bot, p2});
+  }
+}
+
+// construct a custom arrow from the template poistions by scaling it,
+// re-orienting it to point along "dir", and translating it.
+std::vector<triangle> ArrowObj::transform(const vec3 &dir, const vec3 &offs, double len,
+                                          double width)
+{
+  // construct arrow template with default settings if not already done
+  if (!triangles.size()) construct();
+
+  // customized vector
+  std::vector<triangle> newtriangles;
+
+  // normalize direction vector
+  vec3 u = vec3norm(dir);
+
+  // vector is too short. can't draw anything. return empty list
+  if (vec3len(u) < SMALL) return newtriangles;
+
+  // construct orthonormal basis around direction vector
+  vec3 a = (std::fabs(u[0]) < 0.9) ? vec3{1.0, 0.0, 0.0} : vec3{0.0, 1.0, 0.0};
+  vec3 v = vec3norm(vec3cross(u, a));
+  vec3 w = vec3cross(u, v);
+
+  // now process the arrow template triangles
+  newtriangles.reserve(triangles.size());
+  for (const auto &tri : triangles) {
+    vec3 p1 = (len * tri[0][0] * u) + (width * tri[0][1] * v) + (width * tri[0][2] * w) + offs;
+    vec3 p2 = (len * tri[1][0] * u) + (width * tri[1][1] * v) + (width * tri[1][2] * w) + offs;
+    vec3 p3 = (len * tri[2][0] * u) + (width * tri[2][1] * v) + (width * tri[2][2] * w) + offs;
+    newtriangles.push_back({p1, p2, p3});
+  }
+  return newtriangles;
+}
+
+// draw custom arrow from unit template
+void ArrowObj::draw(LAMMPS_NS::Image *img, const double *color, const double *center, double length,
+                    const double *data, double scale, double opacity)
+{
+  // transform the template into the arrow object we want to draw
+
+  vec3 dir{data[0], data[1], data[2]};
+  double lscale = vec3len(dir) * length;
+  double wscale = scale / diameter;
+  auto arrow = transform(dir, {center[0], center[1], center[2]}, lscale, wscale);
+
+  // nothing to draw
+  if (!arrow.size()) return;
+
+  // draw tip and bottom from list of triangles
+  for (const auto &tri : arrow)
+    img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+
+  // infer cylinder end points for body from list of triangles
+  // (middle corner of all triangles in the the second and last set of triangles)
+  if (arrow.size() > resolution + 2)
+    img->draw_cylinder(arrow[resolution + 1][1].data(), arrow[arrow.size() - 1][1].data(), color,
+                       scale, 0, opacity);
+}
 }    // namespace
 
 using namespace LAMMPS_NS;
@@ -1961,7 +1989,9 @@ void DumpImage::create_image()
       } else if (fixvec[i] == TRIANGLE) {
         image->draw_triangle(&fixarray[i][1],&fixarray[i][4],&fixarray[i][7],color,opacity);
       } else if (fixvec[i] == ARROW) {
-        ArrowObj().draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4],
+        ArrowObj a;
+        a.construct();
+        a.draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4],
                         fixarray[i][8], opacity);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
