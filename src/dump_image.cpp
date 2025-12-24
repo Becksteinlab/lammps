@@ -66,19 +66,11 @@ using MathConst::DEG2RAD;
 using namespace ImageObjects;
 
 namespace {
-
-using LAMMPS_NS::MathConst::MY_2PI;
-constexpr double RADINC = MY_2PI / RESOLUTION;
-constexpr double RADOVERLAP = 0.00001;
-constexpr double SMALL = 1.0e-10;
-
 static constexpr double BIG = 1.0e20;
-
 enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT };
 enum { STATIC, DYNAMIC };
 enum { NO = 0, YES = 1, AUTO = 2 };
 enum { FILLED, FRAME, POINTS, TRANSPARENT };
-
 }    // namespace
 // clang-format off
 
@@ -1814,7 +1806,7 @@ void DumpImage::create_image()
 
         // construct triangle mesh and store direction and hi/lo center coordinates
         vec3 lo, hi;
-        ConeObj c(0.0,0.0,0.0,0,2);
+        ConeObj c(0.0, 0.0, 0.0, 0, 2);
         double xdir = 0.0, ydir = 0.0, zdir = 0.0;
 
         if (regstyle == "cone") {
