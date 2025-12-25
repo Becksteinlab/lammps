@@ -1885,12 +1885,13 @@ void DumpImage::create_image()
 
         double center[3] = {myreg->xc, myreg->yc, myreg->zc};
         double radius[3] = {myreg->a, myreg->b, myreg->c};
-        EllipsoidObj e(4);
         if (reg.style == FRAME) {
-          e.draw(image, 2, reg.color, center, radius, reg.ptr, reg.diameter, 1.0);
+          // we use a moderate mesh level for wireframe so we can better see what is inside
+          EllipsoidObj(4).draw(image, 2, reg.color, center, radius, reg.ptr, reg.diameter, 1.0);
         } else if ((reg.style == FILLED) || (reg.style == TRANSPARENT)) {
-          double opacity = (reg.style == TRANSPARENT) ? reg.opacity : 1.0;
-          e.draw(image, 1, reg.color, center, radius, reg.ptr, reg.diameter, opacity);
+          // we get a smoother surface with a one step higher mesh level (and 4x more triangles)
+          EllipsoidObj(5).draw(image, 1, reg.color, center, radius, reg.ptr, reg.diameter,
+                               (reg.style == TRANSPARENT) ? reg.opacity : 1.0);
         }
 
       } else if (regstyle == "plane") {
