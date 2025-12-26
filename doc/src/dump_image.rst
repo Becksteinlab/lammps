@@ -227,18 +227,24 @@ has been run, using the :doc:`rerun <rerun>` command to read snapshots
 from an existing dump file, and using these dump commands in the rerun
 script to generate the images/movie.
 
-Here are two sample images, rendered as :math:`1024\times 1024` JPEG files.
-
 .. |dump1| image:: img/dump1.jpg
-   :width: 48%
+   :width: 19%
 .. |dump2| image:: img/dump2.jpg
-   :width: 48%
+   :width: 19%
+.. |dump3| image:: img/dump3.png
+   :width: 19%
+.. |dump4| image:: img/dump4.png
+   :width: 19%
+.. |dump5| image:: img/dump5.png
+   :width: 21.3%
 
-|dump1|  |dump2|
+Here are five sample images, rendered as JPEG or PNG files.
+
+|dump1|  |dump2|  |dump4|  |dump5|  |dump3|
 
 .. raw:: html
 
-   Click to see the full-size images:
+   <center>(Click to see the full-size images)</center>
 
 Only atoms in the specified group are rendered in the image.  The
 :doc:`dump_modify region and thresh <dump_modify>` commands can also
