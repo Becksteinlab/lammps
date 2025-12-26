@@ -750,7 +750,7 @@ void DumpImage::init_style()
     // check if fix data for dump image is available at the required steps.
 
     int nfreq = fixptr->global_freq;
-    if ((nfreq == 0) || (nevery % nfreq))
+    if ((update->ntimestep != 0) && ((nfreq == 0) || (nevery % nfreq)))
       error->all(FLERR, Error::NOLASTLINE,
                  "Dump {} and fix {} are not executed at compatible timesteps {}",
                  style, fixptr->style, utils::errorurl(7));
