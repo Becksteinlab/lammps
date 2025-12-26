@@ -61,6 +61,7 @@
         Prefer PNG or JEPG format images in suggested dump image command line
         Copy dump image suggested command also into selection buffer where supported
         Switch to user home, if dropped into Windows system folder
+        Make image file name selectable by mouse in slide show
         Support overriding window size from command line
         Check if temporary file can be created when passing viz info to VMD
         Check if temporary file can be created when passing images to FFMpeg
