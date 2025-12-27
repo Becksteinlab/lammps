@@ -590,30 +590,7 @@ and repeats itself for types > 6.
    Support for several fix styles added and more flexible color selection
 
 The *fix* keyword can be used with a :doc:`fix <fix>` that produces
-objects to be drawn.  Below is a table with links to the documentation
-of supported fix styles:
-
-.. table_from_list::
-   :columns: 4
-
-   * :doc:`fix graphics <fix_graphics>`
-   * :doc:`fix graphics/arrows <fix_graphics_arrows>`
-   * :doc:`fix indent <fix_indent>`
-   * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
-   * :doc:`fix wall/lj93 <fix_wall>`
-   * :doc:`fix wall/lj126 <fix_wall>`
-   * :doc:`fix wall/lj1043 <fix_wall>`
-   * :doc:`fix wall/colloid <fix_wall>`
-   * :doc:`fix wall/gran <fix_wall_gran>`
-   * :doc:`fix wall/harmonic <fix_wall>`
-   * :doc:`fix wall/harmonic/outside <fix_wall>`
-   * :doc:`fix wall/lepton <fix_wall>`
-   * :doc:`fix wall/morse <fix_wall>`
-   * :doc:`fix wall/reflect <fix_wall_reflect>`
-   * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
-   * :doc:`fix wall/table <fix_wall>`
-
-The fix keyword may be used multiple times to include visualizations of
+objects to be drawn.  The fix keyword may be used multiple times to include visualizations of
 graphics objects from multiple fixes.  The fix keyword is followed by
 the :doc:`fix ID <fix>` of the fix, the color style setting and two
 numerical values *fflag1* and *fflag2*.
@@ -632,18 +609,21 @@ the fix is done.  See the documentation of the individual fixes for a
 description of what these parameters mean for the graphics objects
 provided by those fixes.
 
+More details and some examples for including graphics objects from fix
+commands are in the :doc:`Howto_viz` howto.
+
 ----------
 
 .. versionadded:: 10Sep2025
 
 .. versionchanged:: TBD
 
-   style *transparency* was added
+   draw style *transparency* was added
 
 The *region* keyword can be used to create a graphical representation of
 a :doc:`region <region>`.  This can be helpful in debugging the location
 and extent of regions, especially when those have parameters controlled
-by variables.  Three styles of representing a region are available:
+by variables.  Four draw styles of representing a region are available:
 *filled*\, *transparency*\, *frame*\, and *points*.  With style *filled*
 the surface of the region is triangulated and drawn.  For region styles
 that support open faces, surfaces for such open faces are skipped.  The

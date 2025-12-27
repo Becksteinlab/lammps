@@ -34,8 +34,8 @@ between LAMMPS format files and other formats.  See the :doc:`Tools
 
 ------------------------
 
-Advanced graphics features in *dump image*
-==========================================
+Advanced graphics features in the *dump image* command
+======================================================
 
 .. versionadded:: TBD
 
@@ -111,9 +111,24 @@ setting, there are no visible pixel patterns when also FSAA is enabled.
 In this case each pixel is the average of a 2x2 block and thus the
 transparent object will contribute 3, 2, or 1, pixels to each pixel.
 
-Transparency is typically associated with an atom type and is enabled
-through :doc:`dump_modify atrans <dump_image>` command.  But other choice
-are available and listed in the documentation page.
+Transparency is typically - like the color of objects - associated with
+an atom type and can be modified through the :doc:`dump_modify atrans
+<dump_image>` command and specified as an opacity ratio, i.e. a number
+between 0 (fully transparent) and 1 (fully opaque).  Other choices are
+available and described in the documentation page.
+
+.. |transparency1| image:: img/transparent-1.png
+   :width: 49%
+.. |transparency2| image:: img/transparent-2.png
+   :width: 49%
+
+|transparency1|  |transparency2|
+
+.. raw:: html
+
+   <center>(Transparency example with opacity set to 0.25, 0.33, 0.5,
+   0.75, and 1.0 (left to right): left: without FSAA, right: with
+   FSAA. Click to see the full-size images)</center>
 
 -----------------------
 
@@ -211,6 +226,8 @@ Play the movie:
 Visualizing bonds for potentials with implicit bonds
 ----------------------------------------------------
 
+
+
 Visualizing body particles
 --------------------------
 
@@ -222,3 +239,27 @@ Visualizing regions
 
 Visualizing graphics provided by fix commands
 ---------------------------------------------
+
+Below is a table with links to the documentation of supported fix
+styles:
+
+.. table_from_list::
+   :columns: 4
+
+   * :doc:`fix graphics <fix_graphics>`
+   * :doc:`fix graphics/arrows <fix_graphics_arrows>`
+   * :doc:`fix indent <fix_indent>`
+   * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
+   * :doc:`fix wall/lj93 <fix_wall>`
+   * :doc:`fix wall/lj126 <fix_wall>`
+   * :doc:`fix wall/lj1043 <fix_wall>`
+   * :doc:`fix wall/colloid <fix_wall>`
+   * :doc:`fix wall/gran <fix_wall_gran>`
+   * :doc:`fix wall/harmonic <fix_wall>`
+   * :doc:`fix wall/harmonic/outside <fix_wall>`
+   * :doc:`fix wall/lepton <fix_wall>`
+   * :doc:`fix wall/morse <fix_wall>`
+   * :doc:`fix wall/reflect <fix_wall_reflect>`
+   * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
+   * :doc:`fix wall/table <fix_wall>`
+
