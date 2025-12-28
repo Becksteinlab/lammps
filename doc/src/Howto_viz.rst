@@ -222,6 +222,8 @@ Play the movie:
    additional libraries, purchasing a license, or may not be
    supported.
 
+--------------
+
 Visualizing bonds for potentials with implicit bonds
 ----------------------------------------------------
 
@@ -248,15 +250,17 @@ approaches to make those bonds visible.
    similar to the *Dynamic Bonds* representation in `VMD
    <https://www.ks.uiuc.edu/Research/vmd/>`_.
 
-3. Use use a combination of :doc:`fix bond/break <fix_bond_break>` and
-   :doc:`fix bond/create/angle <fix_bond_create>` with :doc:`bond style
-   zero <bond_zero>` to dynamically create and remove bonds that do not add
-   any forces.  This also requires to tell the neighbor list code to not
-   treat any pairs of atoms as special neighbors (otherwise the corresponding
-   pairs of atoms could be excluded from the neighbor list and thus the forces
-   computed by the pair style incorrect) through using the
-   :doc:`special_bonds <special_bonds>` command.  Here is an example of the necessary commands
-   for a carbon nanotube:
+3. Use use a combination of :doc:`fix bond/break <fix_bond_break>`
+   and :doc:`fix bond/create/angle <fix_bond_create>` with :doc:`bond
+   style zero <bond_zero>` to dynamically create and remove bonds that
+   do not add any forces.  This also requires to tell the neighbor list
+   code to not treat any pairs of atoms as special neighbors (otherwise
+   the corresponding pairs of atoms could be excluded from the neighbor
+   list and thus the forces computed by the pair style incorrect)
+   through using the :doc:`special_bonds <special_bonds>` command.
+   Unlike the two other options, This method also works with older
+   LAMMPS versions.  Here is an example of the necessary commands for a
+   carbon nanotube (that is modeled with AIREBO):
 
    .. code-block:: LAMMPS
 
@@ -266,21 +270,114 @@ approaches to make those bonds visible.
       fix break all bond/break 1000 1 2.5
       fix form all bond/create/angle 1000 1 1 2.0 1 aconstrain 90.0 180
 
-   This idea was originally posted as part of the LAMMPS tutorial at
+   This "graphics hack" was originally posted as part of the LAMMPS
+   tutorial at
    https://lammpstutorials.github.io/sphinx/build/html/tutorial2/breaking-a-carbon-nanotube.html
 
 -------------
 
+.. Visualizing tri or line particles
+.. ---------------------------------
+..
+.. -------------
+
 Visualizing body particles
 --------------------------
 
+Body particles are objects formed from either a collection of spherical
+particles, polygons (in 2d), or polyhedra (in 3d) formed from triangular
+or quadrilateral surfaces.  The regular :doc:`dump <dump>` command can
+only output the center of those bodies (and their orientation), which
+complicates the visualization with external tools.  In addition, the
+position of the constituent particles of *nparticles* bodies or the
+positions of the vertices of *rounded/polygon* or *rounded/polyhedron*
+bodies, which can be computed with :doc:`compute body/local
+<compute_body_local>` and output with :doc:`dump local <dump>`.
 
+As an alternative, the bodies can be visualized directly with :doc:`dump
+image <dump_image>` using the *body* keyword.  Without the *body*
+keyword the body particles would be visualized like atoms as single
+spheres.  The color and transparency settings can be changed by settings
+those properties for the corresponding atom types.  It is also possible
+to represent the bodies as either wireframes (*bflag1* value 2), planar
+faces (*bflag1* value 1), or both (*bflag1* value 3).
 
-Visualizing ellipsoids particles
---------------------------------
+.. |body1| image:: img/body-frames.png
+   :width: 33%
+.. |body2| image:: img/body-faces.png
+   :width: 33%
+.. |body3| image:: img/body-both.png
+   :width: 33%
+
+|body1|  |body2|  |body3|
+
+.. raw:: html
+
+   <center>(Body particle visualization examples for the *rounded/polyhedron* body style
+   left: frames, center: faces, right: both. Click to see the full-size images)</center>
+
+-------------
+
+Visualizing ellipsoid particles
+-------------------------------
+
+Ellipsoidal particles are a generalization of spheres that may have
+three different radii to define the shape.  They can be modeled using
+pair styles :doc:`gayberne <pair_gayberne>` or :doc:`resquared
+<pair_resquared>`.  The regular :doc:`dump custom <dump>` command can
+output the center of those bodies, the shape parameters and the
+orientation as quaternions.  If one follows the required conventions and
+follows the documented steps, those trajectory dump files can be
+`imported and visualized in OVITO
+<https://www.ovito.org/manual/advanced_topics/aspherical_particles.html>`_
+
+As an alternative, the ellipsoid particles can be visualized directly
+with :doc:`dump image <dump_image>` using the *ellipsoid* keyword.  The
+color and transparency settings can be changed by settings those
+properties for the corresponding atom types.  It is also possible to
+represent the ellipsoids via generating a triangle mesh and visualizing
+it as either wireframes (*eflag* value 2), planar faces (*eflag* value
+1), or both (*eflag* value 3).  The use of a triangle mesh is currently
+required since the rasterizer built into LAMMPS does not offer a
+suitable graphics primitive for ellipsoids.  The mesh is constructed by
+iteratively refining a triangle mesh representing an octahedron where
+each triangle is replaced by four triangles.  For a smooth
+representation a refinement level of 5 or 6 is required, which will
+cause a significant slowdown of the rendering of the image.  Also, some
+artifacts can happen due to rounding which can be somewhat minimized
+using FSAA (which causes further slowdown of the rendering).
+
+.. |ellipsoid1| image:: img/ellipsoid-level2.png
+   :width: 33%
+.. |ellipsoid2| image:: img/ellipsoid-level4.png
+   :width: 33%
+.. |ellipsoid3| image:: img/ellipsoid-level6.png
+   :width: 33%
+
+|ellipsoid1|  |ellipsoid2|  |ellipsoid3|
+
+.. raw:: html
+
+   <center>(Ellipsoid particle visualization examples for different mesh refinement levels.
+   left: level 2, center: level 4, right: level 6. Click to see the full-size images)</center><br>
+
+These images were created by adding the following :doc:`dump image and dump_modify <dump_image>`
+commands to the ``in.ellipse.resquared`` input example:
+
+.. code-block:: LAMMPS
+
+   #                                                       change + this
+   dump viz all image 1000 image-*.png type type ellipsoid type 3 4 0.05 &
+         size 600 600 zoom 2.2 shiny 0.1 fsaa yes view 80 -10 box yes 0.025 &
+         axes no 0.0 0.0 center s 0.5 0.5 0.5 ssao yes 32185474 0.6
+   dump_modify viz pad 9 boxcolor white backcolor gray adiam 1 4 adiam 2 7
+
+-------------
 
 Visualizing regions
 -------------------
+
+-------------
 
 Visualizing graphics provided by fix commands
 ---------------------------------------------
