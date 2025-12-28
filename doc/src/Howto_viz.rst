@@ -414,6 +414,13 @@ commands to the ``in.ellipse.resquared`` input example:
 Visualizing regions
 -------------------
 
+Since there are several commands that operate on regions of atoms, it
+can be helpful to visualize the extend of those regions, either for
+debugging the command settings or for visualizing the production
+simulation.  This is even more useful when regions are (dynamically)
+translated or rotated or both.  The :doc:`dump image region
+<dump_image>` keyword can be used to enable such visualizations.
+
 -------------
 
 Visualizing graphics provided by fix commands
@@ -441,3 +448,8 @@ styles:
    * :doc:`fix wall/reflect <fix_wall_reflect>`
    * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
    * :doc:`fix wall/table <fix_wall>`
+
+There is no support for :doc:`fix wall/region <fix_wall_region>` and
+:doc:`fix wall/gran/region <fix_wall_gran_region>`, since regions can be
+visualized with the *region* keyword of :doc:`dump image <dump_image>`
+already.

@@ -418,13 +418,13 @@ through using :doc:`fix reaxff/bonds <fix_reaxff_bonds>` with the
 ----------
 
 The *bond* keyword allows to you to alter how bonds are drawn.  A bond
-is only drawn if both atoms in the bond are being drawn due to being
-in the specified group and due to other selection criteria
-(e.g. region, threshold settings of the
-:doc:`dump_modify <dump_modify>` command).  By default, bonds are drawn
-if they are defined in the input data file as read by the
-:doc:`read_data <read_data>` command.  Using *none* for both the bond
-*color* and *width* value will turn off the drawing of all bonds.
+is only drawn if both atoms in the bond are being drawn due to being in
+the specified group and due to other selection criteria (e.g. region,
+threshold settings of the :doc:`dump_modify <dump_modify>` command).  By
+default, bonds are drawn if they are defined in the input data file as
+read by the :doc:`read_data <read_data>` command.  Using *none* for both
+the bond *color* and *width* value will turn off the drawing of all
+bonds.
 
 If *atom* is specified for the bond *color* value, then each bond is
 drawn in 2 halves, with the color of each half being the color of the
@@ -653,15 +653,14 @@ The *view*, *center*, *up*, and *zoom* values determine how
 3d simulation space is mapped to the 2d plane of the image.  Basically
 they control how the simulation box appears in the image.
 
-All of the *view*, *center*, *up*, and *zoom* values can be
-specified as numeric quantities, whose meaning is explained below.
-Any of them can also be specified as an :doc:`equal-style variable <variable>`,
-by using v_name as the value, where "name" is
-the variable name.  In this case the variable will be evaluated on the
-timestep each image is created to create a new value.  If the
-equal-style variable is time-dependent, this is a means of changing
-the way the simulation box appears from image to image, effectively
-doing a pan or fly-by view of your simulation.
+All of the *view*, *center*, *up*, and *zoom* values can be specified as
+numeric quantities, whose meaning is explained below.  Any of them can
+also be specified as an :doc:`equal-style variable <variable>`, by using
+v_name as the value, where "name" is the variable name.  In this case
+the variable will be evaluated on the timestep each image is created to
+create a new value.  If the equal-style variable is time-dependent, this
+is a means of changing the way the simulation box appears from image to
+image, effectively doing a pan or fly-by view of your simulation.
 
 The *view* keyword determines the viewpoint from which the simulation
 box is viewed, looking towards the *center* point.  The *theta* value
