@@ -225,10 +225,56 @@ Play the movie:
 Visualizing bonds for potentials with implicit bonds
 ----------------------------------------------------
 
+There are several pair styles available in LAMMPS where the bond
+information is not taken from from a bond topology in a data file but
+the potentials first determine a "bond-order" parameter for pairs of
+atoms and depending on the value of that parameter apply forces for
+bonded interactions.  This applies to :doc:`ReaxFF <pair_reaxff>`,
+:doc:`REBO and AIREBO <pair_airebo>`, :doc:`BOP <pair_bop>`, and several
+others pair styles.  By defaults these implicit bonds will not be
+shown by :doc:`dump image <dump_image>`.  There are currently three
+approaches to make those bonds visible.
 
+1. Access the (internal) bond order information from the pair style
+   through a custom fix and then use the *fix* keyword of the :doc:`dump
+   image <dump_image>` command to use the graphics objects information
+   provided by the fix to visualize the bonds (see below for more
+   information). That includes bonds that are broken and formed.  This
+   is currently only available for ReaxFF by using :doc:`fix
+   reaxff/bonds <fix_reaxff_bonds>`.
+
+2. Use the *autobonds* keyword of :doc:`dump image <dump_image>` to
+   approximate the bonds based on a simple distance heuristic.  This is
+   similar to the *Dynamic Bonds* representation in `VMD
+   <https://www.ks.uiuc.edu/Research/vmd/>`_.
+
+3. Use use a combination of :doc:`fix bond/break <fix_bond_break>` and
+   :doc:`fix bond/create/angle <fix_bond_create>` with :doc:`bond style
+   zero <bond_zero>` to dynamically create and remove bonds that do not add
+   any forces.  This also requires to tell the neighbor list code to not
+   treat any pairs of atoms as special neighbors (otherwise the corresponding
+   pairs of atoms could be excluded from the neighbor list and thus the forces
+   computed by the pair style incorrect) through using the
+   :doc:`special_bonds <special_bonds>` command.  Here is an example of the necessary commands
+   for a carbon nanotube:
+
+   .. code-block:: LAMMPS
+
+      bond_style zero
+      bond_coeff 1 1.4
+      special_bonds lj/coul 1.0 1.0 1.0
+      fix break all bond/break 1000 1 2.5
+      fix form all bond/create/angle 1000 1 1 2.0 1 aconstrain 90.0 180
+
+   This idea was originally posted as part of the LAMMPS tutorial at
+   https://lammpstutorials.github.io/sphinx/build/html/tutorial2/breaking-a-carbon-nanotube.html
+
+-------------
 
 Visualizing body particles
 --------------------------
+
+
 
 Visualizing ellipsoids particles
 --------------------------------
@@ -261,4 +307,3 @@ styles:
    * :doc:`fix wall/reflect <fix_wall_reflect>`
    * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
    * :doc:`fix wall/table <fix_wall>`
-
