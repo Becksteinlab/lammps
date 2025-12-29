@@ -1597,8 +1597,9 @@ void DumpImage::create_image()
       } else if (fixvec[i] == TRIANGLE) {
         image->draw_triangle(&fixarray[i][1], &fixarray[i][4], &fixarray[i][7], color, opacity);
       } else if (fixvec[i] == ARROW) {
-        ArrowObj().draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4],
-                        fixarray[i][8], opacity);
+        ArrowObj a(fixarray[i][9]);
+        a.draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4], fixarray[i][8],
+               opacity);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;

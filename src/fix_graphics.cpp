@@ -218,7 +218,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
     }
   }
   memory->create(imgobjs, numobjs, "fix_graphics:imgobjs");
-  memory->create(imgparms, numobjs, 9, "fix_graphics:imgparms");
+  memory->create(imgparms, numobjs, 10, "fix_graphics:imgparms");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -467,6 +467,7 @@ void FixGraphics::init()
                      "Fix graphics variable {} is not equal-style variable", gi.arrow.dstr);
         gi.arrow.dvar = ivar;
       }
+      imgparms[n][9] = gi.arrow.ratio;
       ++n;
     } else if (gi.style == PROGBAR) {
       imgobjs[n] = DumpImage::CYLINDER;
