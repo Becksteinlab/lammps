@@ -623,23 +623,28 @@ commands are in the :doc:`Howto_viz` howto.
 The *region* keyword can be used to create a graphical representation of
 a :doc:`region <region>`.  This can be helpful in debugging the location
 and extent of regions, especially when those have parameters controlled
-by variables.  Four draw styles of representing a region are available:
-*filled*\, *transparency*\, *frame*\, and *points*.  With style *filled*
-the surface of the region is triangulated and drawn.  For region styles
-that support open faces, surfaces for such open faces are skipped.  The
-style *transparent* is like *filled* but takes an additional parameter
-in the range of 0.0 to 1.0 that defines the opacity and thus allows to
-see what is inside the region.  Draw style *frame* represents the region
-with a mesh of "wires".  The diameter of these "wires" can be set.
-Unlike with the *filled* style and similar to the *transparent* style,
-you can see what is *inside* the region with this draw style.  The
-fourth draw style, *points*\, generates a random point cloud inside the
-simulation box and draws only those points that are within the region.
-This uses the same test than what is used to determine if an atom is
-inside the region.  Draw styles *filled*\, *transparent*\, and *frame*
-support only "primitive" region styles (no unions or intersections of
-multiple regions), but the *points* draw style supports *all* region
-styles.
+by variables.  The sequence of arguments to the *region* are: the
+region-ID, the color for drawing the region, the draw style, and
+possible additional arguments as required by the draw style.
+
+Four draw styles of representing a region are available: *filled*\,
+*transparency*\, *frame*\, and *points*.  With draw style *filled* the
+surface of the region is triangulated and drawn.  For region styles that
+support open faces, surfaces for such open faces are skipped.  The style
+*transparent* is like *filled* but takes an additional parameter in the
+range of 0.0 to 1.0 that defines the opacity and thus allows to see what
+is inside the region for values < 1.  Draw style *frame* represents the
+region with a mesh of "wires".  The diameter of these "wires" are set
+with the following argument.  Unlike with the *filled* style and similar
+to the *transparent* style, you can see what is *inside* the region with
+this draw style.  The fourth draw style, *points*\, generates a random
+point cloud inside the simulation box and draws only those points that
+are within the region.  This uses the same test than what is used to
+determine if an atom is inside the region but ignores any open faces
+(which would match *all* positions as "inside").  Draw styles *filled*\,
+*transparent*\, and *frame* support only "primitive" region styles (no
+unions or intersections of multiple regions), but the *points* draw
+style supports *all* region styles.
 
 Recommended transparency values are 0.25, 0.5, or 0.75 when used in
 combination with *fsaa on*.

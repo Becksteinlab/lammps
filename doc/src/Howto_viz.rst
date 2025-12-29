@@ -438,8 +438,6 @@ available:
   radius if it is located inside the region.  This is useful to check
   the impact of the *side in/out* setting of a region, and complementary
   to the other three draw styles, which only show the region surfaces.
-  This draw style draws points for the *entire* simulation cell, if the
-  region has any open faces.
 
 It can sometimes be convenient to draw the same region with multiple
 draw styles as can be seen from the example visualization images below.

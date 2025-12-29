@@ -1699,6 +1699,11 @@ void DumpImage::create_image()
         zlen = domain->boxhi_bound[2] - domain->boxlo_bound[2];
       }
 
+      // temporarily turn off the region's open faces flag since
+      // otherwise Region::match() will match for *any* position
+      int saved_flag = reg.ptr->openflag;
+      reg.ptr->openflag = 0;
+
       for (int i = 0; i < reg.npoints; ++i) {
         pos[0] = rand.uniform() * xlen + xoff;
         pos[1] = rand.uniform() * ylen + yoff;
@@ -1706,6 +1711,9 @@ void DumpImage::create_image()
         if (reg.ptr->match(pos[0], pos[1], pos[2]))
           image->draw_sphere(pos, reg.color, reg.diameter);
       }
+
+      // restore saved open face flag
+      reg.ptr->openflag = saved_flag;
 
     } else {
       std::string regstyle = reg.ptr->style;
