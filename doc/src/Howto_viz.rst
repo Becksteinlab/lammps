@@ -511,6 +511,17 @@ Below is an example input deck for visualizing *cone* and *cylinder* regions:
 Visualizing graphics provided by fix commands
 ---------------------------------------------
 
+LAMMPS can display additional graphics objects in the :doc:`dump image
+<dump_image>` output that are added by fix styles.  These fall in two
+categories: fixes that were written with the specific purpose of adding
+graphics to the visualization and fixes that make objects or data
+visible that they maintain internally.  Examples for the latter case are
+visualizing the indenter object from :doc:`fix indent <fix_indent>` or
+the wall position from one of the wall fixes.  The details of what kind
+of graphics is added and how it can be configured is described in a
+section titled **Dump image info** in the documentation of the
+individual fix commands.
+
 Below is a table with links to the documentation of supported fix
 styles:
 
@@ -520,6 +531,7 @@ styles:
    * :doc:`fix graphics <fix_graphics>`
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
    * :doc:`fix indent <fix_indent>`
+   * :doc:`fix reaxff/bonds <fix_reaxff_bonds>`
    * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
    * :doc:`fix wall/lj93 <fix_wall>`
    * :doc:`fix wall/lj126 <fix_wall>`
@@ -538,3 +550,57 @@ There is no support for :doc:`fix wall/region <fix_wall_region>` and
 :doc:`fix wall/gran/region <fix_wall_gran_region>`, since regions can be
 visualized with the *region* keyword of :doc:`dump image <dump_image>`
 already (see discussion above).
+
+.. |fix1| image:: img/fix-graphics.png
+   :width: 24%
+.. |fix2| image:: img/fix-arrows.png
+   :width: 24%
+.. |fix3| image:: img/fix-graphics.png
+   :width: 24%
+
+|fix1|  |fix2|  |fix3|
+
+.. raw:: html
+
+   <center>(Fix graphics visualization examples. Click to see the full-size images)</center><br>
+
+Below are discussions about some aspects of specific fix commands and some input examples.
+
+Fix graphics
+^^^^^^^^^^^^
+
+Fix :doc:`graphics <fix_graphics>` adds some graphics primitives and
+more complex objects to the visualization where properties of the
+object(s) are controlled by :doc:`equal-style or compatible variables
+<variable>`.
+
+Fix graphics/arrows
+^^^^^^^^^^^^^^^^^^^
+
+Fix :doc:`graphics/arrows <fix_graphics_arrows>` adds per-atom or
+per-chunk arrows to the visualization.  The arrows represent some
+per-atom property or per-chunk 3-vector property.  For atoms, there are
+the pre-defined properties *force*, *velocity*, and *dipole*.  Everything
+else would have to be computed in :doc:`atom-style or compatible
+variables <variable>`.  For per-chunk properties, one needs to provide
+the IDs of three computes: a :doc:`chunk/atom compute
+<compute_chunk_atom>` and two per-chunk computes where the first defines
+the position of the (middle of the) arrow and the second the direction
+and length of the arrow.  Popular choices would create per-molecule or
+per-bin chunks.
+
+Fix reaxff/bonds
+^^^^^^^^^^^^^^^^
+
+Fix :doc:`reaxff/bonds <fix_reaxff_bonds>` of the :ref:`REAXFF package
+<pkg-reaxff>` provides access to the list of bonds as they are
+dynamically computed by the :doc:`ReaxFF pair style <pair_reaxff>`.  As
+discussed above, this can be used to visualize bonds for a system where
+there is no explicit bond topology defined.
+
+Fix smd/wall_surface
+^^^^^^^^^^^^^^^^^^^^
+
+Fix :doc:`smd/wall_surface <fix_smd_wall_surface>` of the :ref:`MACHDYN
+package <pkg-machdyn>` creates a custom wall from a mesh of triangles
+that is read from an STL format file.
