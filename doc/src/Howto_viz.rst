@@ -425,43 +425,52 @@ visualizations.  There are currently four different draw styles
 available:
 
 * *filled*: a mesh of triangles is constructed for the surface of the
-  region and then drawn in the selected color.  This accounts for the
-  *open* keyword of the :doc:`region <region>` command and only draws
-  the sides that are closed.
-* *transparent*: this is the same as *filled*, but in addition one can set
-  the transparency of that visualization through an opacity parameter in
-  the range of 0.0 (invisible) to 1.0 (fully opaque).
-* *frame*: uses the same mesh of triangles as above, but renders the
-  region's surface as a wireframe mesh with a given cylinder diameter.
+  region and then drawn in the selected color.  This draw style accounts
+  for the *open* keyword of the :doc:`region <region>` command and only
+  draws the faces of a region that are closed.
+* *transparent*: this is the same visualization as draw style *filled*,
+  but in addition one can set the transparency of that visualization
+  through an opacity parameter in the range of 0.0 (invisible) to 1.0
+  (fully opaque).
+* *frame*: uses the same mesh of triangles as the two styles above
+  above, but renders the region's surface as a wireframe mesh with a
+  given cylinder diameter.
 * *points*: generates a cloud of random points inside the simulation box
   and then only draws a point as a sphere with the given color and
   radius if it is located inside the region.  This is useful to check
   the impact of the *side in/out* setting of a region, and complementary
   to the other three draw styles, which only show the region surfaces.
+  For visualization purposes any open faces of a region are ignored,
+  since a region with an open face matches *all* particles.
 
 It can sometimes be convenient to draw the same region with multiple
 draw styles as can be seen from the example visualization images below.
 
-Some notes on the visualization of individual region styles:
+Notes on the visualization of individual region styles:
 
 * *plane*: since in theory planes extend infinitely, some form of
   boundary has to be established for the visualization.  Therefore a
   mesh of triangles is constructed and transformed according to the
-  region settings and then only those triangles are drawn where at least
-  one corner is inside the simulation box.  For draw style *points* the
-  *side in/out* setting determines on which side of the plane the points
-  are drawn.
+  region settings and then only those triangles are drawn, where at
+  least one corner is inside the simulation box.  For draw style
+  *points* the *side in/out* setting determines on which side of the
+  plane the points are drawn.
+* *cone* and *cylinder*: use triangle meshes for draw styles *filled*
+  and *transparent* since there are no equivalent primitives (the
+  cylinder primitive only draws half of the cylinder, since it is
+  optimized for being capped).  For draw style *frame*, only the rim
+  of the top or bottom is drawn and the side is represented by lines
+  from the top to the bottom.
 * *box* and *prism*: for draw style *frame* only the edges of the region
   are shown; for draw styles *filled* and *transparent*, the faces are
   drawn instead, but only if they are not set as "open" in the
   :doc:`region <region>` command.
 
-
 .. |region1| image:: img/region-plane.png
    :width: 33%
-.. |region2| image:: img/region-boxes.png
+.. |region2| image:: img/region-cones.png
    :width: 33%
-.. |region3| image:: img/region-plane.png
+.. |region3| image:: img/region-boxes.png
    :width: 33%
 
 |region1|  |region2|  |region3|
