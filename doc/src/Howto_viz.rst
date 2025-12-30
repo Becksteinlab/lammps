@@ -530,6 +530,7 @@ styles:
 
    * :doc:`fix graphics <fix_graphics>`
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
+   * :doc:`fix graphics/replica <fix_graphics_replica>`
    * :doc:`fix indent <fix_indent>`
    * :doc:`fix reaxff/bonds <fix_reaxff_bonds>`
    * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
