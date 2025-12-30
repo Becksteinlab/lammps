@@ -552,15 +552,17 @@ visualized with the *region* keyword of :doc:`dump image <dump_image>`
 already (see discussion above).
 
 .. |fix1| image:: img/fix-graphics.png
-   :width: 24%
+   :width: 19%
 .. |fix2| image:: img/fix-arrows.png
-   :width: 24%
-.. |fix3| image:: img/fix-mesh.png
-   :width: 24%
-.. |fix4| image:: img/fix-indent.png
-   :width: 24%
+   :width: 19%
+.. |fix3| image:: img/fix-dipoles.png
+   :width: 19%
+.. |fix4| image:: img/fix-mesh.png
+   :width: 19%
+.. |fix5| image:: img/fix-indent.png
+   :width: 19%
 
-|fix1|  |fix2|  |fix3|  |fix4|
+|fix1|  |fix2|  |fix3|  |fix4|  |fix5|
 
 .. raw:: html
 
@@ -582,17 +584,18 @@ Fix graphics/arrows
 Fix :doc:`graphics/arrows <fix_graphics_arrows>` adds per-atom or
 per-chunk arrows to the visualization.  The arrows represent some
 per-atom property or per-chunk 3-vector property.  For atoms, there are
-the pre-defined properties *force*, *velocity*, and *dipole*.
-Everything else would have to be computed in :doc:`atom-style or
-compatible variables <variable>`.  For per-chunk properties, one needs
-to provide the IDs of three computes: a :doc:`chunk/atom compute
-<compute_chunk_atom>` and two per-chunk computes where the first defines
-the position of the (middle of the) arrow and the second the direction
-and length of the arrow.  Popular choices would create per-molecule or
-per-bin chunks.  Below is an example input section that computes and
-displays both, the total dipole moment (using :doc:`fix graphics
-<fix_graphics>` and the per-molecule dipole moment as arrows in addition
-to the per-atom velocities:
+the pre-defined properties *force*, *velocity*, and *dipole* (requires
+atom style *dipole*).  Everything else would have to be computed in
+:doc:`atom-style or compatible variables <variable>` and use the
+*variable* keyword.  For per-chunk properties, one needs to use the
+*chunk* keyword and provide the IDs of three computes: a
+:doc:`chunk/atom compute <compute_chunk_atom>` and two per-chunk
+computes where the first defines the position of the (middle of the)
+arrow and the second the direction and length of the arrow.  Popular
+choices would create per-molecule or per-bin chunks.  Below is an
+example input section that computes and displays both, the total dipole
+moment (using :doc:`fix graphics <fix_graphics>` and the per-molecule
+dipole moment as arrows in addition to the per-atom velocities:
 
 .. code-block:: LAMMPS
 
