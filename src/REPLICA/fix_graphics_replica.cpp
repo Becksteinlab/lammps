@@ -19,15 +19,18 @@
 #include "dump_image.h"
 #include "error.h"
 #include "group.h"
+#include "math_special.h"
 #include "memory.h"
 #include "universe.h"
 #include "update.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
+using MathSpecial::square;
 
 /* ---------------------------------------------------------------------- */
 
@@ -44,7 +47,13 @@ FixGraphicsReplica::FixGraphicsReplica(LAMMPS *lmp, int narg, char **arg) :
   dynamic_group_allow = 1;
 
   dflag = false;
+  dtype = 0;
+  dradius = 1.0;
+  dtrans = 1.0;
   aflag = false;
+  atype = 0;
+  aradius = 1.0;
+  atrans = 1.0;
 
   int iarg = 4;
   while (iarg < narg) {
@@ -52,11 +61,17 @@ FixGraphicsReplica::FixGraphicsReplica(LAMMPS *lmp, int narg, char **arg) :
       if (iarg + 4 > narg)
         error->universe_all(FLERR, "Too few arguments for fix graphics/replica display");
       dflag = true;
+      dtype = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      dradius = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
+      dtrans = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
       iarg += 4;
     } else if (strcmp(arg[iarg], "average") == 0) {
       if (iarg + 4 > narg)
         error->universe_all(FLERR, "Too few arguments for fix graphics/replica average");
       aflag = true;
+      atype = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      aradius = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
+      atrans = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
       iarg += 4;
     } else {
       error->universe_all(FLERR, std::string("Unknown fix graphics/replica keyword: ") + arg[iarg]);
@@ -180,14 +195,20 @@ void FixGraphicsReplica::end_of_step()
 
   if (universe->me == 0) {
     memory->create(imgobjs, numobjs, "fix_graphics:imgobjs");
-    memory->create(imgparms, numobjs, 5, "fix_graphics:imgparms");
+    memory->create(imgparms, numobjs, 6, "fix_graphics:imgparms");
+
+    // reset counter for total graphics objects
     int n = 0;
+
     // first process our own data;
     std::vector<double> buf(coords);
+    std::vector<double> avg(coords);
+    std::vector<double> var(3 * nper, 0.0);
+
     if (dflag) {
       for (int i = 0; i < nper; ++i) {
         imgobjs[n] = DumpImage::SPHERE;
-        imgparms[n][0] = type[i];
+        imgparms[n][0] = (dtype) ? dtype : type[i];
         domain->remap(buf.data() + 3 * i);
         imgparms[n][1] = buf[3 * i];
         imgparms[n][2] = buf[3 * i + 1];
@@ -203,10 +224,18 @@ void FixGraphicsReplica::end_of_step()
     for (int j = 1; j < universe->nworlds; ++j) {
       MPI_Recv(buf.data(), 3 * nper, MPI_DOUBLE, MPI_ANY_SOURCE, 0, universe->uworld,
                MPI_STATUS_IGNORE);
-      if (dflag) {
-        for (int i = 0; i < nper; ++i) {
+      for (int i = 0; i < nper; ++i) {
+        if (aflag) {
+          var[3 * i] += (double) j / ((double) j + 1) * square(buf[3 * i] - avg[3 * i]);
+          var[3 * i + 1] += (double) j / ((double) j + 1) * square(buf[3 * i + 1] - avg[3 * i + 1]);
+          var[3 * i + 2] += (double) j / ((double) j + 1) * square(buf[3 * i + 2] - avg[3 * i + 2]);
+          avg[3 * i] += (buf[3 * i] - avg[3 * i]) / ((double) j + 1.0);
+          avg[3 * i + 1] += (buf[3 * i + 1] - avg[3 * i + 1]) / ((double) j + 1.0);
+          avg[3 * i + 2] += (buf[3 * i + 2] - avg[3 * i + 2]) / ((double) j + 1.0);
+        }
+        if (dflag) {
           imgobjs[n] = DumpImage::SPHERE;
-          imgparms[n][0] = type[i];
+          imgparms[n][0] = (dtype) ? dtype : type[i];
           domain->remap(buf.data() + 3 * i);
           imgparms[n][1] = buf[3 * i];
           imgparms[n][2] = buf[3 * i + 1];
@@ -217,7 +246,26 @@ void FixGraphicsReplica::end_of_step()
         }
       }
     }
-    fprintf(stderr, "output %d objects of %d\n", n, numobjs);
+    if (aflag) {
+      double norm = 1.0 / (double) universe->nworlds;
+      for (int i = 0; i < nper; ++i) {
+        imgobjs[n] = DumpImage::SPHERE;
+        imgparms[n][0] = (atype) ? atype : type[i];
+        var[3 * i] *= norm;
+        var[3 * i + 1] *= norm;
+        var[3 * i + 2] *= norm;
+        domain->remap(avg.data() + 3 * i);
+        imgparms[n][1] = avg[3 * i];
+        imgparms[n][2] = avg[3 * i + 1];
+        imgparms[n][3] = avg[3 * i + 2];
+        imgparms[n][4] = (aradius == 0.0) ? 1.0
+                                          : aradius * norm *
+                sqrt(square(var[3 * i]) + square(var[3 * i + 1]) + square(var[3 * i + 2]));
+
+        imgparms[n][5] = atrans;
+        ++n;
+      }
+    }
   } else {
     if (me == 0) MPI_Send(coords.data(), 3 * nper, MPI_DOUBLE, 0, 0, universe->uworld);
   }
