@@ -223,7 +223,7 @@ none
 Related commands
 """"""""""""""""
 
-none
+:doc:`fix graphics/arrows <fix_graphics_arrows>`, :doc:`fix graphics <fix_graphics/replica>`
 
 Default
 """""""

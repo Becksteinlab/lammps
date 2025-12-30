@@ -181,7 +181,7 @@ The *dipole* mode requires the use of :doc:`atom style dipole
 Related commands
 """"""""""""""""
 
-:doc:`fix_graphics <fix_graphics>`
+:doc:`fix_graphics <fix_graphics>`, :doc:`fix graphics <fix_graphics/replica>`
 
 Default
 """""""

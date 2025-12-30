@@ -105,7 +105,7 @@ LAMMPS was built with that package.  See the :doc:`Build package
 Related commands
 """"""""""""""""
 
-none
+:doc:`fix graphics <fix_graphics>`, :doc:`fix graphics/arrows <fix_graphics_arrows>`
 
 Default
 """""""
