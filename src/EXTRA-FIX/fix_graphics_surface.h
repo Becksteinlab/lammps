@@ -28,26 +28,20 @@ class FixGraphicsSurface : public Fix {
  public:
   FixGraphicsSurface(class LAMMPS *, int, char **);
   ~FixGraphicsSurface() override;
+
   int setmask() override;
-  void init() override;
+  void setup(int) override;
   void end_of_step() override;
 
   int image(int *&, double **&) override;
 
  private:
-  int varflag;
   int atype;
   int quality;
-  int binary;
   double iso;
-  double rad;
-  char *rstr;
-  int rvar;
+  int binary;
   int pad;
   std::string filename;
-
-  double dx, dy, dz;
-  int nx, ny, nz;
 
   int numobjs;
   int *imgobjs;

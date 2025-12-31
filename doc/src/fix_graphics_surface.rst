@@ -15,7 +15,6 @@ Syntax
 * Nevery = update graphics information every this many time steps
 * type = an atom type value to select the color of the surface
 * isovalue = isovalue for the surface selection (unitless)
-* radius = radius of the atoms for computing the isosurface density (may be a variable)
 * one or more keyword/args pairs may be appended
 * keyword = *quality* or *filename* or *binary* or *pad*
 
@@ -32,8 +31,8 @@ Examples
 
 .. code-block:: LAMMPS
 
-   fix sf1 water graphics/surface 200 5 isovalue 0.1 radius 1.5 quality high
-   fix stl water graphics/surface 200 5 filename water-surface-*.stl pad 10
+   fix sf1 water graphics/surface 200 5 0.1 quality high
+   fix stl water graphics/surface 200 1 0.01 filename water-surface-*.stl pad 5
 
 Description
 """""""""""
@@ -61,15 +60,10 @@ be that of the atom type's element or just a globally set constant color
 for *all* objects of this fix instance, which can be changed using a
 :doc:`dump modify fcolor <dump_image>` command.
 
-The *isovalue* keyword argument sets the isovalue used to compute the surface.
+The *isovalue* argument sets the isovalue used to compute the surface.
 
-*R* sets the radius for the atoms.  It may be a variable reference (*v_name*)
-for a variable (called "name") that can be either an equal-style or an
-atom-style or compatible variable.
-
-The *quality* keyword can have any of these words as argument: "max", "high",
-"medium", or "low" and selects the smoothness and resolution of the surface
-graphics object.
+The *quality* keyword can have any of these words as argument: "max",
+"high", "medium", or "low", and selects the resolution of the surface.
 
 -----------
 
@@ -104,7 +98,9 @@ None of the :doc:`fix_modify <fix_modify>` options apply to this fix.
 Restrictions
 """"""""""""
 
-none
+This fix is part of the EXTRA-FIX package.  It is only enabled if LAMMPS was
+built with that package.  See the :doc:`Build package <Build_package>` page for
+more info.
 
 Related commands
 """"""""""""""""
