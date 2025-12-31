@@ -38,7 +38,7 @@ class LabelMap : protected Pointers {
   const std::string &find(int, int) const;     // find type label for numeric type
   bool is_complete(int) const;                 // check if all types are assigned
 
-  // infer interaction types from standard bracket format
+  // infer interaction types from standard hyphen-delimited format
 
   int infer_bondtype(int, int);                      // infer bond type from two atom types
   int infer_bondtype(std::vector<std::string>);      // infer bond type from two atom type labels

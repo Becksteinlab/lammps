@@ -380,7 +380,7 @@ bool LabelMap::is_complete(int mode) const
 /* ----------------------------------------------------------------------
    infer bond type from two atom types
    input/output is numeric types, uses type labels internally
-   assumes bond types are of the form '[a][b]' for atom types 'a' and 'b'
+   assumes bond type labels are of the form "a-b" for atom types 'a' and 'b'
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_bondtype(int type1, int type2)
@@ -395,7 +395,7 @@ int LabelMap::infer_bondtype(int type1, int type2)
 
 /* ----------------------------------------------------------------------
    infer numeric type from two atom type labels
-   assumes bond types are of the form '[a][b]' for atom types 'a' and 'b'
+   assumes bond types are of the form "a-b" for atom types 'a' and 'b'
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_bondtype(std::vector<std::string> mytypes)
@@ -416,7 +416,7 @@ int LabelMap::infer_bondtype(std::vector<std::string> mytypes)
 /* ----------------------------------------------------------------------
    infer angle type from three atom types
    input/output is numeric types, uses type labels internally
-   assumes angle types of the form '[a][b][c]' for atom types 'a', 'b', 'c'
+   assumes angle types of the form "a-b-c" for atom types 'a', 'b', 'c'
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_angletype(int type1, int type2, int type3)
@@ -436,7 +436,7 @@ int LabelMap::infer_angletype(int type1, int type2, int type3)
 /* ----------------------------------------------------------------------
    infer angle type from three atom types
    input/output is numeric types, uses type labels internally
-   assumes angle types of the form '[a][b][c]' for atom types 'a', 'b', 'c'
+   assumes angle types of the form "a-b-c" for atom types 'a', 'b', 'c'
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_angletype(std::vector<std::string> mytypes)
@@ -458,7 +458,7 @@ int LabelMap::infer_angletype(std::vector<std::string> mytypes)
 /* ----------------------------------------------------------------------
    infer dihedral type from four atom types
    input/output is numeric types, uses type labels internally
-   assumes dihedral types of the form '[a][b][c][d]'
+   assumes dihedral types of the form "a-b-c-d"
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_dihedraltype(int type1, int type2, int type3, int type4)
@@ -479,7 +479,7 @@ int LabelMap::infer_dihedraltype(int type1, int type2, int type3, int type4)
 /* ----------------------------------------------------------------------
    infer dihedral type from four atom types
    input/output is numeric types, uses type labels internally
-   assumes dihedral types of the form '[a][b][c][d]'
+   assumes dihedral types of the form "a-b-c-d"
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_dihedraltype(std::vector<std::string> mytypes)
@@ -502,7 +502,7 @@ int LabelMap::infer_dihedraltype(std::vector<std::string> mytypes)
 /* ----------------------------------------------------------------------
    infer improper type from four atom types
    input/output is numeric types, uses type labels internally
-   assumes improper types of the form '[a][b][c][d]'
+   assumes improper types of the form "a-b-c-d"
    the symmetry of the improper is encoded in improper.symmatoms
 ------------------------------------------------------------------------- */
 
@@ -524,7 +524,7 @@ int LabelMap::infer_impropertype(int type1, int type2, int type3, int type4)
 /* ----------------------------------------------------------------------
    infer improper type from four atom types
    input/output is numeric types, uses type labels internally
-   assumes improper types of the form '[a][b][c][d]'
+   assumes improper types of the form "a-b-c-d"
    the symmetry of the improper is encoded in improper.symmatoms
 ------------------------------------------------------------------------- */
 
