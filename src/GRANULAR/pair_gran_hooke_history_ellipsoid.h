@@ -50,6 +50,7 @@ class PairGranHookeHistoryEllipsoid : public Pair {
   int freeze_group_bit;
   int use_history;
   int limit_damping;
+  int bounding_box;
 
   int neighprev;
   double *onerad_dynamic, *onerad_frozen;

@@ -37,7 +37,7 @@ set             type 2 block 2.0 2.0
 set             type 2 mass 10.0
 group ball type 2
 
-pair_style      gran/hooke/history/ellipsoid 1e3 5e2 0.0 0.0 0.5 0
+pair_style      gran/hooke/history/ellipsoid 1e3 5e2 0.0 0.0 0.5 0 bounding_box
 pair_coeff      * *
 
 compute diameter all property/atom shapex shapey shapez

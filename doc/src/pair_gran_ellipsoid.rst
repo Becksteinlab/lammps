@@ -14,7 +14,7 @@ Syntax
 
    pair_style style Kn Kt gamma_n gamma_t xmu dampflag keyword
 
-* style = *gran/hooke* or *gran/hooke/history* or *gran/hertz/history*
+* style = *gran/hooke/history/ellipsoid* or *gran/hertz/history/ellipsoid*
 * Kn = elastic constant for normal particle repulsion (force/distance units or pressure units - see discussion below)
 * Kt = elastic constant for tangential contact (force/distance units or pressure units - see discussion below)
 * gamma_n = damping coefficient for collisions in normal direction (1/time units or 1/time-distance units - see discussion below)
@@ -65,16 +65,17 @@ between two superellipsoid particles whose surface is implicitly defined as:
     \right)^{n_1 / n_2}
     + \left|\frac{z}{c}\right|^{n_1} - 1 = 0
 
-for a point :math:`\mathbf{x} = (x, y, z)` in *canonical* coordinates.
+for a point :math:`\mathbf{x} = (x, y, z)` where the coordinates are given
+in the principal directions of inertia of the particle.
 The half-diameters :math:`a`, :math:`b`, and :math:`c` correspond to the *shape*
 property, and the exponents :math:`n_1` and :math:`n_2` to the *block* property
 of the ellipsoid atom. See the doc page for the :doc:`set <set>` command for
 more details.
 
-Contact detection for these aspherical particles uses the ''midway''
+Contact detection for these aspherical particles uses the so-called ''midway''
 minimization approach from :ref:`(Houlsby) <Houlsby>`. Considering two
 particles with shape functions :math:`F_i` and :math:`F_j`,
-the midway point :math:`\mathbf{X}_0` is obtained as:
+the contact point :math:`\mathbf{X}_0` is obtained as:
 
 .. math::
 
@@ -84,10 +85,19 @@ the midway point :math:`\mathbf{X}_0` is obtained as:
 
 where the shape function is given by
 :math:`F_i(\mathbf{X}) = f(\mathbf{R}_i^T (\mathbf{X} - \mathbf{X}_i))`
-where :math:`\mathbf{X}_i` and :math:`\mathbf{R}_i` are the center of mass
-and rotation matrix of the particle.
+and where :math:`\mathbf{X}_i` and :math:`\mathbf{R}_i` are the center of mass
+and rotation matrix of the particle, respectively.
 The constrained minimization problem is solved using Lagrang multipliers and
 Newton's method with a line search as described by :ref:`(Podlozhnyuk) <Podlozhnyuk>`.
+
+.. note::
+
+    The shape function :math:`F` is not a signed distance function and
+    does not have unit gradient :math:`\|\nabla F \| \neq 1` so that the
+    so-called ''midway'' point is not actually located at an equal distance from the
+    surface of both particles.
+    For contact between non-identical particles, the contact point tends to
+    be closer to the surface of the smaller and blockier particle.
 
 .. note::
 
@@ -96,14 +106,16 @@ Newton's method with a line search as described by :ref:`(Podlozhnyuk) <Podlozhn
     to ensure robustness of the direct solver and high convergence rate,
     even for blocky particles with near flat faces.
 
-The particles overlap if both shape functions are negative at the midway point.
-The contact normal is obtained as: :math:`\mathbf{n}_{ij} = \nabla F_i(\mathbf{X}_0) / \| \nabla F_i(\mathbf{X}_0)\|`
+The particles overlap if both shape functions are negative at the contact point.
+The contact normal is obtained as: :math:`\mathbf{n}_{ij} = \nabla F_i(\mathbf{X}_0) / \| \nabla F_i(\mathbf{X}_0)\| = - \nabla F_j(\mathbf{X}_0) / \| \nabla F_j(\mathbf{X}_0)\|`
 and the overlap :math:`\delta = \|\mathbf{X}_j^{\mathrm{surf}} - \mathbf{X}_i^{\mathrm{surf}}\|`
 is computed as the distance between the points on the
-particles surfaces that are closest to the midway point in the
-direction of the contact normal: :math:`F_i(\mathbf{X}_i^{\mathrm{surf}} = \mathbf{X}_0 + \lambda \mathbf{n}_{ij}) = 0`.
-One-dimensional Newton's method is used to solve this equation for
-:math:`\lambda` and find the surface points.
+particles surfaces that are closest to the contact point in the
+direction of the contact normal: :math:`F_i(\mathbf{X}_i^{\mathrm{surf}} = \mathbf{X}_0 + \lambda_i \mathbf{n}_{ij}) = 0`
+and :math:`F_j(\mathbf{X}_j^{\mathrm{surf}} = \mathbf{X}_0 + \lambda_j \mathbf{n}_{ij}) = 0`.
+Newton's method is used to solve this equation for the scalars
+:math:`\lambda_i` and :math:`\lambda_j` and find the surface points
+:math:`\mathbf{X}_i^{\mathrm{surf}}` and :math:`\mathbf{X}_j^{\mathrm{surf}}`.
 
 .. note::
     TODO: Jacopo: a modified representation of the particle surface is defined
@@ -111,15 +123,18 @@ One-dimensional Newton's method is used to solve this equation for
 
 A hierarchical approach is used to limit the cost of contact detection.
 First, intersection of the bounding spheres of the two particles of bounding
-radii :math:`r_i` and :math:`r_j` is checked. If the distance :math:`d`
+radii :math:`r_i` and :math:`r_j` is checked. If the distance
 between the particles center is more than the sum of the radii
-:math:`d > r_i + r_j`, the particles do not intersect.
+:math:`\|\mathbf{X}_j - \mathbf{X}_j\| > r_i + r_j`, the particles do not intersect.
 Then, if the bounding spheres intersect, intersection of the oriented
 bounding box is checked. This is done following the equations of
 :ref:`(Eberly) <GeometricTools>`.
 This check is only performed if the *bounding_box* keyword is used.
-This can be advantageous for grain with high aspect ratio, where the
-bounding sphere encompasses a large empty volume.
+This can be advantageous for particles with high aspect ratio, where the
+bounding sphere encompasses a large empty volume, and minimization
+would otherwise be performed for particles that might be separated by
+large distances, and using a poor initial guess that might cause
+poor convergence of Newton's method.
 However, for grains with aspect ratio near 1:1,
 the additional bounding box check may be detrimental to performance.
 
