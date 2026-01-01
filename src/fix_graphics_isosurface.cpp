@@ -928,6 +928,9 @@ void FixGraphicsIsosurface::end_of_step()
     if (comm->me == 0) {    // only MPI rank 0 writes to the file
       auto *filecurrent = utils::strdup(utils::star_subst(filename, update->ntimestep, pad));
       if (platform::has_compress_extension(filename)) {
+        if (binary)
+          error->one(FLERR, Error::NOLASTLINE, "Connot use compression with binary output: {}",
+                     filename);
         fp = platform::compressed_write(filecurrent);
       } else if (binary) {
         fp = fopen(filecurrent, "wb");
@@ -935,8 +938,8 @@ void FixGraphicsIsosurface::end_of_step()
         fp = fopen(filecurrent, "w");
       }
       if (fp == nullptr)
-        error->one(FLERR, Error::NOLASTLINE, "Cannot open dump file {}:{}", filecurrent,
-                   utils::getsyserror());
+        error->one(FLERR, Error::NOLASTLINE, "Cannot open STL output file {} for writing: {}",
+                   filecurrent, utils::getsyserror());
 
       auto title = fmt::format("STL isosurface from fix {} graphics/isosurface on step {}", id,
                                update->ntimestep);
