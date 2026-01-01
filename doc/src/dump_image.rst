@@ -229,7 +229,7 @@ script to generate the images/movie.
 
 .. |dump1| image:: img/dump1.jpg
    :width: 19%
-.. |dump2| image:: img/dump2.jpg
+.. |dump2| image:: img/dump2.png
    :width: 19%
 .. |dump3| image:: img/dump3.png
    :width: 19%
