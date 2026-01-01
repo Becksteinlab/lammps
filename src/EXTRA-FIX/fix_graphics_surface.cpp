@@ -39,7 +39,7 @@ constexpr double BIG = 1.0e200;
 
 // for choosing the mesh resolution
 enum { NONE, SURFMIN, SURFLOW, SURFMED, SURFHIGH, SURFMAX };
-constexpr double GRIDPOINTS[] = {0, 8.0, 16.0, 32.0, 128.0, 256.0};
+constexpr double GRIDPOINTS[] = {0, 8.0, 16.0, 64.0, 128.0, 256.0};
 
 // for choosing property
 enum { NUMBER, MASS, CHARGE, VARIABLE, COMPUTE, FIX, CUSTOM };
