@@ -45,7 +45,7 @@ constexpr double GRIDPOINTS[] = {0, 8.0, 16.0, 64.0, 128.0, 256.0};
 enum { NUMBER, MASS, CHARGE, VARIABLE, COMPUTE, FIX, CUSTOM };
 
 // for truncating gaussian spreading
-constexpr double CUTVAL = -std::log(0.0001);
+constexpr double CUTVAL = 9.210340371976182;    // = -std::log(0.0001);
 // extra grid points at the sides of the subbox grid
 constexpr int GRIDEXTRA = 4;
 
