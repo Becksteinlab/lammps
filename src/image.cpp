@@ -943,27 +943,31 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
       // there can be single pixel gaps due to rounding
       // using <= if test can leave single-pixel gaps between 2 triangles
       // using < if test fixes most of them
-
+      // suggested by Nathan Fabian, Nov 2022
+      //
+      // using a < -0.000005 if test fixes even more cases and results in only slightly fuzzy edges.
+      // using a smaller magnitude value has less effect, using a large magnitude value
+      // changed 01-01-2026 by Axel Kohlmeyer
       MathExtra::sub3 (zlocal, xlocal, s1);
       MathExtra::sub3 (ylocal, xlocal, s2);
       MathExtra::sub3 (p, xlocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       MathExtra::sub3 (xlocal, ylocal, s1);
       MathExtra::sub3 (zlocal, ylocal, s2);
       MathExtra::sub3 (p, ylocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       MathExtra::sub3 (ylocal, zlocal, s1);
       MathExtra::sub3 (xlocal, zlocal, s2);
       MathExtra::sub3 (p, zlocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       double cNormal[3];
       cNormal[0] = MathExtra::dot3(camRight, normal);
