@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include "fix_graphics_surface.h"
+#include "fix_graphics_isosurface.h"
 
 #include "arg_info.h"
 #include "atom.h"
@@ -407,11 +407,11 @@ constexpr int TRITABLE[256][16] = {
 
 /* ---------------------------------------------------------------------- */
 
-FixGraphicsSurface::FixGraphicsSurface(LAMMPS *lmp, int narg, char **arg) :
+FixGraphicsIsosurface::FixGraphicsIsosurface(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), pstr(nullptr), pcomp(nullptr), pfix(nullptr), pdata(nullptr),
     imgobjs(nullptr), imgparms(nullptr)
 {
-  if (narg < 6) utils::missing_cmd_args(FLERR, "fix graphics/surface", error);
+  if (narg < 6) utils::missing_cmd_args(FLERR, "fix graphics/isosurface", error);
 
   // fix settings
   global_freq = nevery;
@@ -421,9 +421,9 @@ FixGraphicsSurface::FixGraphicsSurface(LAMMPS *lmp, int narg, char **arg) :
   nmax = -1;
 
   if (domain->triclinic)
-    error->all(FLERR, "Fix graphics/surface is currently not compatible with triclinic cells");
+    error->all(FLERR, "Fix graphics/isosurface is currently not compatible with triclinic cells");
   if (domain->dimension == 2)
-    error->all(FLERR, "Fix graphics/surface is currently not compatible with 2d systems");
+    error->all(FLERR, "Fix graphics/isosurface is currently not compatible with 2d systems");
 
   // defaults
   numobjs = 0;
@@ -435,17 +435,17 @@ FixGraphicsSurface::FixGraphicsSurface(LAMMPS *lmp, int narg, char **arg) :
   // parse mandatory args
 
   nevery = utils::inumeric(FLERR, arg[3], false, lmp);
-  if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics/surface nevery value {}", nevery);
+  if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics/isosurface nevery value {}", nevery);
   iso = utils::numeric(FLERR, arg[4], false, lmp);
   rad = 2.0 * utils::numeric(FLERR, arg[5], false, lmp);
-  if (rad <= 0.0) error->all(FLERR, 5, "Illegal fix graphics/surface radius value {}", rad);
+  if (rad <= 0.0) error->all(FLERR, 5, "Illegal fix graphics/isosurface radius value {}", rad);
 
   // parse optional args
 
   int iarg = 6;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "quality") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/surface quality", error);
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/isosurface quality", error);
       if (strcmp(arg[iarg + 1], "min") == 0) {
         quality = SURFMIN;
       } else if (strcmp(arg[iarg + 1], "low") == 0) {
@@ -457,12 +457,13 @@ FixGraphicsSurface::FixGraphicsSurface(LAMMPS *lmp, int narg, char **arg) :
       } else if (strcmp(arg[iarg + 1], "max") == 0) {
         quality = SURFMAX;
       } else {
-        error->all(FLERR, iarg + 1, "Unknown fix graphics/surface quality setting {}",
+        error->all(FLERR, iarg + 1, "Unknown fix graphics/isosurface quality setting {}",
                    arg[iarg + 1]);
       }
       iarg += 2;
     } else if (strcmp(arg[iarg], "property") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/surface property", error);
+      if (iarg + 2 > narg)
+        utils::missing_cmd_args(FLERR, "fix graphics/isosurface property", error);
       if (strcmp(arg[iarg + 1], "none") == 0) {
         pflag = ArgInfo::NONE;
       } else if (strcmp(arg[iarg + 1], "mass") == 0) {
@@ -476,82 +477,86 @@ FixGraphicsSurface::FixGraphicsSurface(LAMMPS *lmp, int narg, char **arg) :
 
         // check validity of property argument
         if ((pflag == ArgInfo::UNKNOWN) || (pflag == ArgInfo::NONE) || (argi.get_dim() > 1))
-          error->all(FLERR, iarg + 1, "Invalid fix graphics/surface property {}", arg[iarg + 1]);
+          error->all(FLERR, iarg + 1, "Invalid fix graphics/isosurface property {}", arg[iarg + 1]);
 
         if (pflag == ArgInfo::COMPUTE) {
           pcomp = modify->get_compute_by_id(pstr);
           if (!pcomp)
-            error->all(FLERR, iarg + 1, "Compute ID {} for fix graphics/surface does not exist",
+            error->all(FLERR, iarg + 1, "Compute ID {} for fix graphics/isosurface does not exist",
                        pstr);
           if (pcomp->peratom_flag == 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface compute {} does not calculate per-atom values", pstr);
+                       "Fix graphics/isosurface compute {} does not calculate per-atom values",
+                       pstr);
           if (pindex == 0 && pcomp->size_peratom_cols != 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface compute {} does not calculate a per-atom vector",
+                       "Fix graphics/isosurface compute {} does not calculate a per-atom vector",
                        pstr);
           if (pindex && pcomp->size_peratom_cols == 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface compute {} does not calculate a per-atom array", pstr);
+                       "Fix graphics/isosurface compute {} does not calculate a per-atom array",
+                       pstr);
           if (pindex && pindex > pcomp->size_peratom_cols)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface compute {} array is accessed out-of-range{}", pstr,
+                       "Fix graphics/isosurface compute {} array is accessed out-of-range{}", pstr,
                        utils::errorurl(20));
 
         } else if (pflag == ArgInfo::FIX) {
           pfix = modify->get_fix_by_id(pstr);
           if (!pfix)
-            error->all(FLERR, iarg + 1, "Fix ID {} for fix graphics/surface does not exist", pstr);
+            error->all(FLERR, iarg + 1, "Fix ID {} for fix graphics/isosurface does not exist",
+                       pstr);
           if (pfix->peratom_flag == 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface fix {} does not calculate per-atom values", pstr);
+                       "Fix graphics/isosurface fix {} does not calculate per-atom values", pstr);
           if (pindex == 0 && pfix->size_peratom_cols != 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface fix {} does not calculate a per-atom vector", pstr);
+                       "Fix graphics/isosurface fix {} does not calculate a per-atom vector", pstr);
           if (pindex && pfix->size_peratom_cols == 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface fix {} does not calculate a per-atom array", pstr);
+                       "Fix graphics/isosurface fix {} does not calculate a per-atom array", pstr);
           if (pindex && pindex > pfix->size_peratom_cols)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface fix {} array is accessed out-of-range{}", pstr,
+                       "Fix graphics/isosurface fix {} array is accessed out-of-range{}", pstr,
                        utils::errorurl(20));
           if (nevery % pfix->peratom_freq)
             error->all(FLERR, iarg + 1,
-                       "Fix {} for fix graphics/surface not computed at compatible time{}", pstr,
+                       "Fix {} for fix graphics/isosurface not computed at compatible time{}", pstr,
                        utils::errorurl(7));
 
         } else if (pflag == ArgInfo::VARIABLE) {
           pvar = input->variable->find(pstr);
           if (pvar < 0)
-            error->all(FLERR, iarg + 1, "Variable name {} for fix graphics/surface does not exist",
-                       pstr);
+            error->all(FLERR, iarg + 1,
+                       "Variable name {} for fix graphics/isosurface does not exist", pstr);
           if (input->variable->atomstyle(pvar) == 0)
             error->all(FLERR, iarg + 1,
-                       "Fix graphics/surface variable {} is not atom-style variable", pstr);
+                       "Fix graphics/isosurface variable {} is not atom-style variable", pstr);
         }
       }
       iarg += 2;
     } else if (strcmp(arg[iarg], "filename") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/surface filename", error);
+      if (iarg + 2 > narg)
+        utils::missing_cmd_args(FLERR, "fix graphics/isosurface filename", error);
       filename = arg[iarg + 1];
       iarg += 2;
     } else if (strcmp(arg[iarg], "binary") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/surface binary", error);
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/isosurface binary", error);
       binary = utils::logical(FLERR, arg[iarg + 1], false, lmp);
       iarg += 2;
     } else if (strcmp(arg[iarg], "pad") == 0) {
-      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/surface pad", error);
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix graphics/isosurface pad", error);
       pad = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
       iarg += 2;
     } else {
-      error->all(FLERR, iarg, "Unknown fix graphics/surface keyword {}", arg[iarg]);
+      error->all(FLERR, iarg, "Unknown fix graphics/isosurface keyword {}", arg[iarg]);
     }
   }
 }
 
 /* ---------------------------------------------------------------------- */
 
-FixGraphicsSurface::~FixGraphicsSurface()
+FixGraphicsIsosurface::~FixGraphicsIsosurface()
 {
   delete[] pstr;
   memory->destroy(pdata);
@@ -561,7 +566,7 @@ FixGraphicsSurface::~FixGraphicsSurface()
 
 /* ---------------------------------------------------------------------- */
 
-int FixGraphicsSurface::setmask()
+int FixGraphicsIsosurface::setmask()
 {
   int mask = 0;
   mask |= FixConst::POST_FORCE;
@@ -572,7 +577,7 @@ int FixGraphicsSurface::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::init()
+void FixGraphicsIsosurface::init()
 {
   if (utils::strmatch(update->integrate_style, "^respa"))
     nlevels_respa = (dynamic_cast<Respa *>(update->integrate))->nlevels;
@@ -606,7 +611,7 @@ void FixGraphicsSurface::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::setup(int vflag)
+void FixGraphicsIsosurface::setup(int vflag)
 {
   post_force(vflag);
   end_of_step();
@@ -614,7 +619,7 @@ void FixGraphicsSurface::setup(int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::post_force(int /*vflag*/)
+void FixGraphicsIsosurface::post_force(int /*vflag*/)
 {
   // manage updates of computes, if needed
   if ((pflag != ArgInfo::NONE) && (pflag != ArgInfo::MASS)) modify->clearstep_compute();
@@ -623,7 +628,7 @@ void FixGraphicsSurface::post_force(int /*vflag*/)
   if (nmax < atom->nmax) {
     nmax = MAX(1, atom->nmax);
     memory->destroy(pdata);
-    memory->create(pdata, nmax, "fix_graphics/surface:pdata");
+    memory->create(pdata, nmax, "fix_graphics/isosurface:pdata");
   }
 
   // fill per-atom data storage with requested data for local atoms
@@ -679,8 +684,8 @@ void FixGraphicsSurface::post_force(int /*vflag*/)
 
 /* ---------------------------------------------------------------------- */
 
-int FixGraphicsSurface::pack_forward_comm(int n, int *list, double *buf, int /*pbc_flag*/,
-                                          int * /*pbc*/)
+int FixGraphicsIsosurface::pack_forward_comm(int n, int *list, double *buf, int /*pbc_flag*/,
+                                             int * /*pbc*/)
 {
   int m = 0;
   for (int i = 0; i < n; ++i) {
@@ -693,7 +698,7 @@ int FixGraphicsSurface::pack_forward_comm(int n, int *list, double *buf, int /*p
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::unpack_forward_comm(int n, int first, double *buf)
+void FixGraphicsIsosurface::unpack_forward_comm(int n, int first, double *buf)
 {
   int m = 0;
   int last = first + n;
@@ -703,14 +708,14 @@ void FixGraphicsSurface::unpack_forward_comm(int n, int first, double *buf)
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::post_force_respa(int vflag, int ilevel, int /*iloop*/)
+void FixGraphicsIsosurface::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
   if (ilevel == nlevels_respa - 1) post_force(vflag);
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsSurface::end_of_step()
+void FixGraphicsIsosurface::end_of_step()
 {
   // determine grid dimensions
 
@@ -733,9 +738,9 @@ void FixGraphicsSurface::end_of_step()
   // allocate grids and zero it out the property grid
   double ***isogrid, ***distgrid;
   int ***typegrid;
-  memory->create(isogrid, nx, ny, nz, "fix graphics/surface:isogrid");
-  memory->create(distgrid, nx, ny, nz, "fix graphics/surface:distgrid");
-  memory->create(typegrid, nx, ny, nz, "fix graphics/surface:typegrid");
+  memory->create(isogrid, nx, ny, nz, "fix graphics/isosurface:isogrid");
+  memory->create(distgrid, nx, ny, nz, "fix graphics/isosurface:distgrid");
+  memory->create(typegrid, nx, ny, nz, "fix graphics/isosurface:typegrid");
   memset(isogrid[0][0], 0, sizeof(double) * nx * ny * nz);
   memset(typegrid[0][0], 0, sizeof(int) * nx * ny * nz);
   for (int ix = 0; ix < nx; ++ix) {
@@ -756,7 +761,7 @@ void FixGraphicsSurface::end_of_step()
                  nrange, rcutsq, rad);
   }
 
-  // subtract the isovalue from grid data so that the surface would be drawn for a value of < 0.0
+  // subtract the isovalue from grid data so that the isosurface would be drawn for a value of < 0.0
   for (int ix = 0; ix < nx; ++ix) {
     for (int iy = 0; iy < ny; ++iy) {
       for (int iz = 0; iz < nz; ++iz) isogrid[ix][iy][iz] -= iso;
@@ -875,7 +880,7 @@ void FixGraphicsSurface::end_of_step()
    provide graphics information to dump image
 ------------------------------------------------------------------------- */
 
-int FixGraphicsSurface::image(int *&objs, double **&parms)
+int FixGraphicsIsosurface::image(int *&objs, double **&parms)
 {
   objs = imgobjs;
   parms = imgparms;

@@ -13,21 +13,21 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(graphics/surface,FixGraphicsSurface);
+FixStyle(graphics/isosurface,FixGraphicsIsosurface);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_GRAPHICS_SURFACE_H
-#define LMP_FIX_GRAPHICS_SURFACE_H
+#ifndef LMP_FIX_GRAPHICS_ISOSURFACE_H
+#define LMP_FIX_GRAPHICS_ISOSURFACE_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixGraphicsSurface : public Fix {
+class FixGraphicsIsosurface : public Fix {
  public:
-  FixGraphicsSurface(class LAMMPS *, int, char **);
-  ~FixGraphicsSurface() override;
+  FixGraphicsIsosurface(class LAMMPS *, int, char **);
+  ~FixGraphicsIsosurface() override;
 
   int setmask() override;
   void init() override;

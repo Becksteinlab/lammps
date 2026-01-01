@@ -887,8 +887,6 @@
 /fix_filter_corotate.h
 /fix_granular_mdr.cpp
 /fix_granular_mdr.h
-/fix_graphics_surface.cpp
-/fix_graphics_surface.h
 /fix_viscosity.cpp
 /fix_viscosity.h
 /fix_ehex.cpp
