@@ -397,7 +397,7 @@ can be used to reduce the number of reaction templates needed to model a
 set of similar reactions.  Wildcard atoms are specified Wildcards section
 of the map file.  The atom types of wildcard atoms in the simulation are
 not updated.  Any bond, angle, dihedral, or improper, which is defined in
-the pre-reaction template and contains a wildcard atom, will be updated by
+the reaction templates and contains a wildcard atom, will be updated by
 inferring its type from its constituent atom types.  To use wildcard atoms,
 a specific :doc:`type label <Howto_type_labels>` format is necessary to
 infer the types of higher-order interactions.  Bond, angle, dihedral, and
