@@ -708,12 +708,10 @@ void DumpImage::init_style()
 
   // set up type -> element mapping
 
-  if (atomflag && acolor == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      colorelement[i] = image->element2color(typenames[i]);
-      if (colorelement[i] == nullptr)
-        error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
-    }
+  for (int i = 1; i <= ntypes; i++) {
+    colorelement[i] = image->element2color(typenames[i]);
+    if (colorelement[i] == nullptr)
+      error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
   }
 
   if (atomflag && adiam == ELEMENT) {
