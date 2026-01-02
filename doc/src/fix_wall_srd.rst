@@ -58,12 +58,12 @@ A particle/wall collision occurs if an SRD particle moves outside the
 wall on a timestep.  This alters the position and velocity of the SRD
 particle and imparts a force to the wall.
 
-The *collision* and *Tsrd* settings specified via the :doc:`fix srd <fix_srd>` command affect the SRD/wall collisions.  A *slip*
-setting for the *collision* keyword means that the tangential
-component of the SRD particle momentum is preserved.  Thus only a
-normal force is imparted to the wall.  The normal component of the new
-SRD velocity is sampled from a Gaussian distribution at temperature
-*Tsrd*\ .
+The *collision* and *Tsrd* settings specified via the :doc:`fix srd
+<fix_srd>` command affect the SRD/wall collisions.  A *slip* setting for
+the *collision* keyword means that the tangential component of the SRD
+particle momentum is preserved.  Thus only a normal force is imparted to
+the wall.  The normal component of the new SRD velocity is sampled from
+a Gaussian distribution at temperature *Tsrd*\ .
 
 For a *noslip* setting of the *collision* keyword, both the normal and
 tangential components of the new SRD velocity are sampled from a

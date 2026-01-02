@@ -217,9 +217,8 @@ rendered as a cylinder.
 The color of the indenter object is by default that of the first atom
 type when using color styles "type" or "element".  With color style
 "const" the default value of "white" can be changed using
-:doc:`dump_modify fcolor <dump_image>`.  Similarly, the transparency
-follows the first atom type or can be changed for color style "const"
-with *dump\_modify ftrans*\ .
+:doc:`dump_modify fcolor <dump_image>`.  The transparency is by default
+fully opaque and can be changed with *dump\_modify ftrans*\ .
 
 The *fflag1* setting of *dump image fix* has no impact on rendering a
 spherical indenter or a planar indenter in 3d systems.  For a

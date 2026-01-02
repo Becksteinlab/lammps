@@ -150,9 +150,8 @@ are included in the rendered image.
 The color of the arrows is by default that of the atoms when using color
 styles "type" or "element".  With color style "const" the default value
 of "white" can be changed using :doc:`dump_modify fcolor <dump_image>`.
-Similarly, the transparency follows the atom type or can be changed for
-color style "const" with *dump\_modify ftrans*\ .
-
+The transparency is by default fully opaque and can be changed with
+*dump\_modify ftrans*\ .
 
 The *fflag1* and *fflag2* settings of *dump image fix* are currently ignored.
 
