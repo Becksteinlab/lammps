@@ -8,13 +8,13 @@ Syntax
 
 .. code-block:: LAMMPS
 
-   fix ID group-ID graphics/periodic Nevery mode keyword args ...
+   fix ID group-ID graphics/periodic Nevery keyword args ...
 
 * ID, group-ID are documented in :doc:`fix <fix>` command
 * graphics/periodic = style name of this fix command
 * Nevery = update graphics information every this many time steps
 * zero or more keywords or keyword/value pairs may be appended
-* keyword = *autoscale*
+* keyword = *xlo* or *xhi* or *ylo* or *yhi* or *zlo* or *zhi* or *radius* or *atoms* or *bonds*
 
   .. parsed-literal::
 
