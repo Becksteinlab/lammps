@@ -28,12 +28,6 @@ namespace MathExtraSuperellipsoids {
   // needed for shape functions grad and matrix 
   void global2local_vector(const double v[3], const double *quat, double local_v[3]); // TODO: TBD if still useful once we implement Hertz. There might be a cheaper way with the rotation matrix that we need for contact detection anyway
 
-  // shape function computations
-  // TODO Jacopo: Let's make sure we only have one set of such functions and that they are optimized. Deleted some but cannot do all without messing with your code.
-  void shape_function_local(const double *shape, const double *block, const double *quat, const double *point, double local_f);
-  void shape_function_local_grad(const double *shape, const double *block, const double *quat, const double *point, double *local_grad);
-  void shape_function_local_hessian(const double *shape, const double *block, const double *quat, const double *point, double local_hessian[3][3]);
-
   inline double det4_M44_zero(const double m[4][4]);
 
   // 4 by 4 sytems solvers, they all overwrite b with the solution
@@ -57,8 +51,8 @@ namespace MathExtraSuperellipsoids {
   inline int determine_contact_point_wall(const double* xci, const double Ri[3][3], const double* shapei, const double* blocki, const int flagi,
                                         const double* x_wall, const double* n_wall, double* X0, double* nij, double* overlap);
 
-  // Jibril's versions of the functions for contact detection
-  // TODO @Jacopo: you might need to add a function that only computed the shape, or shape+grad if still needed in overlap / curvature calculation after answering the other TODOs I left
+  
+  // shape function computations, using flag to optimize for special cases (ellipsoid, superquadric with n1=n2)
   double shape_and_derivatives_local(const double* xlocal, const double* shape, const double* block, const int flag, double* grad, double hess[3][3]);
   double shape_and_derivatives_local_superquad(const double* xlocal, const double* shape, const double* block, double* grad, double hess[3][3]);
   double shape_and_derivatives_local_n1equaln2(const double* xlocal, const double* shape, const double n, double* grad, double hess[3][3]);
@@ -74,17 +68,16 @@ namespace MathExtraSuperellipsoids {
                               const double* xcj, const double Rj[3][3], const double* shapej, const double* blockj, const int flagj,
                               double* X0, double* nij);
 
-  // TODO: Jacopo the global function is never used. Can we delete? Is this duplicating the `stable_shape_and_gradient` methods?
-  double regularized_shape_and_derivatives_global(const double* xc, const double R[3][3], const double* shape, const double* block, const int flag, const double* X0, double* grad, double hess[3][3]);
   void apply_regularization_shape_function(double n1, double *value, double *grad, double hess[3][3]);
-  // functions to compute shape function and gradient only when called for newton method
-  // TODO: rename those. I don't think `stable` is a good terminolgy here. Maybe "..._local_superquad_surfacesearch", or "modified_shape_..."" TBD
-  double stable_shape_and_gradient_local_superquad(const double* xlocal, const double* shape, const double* block, double* grad);
-  double stable_shape_and_gradient_local_n1equaln2(const double* xlocal, const double* shape, const double n, double* grad);
-  double stable_shape_and_gradient_local_ellipsoid(const double* xlocal, const double* shape, double* grad);
-
+  // functions to compute shape function and gradient only when called for surface point calculation given contact point
+  double shape_and_gradient_local_superquad_surfacesearch(const double* xlocal, const double* shape, const double* block, double* grad);
+  double shape_and_gradient_local_n1equaln2_surfacesearch(const double* xlocal, const double* shape, const double n, double* grad);
+  
   double compute_overlap_distance(const double* shape, const double* block, const double Rot[3][3], const int flag, const double* global_point, const double* global_normal, const double* center);
   
+  double mean_curvature_superellipsoid(const double *shape, const double *block, const int flag, const double R[3][3], const double *surf_global_point, const double *xc);
+  double gaussian_curvature_superellipsoid(const double *shape, const double *block, const int flag, const double R[3][3], const double *surf_global_point, const double *xc);
+
 };
 
 
@@ -128,7 +121,7 @@ inline double MathExtraSuperellipsoids::det4_M44_zero(const double m[4][4])
 
 inline bool MathExtraSuperellipsoids::solve_4x4_manual(double A[16], double b[4]) {
     
-    // Tikhonov regularization
+    // Tikhonov regularization (avoiding the constraint on the last row)
     // High blockiness grains can have zero curvature / singular Hessian
     // along principal local axes (x=0, y=0, z=0)
     const double diag_weight = TIKHONOV_SCALE * (A[0] + A[5] + A[10]);

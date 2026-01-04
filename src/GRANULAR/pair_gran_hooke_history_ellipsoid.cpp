@@ -305,6 +305,10 @@ void PairGranHookeHistoryEllipsoid::compute(int eflag, int vflag)
         overlap1 = MathExtraSuperellipsoids::compute_overlap_distance(shapei, blocki, Ri, flagi, X0, nij, x[i]);
         overlap2 = MathExtraSuperellipsoids::compute_overlap_distance(shapej, blockj, Rj, flagj, X0, nji, x[j]); // TODO: Jibril: I wonder if we'd get the correct, but negative overlap if we picked nji, which might be cheaper than computing nji
 
+        // TODO: for the hertzian contact pass the surface points directly to the 
+        // curvature calculations. Need to add the normal scaled by the overlap to the contact point
+
+
         // branch vectors 
         double cr1[3], cr2[3];
         MathExtra::sub3(X0, x[i], cr1);

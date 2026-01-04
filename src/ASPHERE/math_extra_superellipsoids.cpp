@@ -51,60 +51,49 @@ static constexpr double MINSLOPE_OVERLAP = 1e-12;
    curvature of superellipsoid
    source https://en.wikipedia.org/wiki/Mean_curvature
 ------------------------------------------------------------------------- */
-// TODO Jacopo: please refactor using the high-performance functions.
-//              This recomputes a lot of expensive things twice or more
-void mean_curvature_superellipsoid(const double *shape, const double *blockiness, const double* quat, const double *global_point, double curvature)
+double mean_curvature_superellipsoid(const double *shape, const double *block, const int flag, const double R[3][3], const double *surf_global_point, const double *xc)
 {
   // this code computes the mean curvature on the superellipsoid surface
   // for the given global point
-  double local_point[3],hessian[3][3], nablaF[3], f, normal[3];
-  global2local_vector(global_point, quat, local_point);
-  shape_function_local(shape, blockiness, quat, local_point, f);  
-  double koef = pow(fabs(0.5), std::max(blockiness[0], blockiness[1])-2.0);
-  double alpha = 1.0 / pow(fabs(f/koef + 1.0), 1.0/blockiness[0]);
-  for(int i = 0; i < 3; i++)
-    local_point[i] *= alpha; // TODO: why is the local point moved after the shape function is computed? This does not seem to appear in Eq (39) of Podlozhnyuk
-                             //       If not, we may directly use the function that computes shape func, grad and hess for cheaper
-  shape_function_local_grad(shape, blockiness, quat, local_point, nablaF);  
-  shape_function_local_hessian(shape, blockiness, quat, local_point, hessian);  
-  MathExtra::normalize3(nablaF, normal);
-  double temp[3];
-  MathExtra::matvec(hessian, normal, temp);
-  double F_mag = sqrt(MathExtra::dot3(nablaF, nablaF));
-  curvature = fabs(MathExtra::dot3(normal, temp) - (hessian[0][0] + hessian[1][1] + hessian[2][2])) / fabs(2.0 * F_mag);
+  double hess[3][3], grad[3], normal[3];
+  double shapefunc, xlocal[3], tmp_v[3];
+  MathExtra::sub3(surf_global_point, xc, tmp_v); // here tmp_v is the vector from center to surface point
+  MathExtra::transpose_matvec(R, tmp_v, xlocal);
+  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, grad, hess); // computation of curvature is independent of local or global frame
+  MathExtra::normalize3(grad, normal);
+  MathExtra::matvec(hess, normal, tmp_v); // here tmp_v is intermediate product
+  double F_mag = sqrt(MathExtra::dot3(grad, grad));
+  double curvature = fabs(MathExtra::dot3(normal, tmp_v) - (hess[0][0] + hess[1][1] + hess[2][2])) / (2.0 * F_mag);
+  return curvature;
 }
 
-void gaussian_curvature_superellipsoid(const double *shape, const double *blockiness, const double* quat, const double *global_point, double curvature)
+double gaussian_curvature_superellipsoid(const double *shape, const double *block, const int flag, const double R[3][3], const double *surf_global_point, const double *xc)
 {
   // this code computes the gaussian curvature coefficient
   // for the given global point
-  double local_point[3],hessian[3][3], nablaF[3], f, normal[3];
-  global2local_vector(global_point, quat, local_point); 
-  shape_function_local(shape, blockiness, quat, local_point, f);
-  double koef = pow(fabs(0.5), std::max(blockiness[0], blockiness[1])-2.0);
-  double alpha = 1.0 / pow(fabs(f/koef + 1.0), 1.0/blockiness[0]);
-  for(int i = 0; i < 3; i++)
-    local_point[i] *= alpha; // TODO: why is the local point moved after the shape function is computed? This does not seem to appear in Eq (39) of Podlozhnyuk
-                             //       If not, we may directly use the function that computes shape func, grad and hess for cheaper
-  shape_function_local_grad(shape, blockiness, quat, local_point, nablaF);
-  shape_function_local_hessian(shape, blockiness, quat, local_point, hessian);
-  MathExtra::normalize3(nablaF, normal);
+  double hess[3][3], grad[3], normal[3];
+  double shapefunc, xlocal[3], tmp_v[3];
+  MathExtra::sub3(surf_global_point, xc, tmp_v); // here tmp_v is the vector from center to surface point
+  MathExtra::transpose_matvec(R, tmp_v, xlocal);
+  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, grad, hess); // computation of curvature is independent of local or global frame
+  MathExtra::normalize3(grad, normal);
+
   double temp[3];
-  MathExtra::matvec(hessian, normal, temp);
-  double F_mag = sqrt(MathExtra::dot3(nablaF, nablaF));
+  MathExtra::matvec(hess, normal, temp);
+  double F_mag = sqrt(MathExtra::dot3(grad, grad));
 
-  double fx = nablaF[0];
-  double fy = nablaF[1];
-  double fz = nablaF[2];
+  double fx = grad[0];
+  double fy = grad[1];
+  double fz = grad[2];
 
-  double fxx = hessian[0][0];
-  double fxy = hessian[0][1];
-  double fxz = hessian[0][2];
+  double fxx = hess[0][0];
+  double fxy = hess[0][1];
+  double fxz = hess[0][2];
 
-  double fyy = hessian[1][1];
-  double fyz = hessian[1][2];
+  double fyy = hess[1][1];
+  double fyz = hess[1][2];
 
-  double fzz = hessian[2][2];
+  double fzz = hess[2][2];
 
   double mat[4][4] = {
     {fxx, fxy, fxz, fx},
@@ -113,8 +102,9 @@ void gaussian_curvature_superellipsoid(const double *shape, const double *blocki
     {fx,  fy,  fz, 0.0} 
   };
 
-    double K = -det4_M44_zero(mat) / (F_mag*F_mag*F_mag*F_mag);
-    curvature =  sqrt(fabs(K));
+  double K = -det4_M44_zero(mat) / (F_mag*F_mag*F_mag*F_mag);
+  double curvature =  sqrt(fabs(K));
+  return curvature;
 }
 
   
@@ -130,62 +120,8 @@ void global2local_vector(const double *v, const double *quat, double *local_v){
 
 };
 
-
 /* ----------------------------------------------------------------------
-   shape function computations for superellipsoids
-------------------------------------------------------------------------- */
-// TODO Jacopo: this function does nothing (f is passed by value), return double instead
-//              Please refactor using ideas from the high-performance functions and distinguish between cases
-//              Also, this function only seems to be used in curvature calculation. After we discuss why the local_point is moved, we may not even need a function that only computes the shape function without cumputing its derivatives
-void shape_function_local(const double *shape, const double *block, const double *quat, const double *point, double local_f){
-  const double n1 = block[0], n2 = block[1];
-  
-  local_f = pow( pow(abs(point[0]/shape[0]), n2) + pow(abs(point[1]/shape[1]), n2) , n1/ n2) + pow(abs(point[2]/shape[2]), n1)  - 1.0;
-};
-
-void shape_function_local_grad(const double *shape, const double *block, const double *quat, const double *point, double *local_grad){
-  // point is in local coordinates
-  const double n1 = block[0], n2 = block[1];
-  const double ainv = 1.0 / shape[0];
-  const double binv = 1.0 / shape[1];
-  const double cinv = 1.0 / shape[2];
-
-  const double nu = pow(abs(point[0] * ainv), n2) + pow(abs(point[1] * binv), n2);
-  const double nu_12 = pow(nu, n1 / n2 - 1.0);
-
-  local_grad[0] = n1*ainv * pow(abs(point[0] * ainv), n2 - 1.0) * nu_12 * copysign(1.0, point[0]);
-  local_grad[1] = n1*binv * pow(abs(point[1] * binv), n2 - 1.0) * nu_12 * copysign(1.0, point[1]);
-  local_grad[2] = n1*cinv * pow(abs(point[2] * cinv), n1 - 1.0) * copysign(1.0, point[2]);
-
-};
-
-void shape_function_local_hessian(
-  const double *shape, const double *block, const double *quat, const double *point, double local_hess[3][3]) {
-  const double n1 = block[0], n2 = block[1];
-  const double ainv = 1.0 / shape[0];
-  const double binv = 1.0 / shape[1];
-  const double cinv = 1.0 / shape[2];
-
-  const double nu = pow(abs(point[0] * ainv), n2) + pow(abs(point[1] * binv), n2);
-  const double nu_12_1 = pow(nu, n1 / n2 - 1.0);
-  const double nu_12_2 = pow(nu, n1 / n2 - 2.0);
-
-  local_hess[0][2] = local_hess[2][0] = local_hess[1][2] = local_hess[2][1] =0;
-
-  local_hess[0][0] = n1 * (n2 - 1) * ainv * ainv * pow(abs(point[0] * ainv), n2 - 2.0)* nu_12_1 +
-                     n1 * (n1 - n2) * ainv * ainv * pow(abs(point[0] * ainv), 2*n2 - 2.0)* nu_12_2;
-
-  local_hess[1][1] = n1 * (n2 - 1) * binv * binv * pow(abs(point[1] * binv), n2 - 2.0)* nu_12_1 +
-                     n1 * (n1 - n2) * ainv * ainv * pow(abs(point[1] * binv), 2*n2 - 2.0)* nu_12_2;
-
-  local_hess[2][2] = n1 * (n1 - 1) * cinv * cinv * pow(abs(point[2] * cinv), n1-2);
-
-  local_hess[0][1] = n1 * (n1 - n2) * ainv * binv * pow(abs(point[0]*ainv), n2 - 1) *
-                     pow(abs(point[1]*binv), n2 -1) * pow(nu, n1 / n2 - 2) * copysign(1.0, shape[0] * shape[1]); 
-                
-  }
-/* ----------------------------------------------------------------------
-   Possible regularization for the shape functions
+   Possible regularization for the shape functions (WIP)
    Instead of F(x,y,z) - 1 = 0 we use (F(x,y,z))^(1/n1) -1 = G(x,y,z) = 0
    The gradient is simply nabla G = (1/n1) * (F)^(1/n1 - 1) * nabla F
    The hessian is H(G) = (1/n1) * (F)^(1/n1 - 1) * H(F) + (1/n1) * (1/n1 - 1) * (F)^(1/n1 - 2) * nabla F (nabla F)^T
@@ -218,6 +154,9 @@ void apply_regularization_shape_function(double n1, double *value, double *grad,
 };
 
 
+/* ----------------------------------------------------------------------
+   shape function computations for superellipsoids
+------------------------------------------------------------------------- */
 double shape_and_derivatives_local(const double* xlocal, const double* shape, const double* block, const int flag, double* grad, double hess[3][3]) {
   double shapefunc;
   // TODO: Not sure how to make flag values more clear
@@ -357,9 +296,9 @@ double regularized_shape_and_derivatives_global(const double* xc, const double R
 
 double shape_and_derivatives_global(const double* xc, const double R[3][3], const double* shape, const double* block, const int flag, const double* X0, double* grad, double hess[3][3]) {
   double shapefunc, xlocal[3], tmp_v[3], tmp_m[3][3];
-  MathExtra::sub3(X0, xc, tmp_v);
+  MathExtra::sub3(X0, xc, tmp_v); // here temp_v is X0 - xc
   MathExtra::transpose_matvec(R, tmp_v, xlocal);
-  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess);
+  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess); // here temp_v is grad in local
   MathExtra::matvec(R, tmp_v, grad);
   MathExtra::times3_transpose(hess, R, tmp_m);
   MathExtra::times3(R, tmp_m, hess);
@@ -495,7 +434,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
 
       double xilocal[3], gradi[3], hessi[3][3], xjlocal[3], gradj[3], hessj[3][3], tmp_v[3];
 
-      MathExtra::sub3(X_line, xci, tmp_v);
+      MathExtra::sub3(X_line, xci, tmp_v); 
       MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
       shapefunc[0] = shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hessi);
       MathExtra::matvec(Ri, tmp_v, gradi);
@@ -562,13 +501,10 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
   return 0;
 }
 
-
-
-
 // Functions to compute shape function and gradient only when called for newton method
 // to avoid computing hessian when not needed and having smoother landscape for the line search
 // General case for n1 != n2 > 2
-double stable_shape_and_gradient_local_superquad(const double* xlocal, const double* shape, const double* block, double* grad) {
+double shape_and_gradient_local_superquad_surfacesearch(const double* xlocal, const double* shape, const double* block, double* grad) {
   double a_inv = 1.0 / shape[0];
   double b_inv = 1.0 / shape[1];
   double c_inv = 1.0 / shape[2];
@@ -609,7 +545,7 @@ double stable_shape_and_gradient_local_superquad(const double* xlocal, const dou
 }
 
 // Special case for n2 = n2 = n > 2
-double stable_shape_and_gradient_local_n1equaln2(const double* xlocal, const double* shape, const double n, double* grad) {
+double shape_and_gradient_local_n1equaln2_surfacesearch(const double* xlocal, const double* shape, const double n, double* grad) {
   double a_inv = 1.0 / shape[0];
   double b_inv = 1.0 / shape[1];
   double c_inv = 1.0 / shape[2];
@@ -639,28 +575,6 @@ double stable_shape_and_gradient_local_n1equaln2(const double* xlocal, const dou
   grad[2] *= scale_factor;
 
   return std::pow(F, 1.0/n) - 1.0;
-}
-
-
-// Special case for n1 = n2 = 2
-double stable_shape_and_gradients_local_ellipsoid(const double* xlocal, const double* shape, double* grad) {
-  double a = 2.0 / (shape[0] * shape[0]);
-  double b = 2.0 / (shape[1] * shape[1]);
-  double c = 2.0 / (shape[2] * shape[2]);
-
-  // Equation (14) simplified for n1 = n2 = 2
-  grad[0] = a * xlocal[0];
-  grad[1] = b * xlocal[1];
-  grad[2] = c * xlocal[2];
-
-  double F = 0.5 * (grad[0]*xlocal[0] + grad[1]*xlocal[1] + grad[2]*xlocal[2]);
-  double scale_factor = std::sqrt(F) / 2.0;
-  
-  grad[0] *= scale_factor;
-  grad[1] *= scale_factor;
-  grad[2] *= scale_factor;
-
-  return std::sqrt(F) - 1.0;
 }
 
 // Newton Rapson method to find the overlap distance from the contact point given the normal
@@ -723,9 +637,9 @@ double compute_overlap_distance(
 
       // Calculate Distance Estimator value and Gradient
       if (flag == 1) {
-        val = stable_shape_and_gradient_local_n1equaln2(current_p, shape, block[0], local_grad);
+        val = shape_and_gradient_local_n1equaln2_surfacesearch(current_p, shape, block[0], local_grad);
       } else {
-        val = stable_shape_and_gradient_local_superquad(current_p, shape, block, local_grad);
+        val = shape_and_gradient_local_superquad_surfacesearch(current_p, shape, block, local_grad);
       }
 
       // Convergence Check
