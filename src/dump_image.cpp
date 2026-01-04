@@ -1595,6 +1595,12 @@ void DumpImage::create_image()
         ArrowObj a(fixarray[i][9]);
         a.draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4], fixarray[i][8],
                opacity);
+      } else if (fixvec[i] == PIXMAP) {
+        // get pointer to pixmap buffer and background transparency color
+        auto *pixmap = (const unsigned char *) ubuf(fixarray[i][6]).i;
+        double transcolor[3] = {fixarray[i][7], fixarray[i][8], fixarray[i][9]};
+        image->draw_pixmap(&fixarray[i][1], fixarray[i][4], fixarray[i][5], pixmap, transcolor,
+                           fixarray[i][10], opacity);
       } else if (fixvec[i] == BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
