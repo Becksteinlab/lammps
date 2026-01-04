@@ -46,86 +46,128 @@ namespace {
 // read image into buffer that is locally allocated with new
 // return null pointer if incompatible format or not supported
 
-unsigned char *read_image(FILE *fp, int &width, int &height)
+unsigned char *read_image(FILE *fp, int &width, int &height, std::string &fileinfo)
 {
   if (!fp) return nullptr;
   unsigned char *pixmap = nullptr;
 
+  if (utils::strmatch(fileinfo, "\\.jpg$") || utils::strmatch(fileinfo, "\\.JPG$") ||
+      utils::strmatch(fileinfo, "\\.jpeg$") || utils::strmatch(fileinfo, "\\.JPEG$")) {
+
 #if defined(LAMMPS_JPEG)
+    struct jpeg_decompress_struct cinfo;
+    struct jpeg_error_mgr jerr;
+    JSAMPROW row_pointer;
+
+    // initialize for reading from input stream
+    jpeg_create_decompress(&cinfo);
+    cinfo.err = jpeg_std_error(&jerr);
+    cinfo.out_color_space = JCS_RGB;
+    jpeg_stdio_src(&cinfo, fp);
+
+    int rv = jpeg_read_header(&cinfo, TRUE);
+    if (rv != JPEG_HEADER_OK) return nullptr;
+
+    jpeg_start_decompress(&cinfo);
+
+    // we currently only can handle 8-bit 3-component images
+    if ((cinfo.data_precision != 8) || (cinfo.output_components != 3)) return nullptr;
+
+    // read file line-by-line and convert to RGB buffer
+    width = cinfo.output_width;
+    height = cinfo.output_height;
+    pixmap = new unsigned char[3 * width * height];
+    JSAMPARRAY scanline = new unsigned char *[1];
+    for (int i = 0; i < height; ++i) {
+      scanline[0] = &pixmap[(height - 1 - i) * 3*width];
+      jpeg_read_scanlines(&cinfo, scanline, 1);
+    }
+    delete[] scanline;
+    jpeg_destroy_decompress(&cinfo);
+
+    fileinfo = fmt::format("{}x{} JPEG file, 8-bit RGB", width, height);
+    return pixmap;
 #else
-  return nullptr;
+    return nullptr;
 #endif
+  } else if (utils::strmatch(fileinfo, "\\.png$") || utils::strmatch(fileinfo, "\\.PNG$")) {
+
 #if defined(LAMMPS_PNG)
 #else
-  return nullptr;
-#endif
-
-  // read file in NetPBM binary format
-  char buffer[128];
-  char *ptr = fgets(buffer, 128, fp);
-  if (!ptr || (strlen(buffer) < 3) || (buffer[0] != 'P')) return nullptr;
-
-  // detect binary versus ASCII variant
-  bool binary = true;
-  if (buffer[1] == '3')
-    binary = false;
-  else if (buffer[1] != '6')
     return nullptr;
+#endif
+  } else {
 
-  // skip over optional comments
-  do {
+    // read file in NetPBM binary format
+    char buffer[128];
     char *ptr = fgets(buffer, 128, fp);
-  } while (buffer[0] == '#');
+    if (!ptr || (strlen(buffer) < 3) || (buffer[0] != 'P')) return nullptr;
 
-  int rv = sscanf(buffer, "%d%d", &width, &height);
-  if (rv != 2) return nullptr;
+    // detect binary versus ASCII variant
+    bool binary = true;
+    if (buffer[1] == '3')
+      binary = false;
+    else if (buffer[1] != '6')
+      return nullptr;
 
-  int tmp = 0;
-  ptr = fgets(buffer, 128, fp);
-  rv = sscanf(buffer, "%d", &tmp);
-  if ((rv != 1) || (tmp != 255)) return nullptr;
+    // skip over optional comments
+    do {
+      char *ptr = fgets(buffer, 128, fp);
+    } while (buffer[0] == '#');
 
-  pixmap = new unsigned char[3 * width * height];
-  if (binary) {
-    // read raw data directly into buffer in the expected order of lines
-    // this is the inverse of what Image::write_PPM() does
-    for (int y = height - 1; y >= 0; --y) {
-      rv = fread(&pixmap[y * width * 3], 3, width, fp);
-      if (rv != width) {
+    int rv = sscanf(buffer, "%d%d", &width, &height);
+    if (rv != 2) return nullptr;
+
+    int tmp = 0;
+    ptr = fgets(buffer, 128, fp);
+    rv = sscanf(buffer, "%d", &tmp);
+    if ((rv != 1) || (tmp != 255)) return nullptr;
+
+    fileinfo =
+        fmt::format("{}x{} PPM {} file, 8-bit RGB", width, height, binary ? "binary" : "text");
+    pixmap = new unsigned char[3 * width * height];
+    if (binary) {
+      // read raw data directly into buffer in the expected order of lines
+      // this is the inverse of what Image::write_PPM() does
+      for (int y = height - 1; y >= 0; --y) {
+        rv = fread(&pixmap[y * width * 3], 3, width, fp);
+        if (rv != width) {
+          delete[] pixmap;
+          return nullptr;
+        }
+      }
+    } else {
+      // read file line-by-line and store three RGB values at a time
+      auto reader = TextFileReader(fp, "NetPBM ASCII pixmap");
+      try {
+        int y = height - 1;
+        int x = 0;
+        auto *line = reader.next_line();
+        while (line) {
+          auto values = ValueTokenizer(line);
+
+          while (values.has_next()) {
+            pixmap[y * width * 3 + 3 * x] = values.next_int();
+            pixmap[y * width * 3 + 3 * x + 1] = values.next_int();
+            pixmap[y * width * 3 + 3 * x + 2] = values.next_int();
+            ++x;
+            // next line of pixels
+            if (x >= width) {
+              --y;
+              x = 0;
+            }
+          }
+          line = reader.next_line();
+        }
+      } catch (std::exception &e) {
         delete[] pixmap;
         return nullptr;
       }
     }
-  } else {
-    // read file line-by-line and store three RGB values at a time
-    auto reader = TextFileReader(fp, "NetPBM ASCII pixmap");
-    try {
-      int y = height -1;
-      int x = 0;
-      auto *line = reader.next_line();
-      while (line) {
-        auto values = ValueTokenizer(line);
 
-        while (values.has_next()) {
-          pixmap[y * width * 3 + 3 * x] = values.next_int();
-          pixmap[y * width * 3 + 3 * x + 1] = values.next_int();
-          pixmap[y * width * 3 + 3 * x + 2] = values.next_int();
-          ++x;
-          // next line of pixels
-          if (x >= width) {
-            --y;
-            x = 0;
-          }
-        }
-        line = reader.next_line();
-      }
-    } catch (std::exception &e) {
-      delete[] pixmap;
-      return nullptr;
-    }
+    return pixmap;
   }
-
-  return pixmap;
+  return nullptr;
 }
 }    // namespace
 
@@ -157,18 +199,23 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
         -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
       // clang-format on
 
-      // read and store image file with pixmap only on MPI rank 0
+      // read and store image file with pixmap only on MPI rank 0.
+      // must always open in binary mode to avoid data corruption on Windows
       if (comm->me == 0) {
-        FILE *fp = fopen(arg[iarg + 1], "rb");
+        std::string fileinfo = arg[iarg + 1];
+        FILE *fp = fopen(fileinfo.c_str(), "rb");
         if (!fp)
-          error->one(FLERR, iarg + 1, "Cannot open fix graphics/labels image file {}: {}",
-                     arg[iarg + 1], utils::getsyserror());
-        pix.pixmap = read_image(fp, pix.width, pix.height);
+          error->one(FLERR, iarg + 1, "Cannot open fix graphics/labels image file {}: {}", fileinfo,
+                     utils::getsyserror());
+
+        pix.pixmap = read_image(fp, pix.width, pix.height, fileinfo);
         if (!pix.pixmap)
           error->one(FLERR, iarg + 1,
                      "Reading open fix graphics/labels image file {} failed.\n"
                      "                Unsupported file format or broken file",
-                     arg[iarg + 1]);
+                     fileinfo);
+
+        utils::logmesg(lmp, "Read image from {} file: {} format\n", arg[iarg + 1], fileinfo);
       }
 
       if (strstr(arg[iarg + 2], "v_") == arg[iarg + 2]) {
