@@ -22,6 +22,7 @@ set             type 1 shape 2.0 1.0 1.0
 # set             type 1 block 4.0 4.0
 
 pair_style      gran/hooke/history/ellipsoid 1e3 0.0 0.0 0.0 0.5 0
+# pair_style      gran/hertz/history/ellipsoid 1e3 0.0 0.0 0.0 0.5 0
 pair_coeff      * *
 
 compute diameter all property/atom shapex shapey shapez
