@@ -17,12 +17,14 @@
 #include "comm.h"
 #include "dump_image.h"
 #include "error.h"
+#include "input.h"
 #include "memory.h"
 #include "modify.h"
 #include "respa.h"
 #include "text_file_reader.h"
 #include "tokenizer.h"
 #include "update.h"
+#include "variable.h"
 
 #include <cstring>
 
@@ -150,11 +152,12 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
     if (strcmp(arg[iarg], "image") == 0) {
       if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels", error);
 
-      PixmapInfo pix{
-          {0.0, 0.0, 0.0}, 0,       0,       nullptr, {-1.0, -1.0, -1.0}, 1.0, -1, -1, -1, -1,
-          nullptr,         nullptr, nullptr, nullptr};
+      // clang-format off
+      PixmapInfo pix{{0.0, 0.0, 0.0}, 0, 0, nullptr, {-1.0, -1.0, -1.0}, 1.0,
+        -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
+      // clang-format on
 
-      // read and store pixmap only on MPI rank 0
+      // read and store image file with pixmap only on MPI rank 0
       if (comm->me == 0) {
         FILE *fp = fopen(arg[iarg + 1], "rb");
         if (!fp)
@@ -168,9 +171,21 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
                      arg[iarg + 1]);
       }
 
-      pix.pos[0] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
-      pix.pos[1] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
-      pix.pos[2] = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
+      if (strstr(arg[iarg + 2], "v_") == arg[iarg + 2]) {
+        varflag = 1;
+        pix.xstr = utils::strdup(arg[iarg + 2] + 2);
+      } else
+        pix.pos[0] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
+      if (strstr(arg[iarg + 3], "v_") == arg[iarg + 3]) {
+        varflag = 1;
+        pix.ystr = utils::strdup(arg[iarg + 3] + 2);
+      } else
+        pix.pos[1] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
+      if (strstr(arg[iarg + 4], "v_") == arg[iarg + 4]) {
+        varflag = 1;
+        pix.zstr = utils::strdup(arg[iarg + 4] + 2);
+      } else
+        pix.pos[2] = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
 
       iarg += 5;
 
@@ -182,7 +197,11 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
         if (strcmp(arg[iarg], "scale") == 0) {
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels image scale", error);
-          pix.scale = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+          if (strstr(arg[iarg + 1], "v_") == arg[iarg + 1]) {
+            varflag = 1;
+            pix.sstr = utils::strdup(arg[iarg + 1] + 2);
+          } else
+            pix.scale = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
           if (pix.scale <= 0.0)
             error->all(FLERR, iarg + 1, "Invalid fix graphics/labels image scale value: {}",
                        pix.scale);
@@ -248,6 +267,54 @@ int FixGraphicsLabels::setmask()
 
 /* ---------------------------------------------------------------------- */
 
+void FixGraphicsLabels::init()
+{
+  for (auto &pix : pixmaps) {
+    if (pix.xstr) {
+      int ivar = input->variable->find(pix.xstr);
+      if (ivar < 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "Variable name {} for fix graphics/labels does not exist", pix.xstr);
+      if (input->variable->equalstyle(ivar) == 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "fix graphics/labels variable {} is not equal-style variable", pix.xstr);
+      pix.xvar = ivar;
+    }
+    if (pix.ystr) {
+      int ivar = input->variable->find(pix.ystr);
+      if (ivar < 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "Variable name {} for fix graphics/labels does not exist", pix.ystr);
+      if (input->variable->equalstyle(ivar) == 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "fix graphics/labels variable {} is not equal-style variable", pix.ystr);
+      pix.yvar = ivar;
+    }
+    if (pix.zstr) {
+      int ivar = input->variable->find(pix.zstr);
+      if (ivar < 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "Variable name {} for fix graphics/labels does not exist", pix.zstr);
+      if (input->variable->equalstyle(ivar) == 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "fix graphics/labels variable {} is not equal-style variable", pix.zstr);
+      pix.zvar = ivar;
+    }
+    if (pix.sstr) {
+      int ivar = input->variable->find(pix.sstr);
+      if (ivar < 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "Variable name {} for fix graphics/labels does not exist", pix.sstr);
+      if (input->variable->equalstyle(ivar) == 0)
+        error->all(FLERR, Error::NOLASTLINE,
+                   "fix graphics/labels variable {} is not equal-style variable", pix.sstr);
+      pix.svar = ivar;
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
 void FixGraphicsLabels::setup(int vflag)
 {
   end_of_step();
@@ -271,6 +338,11 @@ void FixGraphicsLabels::end_of_step()
 
     int n = 0;
     for (auto &pix : pixmaps) {
+      if (pix.xstr) pix.pos[0] = input->variable->compute_equal(pix.xvar);
+      if (pix.ystr) pix.pos[1] = input->variable->compute_equal(pix.yvar);
+      if (pix.zstr) pix.pos[2] = input->variable->compute_equal(pix.zvar);
+      if (pix.sstr) pix.scale = input->variable->compute_equal(pix.svar);
+
       imgobjs[n] = DumpImage::PIXMAP;
       imgparms[n][0] = 1;
       imgparms[n][1] = pix.pos[0];

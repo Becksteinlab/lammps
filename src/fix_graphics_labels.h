@@ -31,6 +31,7 @@ class FixGraphicsLabels : public Fix {
   FixGraphicsLabels(class LAMMPS *, int, char **);
   ~FixGraphicsLabels() override;
   int setmask() override;
+  void init() override;
   void setup(int) override;
   void end_of_step() override;
 
