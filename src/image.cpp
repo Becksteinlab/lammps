@@ -189,8 +189,132 @@ void scale_pixmap(int ow, int oh, const unsigned char *opix, int nw, int nh, uns
   }
 }
 
-}    // namespace
+// convert an RGB color to YUV colorspace
+void rgb2yuv(int *rgb, int *yuv)
+{
+  yuv[0] = (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+  yuv[1] = -(0.14713 * rgb[0]) - (0.28886 * rgb[1]) + (0.436 * rgb[2]);
+  yuv[2] = (0.615 * rgb[0]) - (0.51499 * rgb[1]) - (0.10001 * rgb[2]);
+}
+
+void xpm2pix(int width, int height, const char *xpm, unsigned char *pix, double *fg, double *bg)
+{
+  for (int j = height; j > 0; --j) {
+    for (int i = 0; i < width; ++i) {
+      double *color = (xpm[(j - 1) * width + i] == '#') ? fg : bg;
+      int idx = (height - j) * width * 3 + 3 * i;
+      pix[idx] = static_cast<unsigned char>(color[0] * 255.0);
+      pix[idx + 1] = static_cast<unsigned char>(color[1] * 255.0);
+      pix[idx + 2] = static_cast<unsigned char>(color[2] * 255.0);
+    }
+  }
+}
 // clang-format off
+
+// the following are 32x32 pixel XPM-like bitmaps of the letters X, Y, and Z for the axis labels.
+constexpr char letter_x[] = {
+  "                                "
+  "                                "
+  "    #####             #####     "
+  "     #####           #####      "
+  "      #####         #####       "
+  "      #####         #####       "
+  "       #####       #####        "
+  "        #####     #####         "
+  "        #####     #####         "
+  "         #####   #####          "
+  "          ##### #####           "
+  "          ##### #####           "
+  "           #########            "
+  "            #######             "
+  "            #######             "
+  "             #####              "
+  "            ######              "
+  "            #######             "
+  "           ########             "
+  "          ##########            "
+  "          ##### #####           "
+  "         #####   ####           "
+  "         ####    #####          "
+  "        #####     #####         "
+  "       #####       #####        "
+  "       ####        #####        "
+  "      #####         #####       "
+  "     #####           #####      "
+  "     ####            #####      "
+  "    #####             #####     "
+  "   #####               #####    "
+  "                                "};
+
+constexpr char letter_y[] = {
+  "                                "
+  "                                "
+  "    #####              #####    "
+  "     #####            #####     "
+  "      ####            ####      "
+  "      #####          #####      "
+  "       #####        #####       "
+  "        ####        ####        "
+  "        #####      #####        "
+  "         #####    #####         "
+  "          ####    ####          "
+  "          #####  #####          "
+  "           ##########           "
+  "            ########            "
+  "            ########            "
+  "             ######             "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "                                "};
+
+constexpr char letter_z[] = {
+  "                                "
+  "                                "
+  "    #######################     "
+  "    #######################     "
+  "    #######################     "
+  "                     ######     "
+  "                     #####      "
+  "                    #####       "
+  "                   #####        "
+  "                  ######        "
+  "                  #####         "
+  "                 #####          "
+  "                #####           "
+  "               #####            "
+  "              ######            "
+  "              #####             "
+  "             #####              "
+  "            #####               "
+  "           #####                "
+  "           #####                "
+  "          #####                 "
+  "         #####                  "
+  "        #####                   "
+  "       ######                   "
+  "       #####                    "
+  "      #####                     "
+  "     #####                      "
+  "    #####                       "
+  "    ########################    "
+  "    ########################    "
+  "    ########################    "
+  "                                "};
+
+}    // namespace
 
 /* ---------------------------------------------------------------------- */
 
@@ -572,6 +696,47 @@ void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
   draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3,opacity);
   draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3,opacity);
   draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3,opacity);
+
+  // draw axis labels from 32x32 size bitmaps stored as string list in an XPM-like format
+  // convert the bitmap into an RGB pixmap and use "green" as the transparent color
+  // offset labels by a diameter in every direction to avoid them being obscured by the cylinders
+  // scale pixmaps based on the smaller of image width or height. scaling down to 16x16 for default
+  double scale = static_cast<double>(MIN(width,height)) / 1440.0;
+
+  unsigned char rgbbuffer[32*32*3];
+  double shiftedpos[3];
+
+  // set font color for axis label to white, but when the
+  // luminance of the background is too large, switch to black
+
+  double *fontcolor = color2rgb("white");
+  double *backcolor = color2rgb("silver");
+
+  int bgyuv[3];
+  rgb2yuv(background, bgyuv);
+  if (bgyuv[0] > 192){
+    fontcolor = color2rgb("black");
+    backcolor = color2rgb("darkgray");
+  }
+
+  shiftedpos[0] = axes[1][0] + diameter;
+  shiftedpos[1] = axes[1][1] + diameter;
+  shiftedpos[2] = axes[1][2] - diameter;
+  xpm2pix(32,32,letter_x,rgbbuffer,fontcolor,backcolor);
+  draw_pixmap(shiftedpos,32,32,rgbbuffer,backcolor,scale,opacity);
+
+  shiftedpos[0] = axes[2][0] + diameter;
+  shiftedpos[1] = axes[2][1] + diameter;
+  shiftedpos[2] = axes[2][2] + diameter;
+  xpm2pix(32,32,letter_y,rgbbuffer,fontcolor,backcolor);
+  draw_pixmap(shiftedpos,32,32,rgbbuffer,backcolor,scale,opacity);
+
+  shiftedpos[0] = axes[3][0] + diameter;
+  shiftedpos[1] = axes[3][1] + diameter;
+  shiftedpos[2] = axes[3][2] + diameter;
+  xpm2pix(32,32,letter_z,rgbbuffer,fontcolor,backcolor);
+  draw_pixmap(shiftedpos,32,32,rgbbuffer,backcolor,scale,opacity);
+}
 
 /* ----------------------------------------------------------------------
    copy pixmap centered at location x into image with depth buffering
