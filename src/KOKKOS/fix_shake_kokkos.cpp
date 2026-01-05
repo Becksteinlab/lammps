@@ -329,6 +329,120 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakePreNeighbor, const int &i
 }
 
 /* ----------------------------------------------------------------------
+   substitute shake constraints with very strong bonds
+------------------------------------------------------------------------- */
+
+template<class DeviceType>
+void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
+{
+  // 1. Setup and Sync
+  atomKK->sync(execution_space, X_MASK | F_MASK);
+  k_list.sync<DeviceType>();
+  k_closest_list.sync<DeviceType>();
+  
+  ev_init(vflag);
+  double ebond_sync = 0.0;
+
+  // Setup ScatterView for forces to handle atomics/duplicated memory
+  neighflag = lmp->kokkos->neighflag;
+  int need_dup = 0;
+  if (neighflag != HALF)
+    need_dup = std::is_same_v<NeedDup_v<HALFTHREAD,DeviceType>, Kokkos::Experimental::ScatterDuplicated>;
+
+  if (need_dup) {
+    dup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_f);
+  } else {
+    ndup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_f);
+  }
+
+  // 2. Capture required data for the lambda
+  auto d_shake_flag = this->d_shake_flag;
+  auto d_shake_type = this->d_shake_type;
+  auto d_list = this->d_list;
+  auto d_closest_list = this->d_closest_list;
+  auto d_bond_distance = this->d_bond_distance;
+  auto d_x = this->d_x;
+  auto d_nlocal = this->nlocal;
+  
+  // Use local scope for ScatterView to ensure proper capture
+  auto local_dup_f = dup_f;
+  auto local_ndup_f = ndup_f;
+
+  // 3. Parallel Reduction Kernel
+  Kokkos::parallel_reduce("FixShake:min_post_force", 
+    Kokkos::RangePolicy<DeviceType>(0, nlist),
+    KOKKOS_LAMBDA(const int &i, double &update_ebond) {
+      
+      auto v_f = ScatterViewHelper<NeedDup_v<HALF,DeviceType>, decltype(local_dup_f), decltype(local_ndup_f)>::get(local_dup_f, local_ndup_f);
+      auto a_f = v_f.template access<AtomicDup_v<HALF,DeviceType>>();
+
+      const int m = d_list[i];
+      const int flag = d_shake_flag[m];
+      const int i0 = d_closest_list(i, 0);
+
+      // Helper lambda for harmonic restraint force
+      auto apply_restraint = [&](int idx0, int idx1, int type_idx, bool is_angle) {
+        double d0 = is_angle ? d_angle_distance[type_idx] : d_bond_distance[type_idx];
+        
+        double delx = d_x(idx0, 0) - d_x(idx1, 0);
+        double dely = d_x(idx0, 1) - d_x(idx1, 1);
+        double delz = d_x(idx0, 2) - d_x(idx1, 2);
+        double rsq = delx*delx + dely*dely + delz*delz;
+        double r = sqrt(rsq);
+        
+        // Force constant matching FixShake::bond_force (1e10 is typical default)
+        double k_spring = 1e10; 
+        double dr = r - d0;
+        double f_mag = -k_spring * dr;
+        
+        update_ebond += 0.5 * k_spring * dr * dr;
+
+        if (r > 0.0) {
+          double f_over_r = f_mag / r;
+          if (idx0 < d_nlocal) {
+            a_f(idx0, 0) += delx * f_over_r;
+            a_f(idx0, 1) += dely * f_over_r;
+            a_f(idx0, 2) += delz * f_over_r;
+          }
+          if (idx1 < d_nlocal) {
+            a_f(idx1, 0) -= delx * f_over_r;
+            a_f(idx1, 1) -= dely * f_over_r;
+            a_f(idx1, 2) -= delz * f_over_r;
+          }
+        }
+      };
+
+      // Apply restraints based on cluster type
+      if (flag == 2) { // Single Bond
+        apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+      } else if (flag == 3) { // Two Bonds
+        apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+        apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
+      } else if (flag == 4) { // Three Bonds
+        apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+        apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
+        apply_restraint(i0, d_closest_list(i, 3), d_shake_type(m, 2), false);
+      } else if (flag == 1) { // Two Bonds + Angle (Water)
+        int i1 = d_closest_list(i, 1);
+        int i2 = d_closest_list(i, 2);
+        apply_restraint(i0, i1, d_shake_type(m, 0), false);
+        apply_restraint(i0, i2, d_shake_type(m, 1), false);
+        apply_restraint(i1, i2, d_shake_type(m, 2), true);
+      }
+    }, ebond_sync);
+
+  // 4. Contribute forces and update global energy
+  if (need_dup) Kokkos::Experimental::contribute(d_f, dup_f);
+  
+  this->ebond = ebond_sync;
+  atomKK->modified(execution_space, F_MASK);
+  
+  // Cleanup
+  dup_f = {};
+  ndup_f = {};
+}
+
+/* ----------------------------------------------------------------------
    compute the force adjustment for SHAKE constraint
 ------------------------------------------------------------------------- */
 
