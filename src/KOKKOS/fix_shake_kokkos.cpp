@@ -325,40 +325,52 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakePreNeighbor, const int &i
 template<class DeviceType>
 void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
 {
-  // 1. Setup and Sync
+  // Sync all required data to the device
   atomKK->sync(execution_space, X_MASK | F_MASK);
+  k_shake_flag.sync<DeviceType>();
+  k_shake_type.sync<DeviceType>();
   k_list.sync<DeviceType>();
   k_closest_list.sync<DeviceType>();
-  
+  k_bond_distance.sync<DeviceType>();
+  k_angle_distance.sync<DeviceType>();
+
   ev_init(vflag);
-  double ebond_sync = 0.0;
+  
+  // Use exact stiffness from the base class
+  const double k_spring = this->kbond; 
+  const int nb = atom->nbondtypes + 1;
+  const int na = atom->nangletypes + 1;
 
-  // Setup ScatterView for forces to handle atomics/duplicated memory
+  // 1. Setup ScatterView for forces to handle thread-safety
   neighflag = lmp->kokkos->neighflag;
-  int need_dup = 0;
-  if (neighflag != HALF)
-    need_dup = std::is_same_v<NeedDup_v<HALFTHREAD,DeviceType>, Kokkos::Experimental::ScatterDuplicated>;
-
+  int need_dup = (neighflag != HALF);
   if (need_dup) {
     dup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_f);
   } else {
     ndup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_f);
   }
 
-  // 2. Capture required data for the lambda
-  auto d_shake_flag = this->d_shake_flag;
-  auto d_shake_type = this->d_shake_type;
-  auto d_list = this->d_list;
-  auto d_closest_list = this->d_closest_list;
-  auto d_bond_distance = this->d_bond_distance;
+  // 2. Setup Statistics Accumulators if output is requested
+  // Creating temporary device views to hold per-type stats during the kernel
+  typename AT::t_double_2d d_b_stats("shake:b_stats", nb, 4); // [count, sum, max, min]
+  typename AT::t_double_2d d_a_stats("shake:a_stats", na, 4); 
+
+  if (output_every) {
+    Kokkos::parallel_for("FixShake:zero_stats", Kokkos::RangePolicy<DeviceType>(0, nb > na ? nb : na), 
+      KOKKOS_LAMBDA(const int &i) {
+        if (i < nb) { d_b_stats(i,0) = 0; d_b_stats(i,1) = 0; d_b_stats(i,2) = 0; d_b_stats(i,3) = BIG; }
+        if (i < na) { d_a_stats(i,0) = 0; d_a_stats(i,1) = 0; d_a_stats(i,2) = 0; d_a_stats(i,3) = BIG; }
+    });
+  }
+
+  // 3. Capture views for the lambda
   auto d_x = this->d_x;
   auto d_nlocal = this->nlocal;
-  
-  // Use local scope for ScatterView to ensure proper capture
   auto local_dup_f = dup_f;
   auto local_ndup_f = ndup_f;
 
-  // 3. Parallel Reduction Kernel
+  double ebond_sync = 0.0;
+
   Kokkos::parallel_reduce("FixShake:min_post_force", 
     Kokkos::RangePolicy<DeviceType>(0, nlist),
     KOKKOS_LAMBDA(const int &i, double &update_ebond) {
@@ -370,64 +382,96 @@ void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
       const int flag = d_shake_flag[m];
       const int i0 = d_closest_list(i, 0);
 
-      // Helper lambda for harmonic restraint force
+      // Helper for harmonic restraints matching FixShake::bond_force
       auto apply_restraint = [&](int idx0, int idx1, int type_idx, bool is_angle) {
-        double d0 = is_angle ? d_angle_distance[type_idx] : d_bond_distance[type_idx];
+        const double d0 = is_angle ? d_angle_distance[type_idx] : d_bond_distance[type_idx];
         
-        double delx = d_x(idx0, 0) - d_x(idx1, 0);
-        double dely = d_x(idx0, 1) - d_x(idx1, 1);
-        double delz = d_x(idx0, 2) - d_x(idx1, 2);
-        double rsq = delx*delx + dely*dely + delz*delz;
-        double r = sqrt(rsq);
+        // PBC are handled via closest_image mapping done in pre_neighbor
+        const double delx = d_x(idx0, 0) - d_x(idx1, 0);
+        const double dely = d_x(idx0, 1) - d_x(idx1, 1);
+        const double delz = d_x(idx0, 2) - d_x(idx1, 2);
         
-        // Force constant matching FixShake::bond_force (1e10 is typical default)
-        double k_spring = 1e10; 
-        double dr = r - d0;
-        double f_mag = -k_spring * dr;
+        const double r = sqrt(delx*delx + dely*dely + delz*delz);
+        const double dr = r - d0;
         
-        update_ebond += 0.5 * k_spring * dr * dr;
+        // Exact 1:1 math from serial FixShake::bond_force
+        const double rk = k_spring * dr;
+        const double fbond = (r > 0.0) ? -2.0 * rk / r : 0.0;
+        const double eb = rk * dr;
+        
+        update_ebond += eb; 
 
-        if (r > 0.0) {
-          double f_over_r = f_mag / r;
-          if (idx0 < d_nlocal) {
-            a_f(idx0, 0) += delx * f_over_r;
-            a_f(idx0, 1) += dely * f_over_r;
-            a_f(idx0, 2) += delz * f_over_r;
-          }
-          if (idx1 < d_nlocal) {
-            a_f(idx1, 0) -= delx * f_over_r;
-            a_f(idx1, 1) -= dely * f_over_r;
-            a_f(idx1, 2) -= delz * f_over_r;
-          }
+        if (idx0 < d_nlocal) {
+          a_f(idx0, 0) += delx * fbond;
+          a_f(idx0, 1) += dely * fbond;
+          a_f(idx0, 2) += delz * fbond;
         }
+        if (idx1 < d_nlocal) {
+          a_f(idx1, 0) -= delx * fbond;
+          a_f(idx1, 1) -= dely * fbond;
+          a_f(idx1, 2) -= delz * fbond;
+        }
+
+        // Tally statistics on device for output_every
+        if (output_every) {
+           if (!is_angle) {
+             Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0);
+             Kokkos::atomic_add(&d_b_stats(type_idx, 1), r);
+             if (r > d_b_stats(type_idx, 2)) Kokkos::atomic_max(&d_b_stats(type_idx, 2), r);
+             if (r < d_b_stats(type_idx, 3)) Kokkos::atomic_min(&d_b_stats(type_idx, 3), r);
+           }
+        }
+        return r;
       };
 
-      // Apply restraints based on cluster type
-      if (flag == 2) { // Single Bond
+      if (flag == 2) { 
         apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
-      } else if (flag == 3) { // Two Bonds
+      } else if (flag == 3) {
         apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
         apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
-      } else if (flag == 4) { // Three Bonds
+      } else if (flag == 4) {
         apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
         apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
         apply_restraint(i0, d_closest_list(i, 3), d_shake_type(m, 2), false);
-      } else if (flag == 1) { // Two Bonds + Angle (Water)
+      } else if (flag == 1) { // Water cluster (Angle + 2 Bonds)
         int i1 = d_closest_list(i, 1);
         int i2 = d_closest_list(i, 2);
-        apply_restraint(i0, i1, d_shake_type(m, 0), false);
-        apply_restraint(i0, i2, d_shake_type(m, 1), false);
-        apply_restraint(i1, i2, d_shake_type(m, 2), true);
+        double r1 = apply_restraint(i0, i1, d_shake_type(m, 0), false);
+        double r2 = apply_restraint(i0, i2, d_shake_type(m, 1), false);
+        double r3 = apply_restraint(i1, i2, d_shake_type(m, 2), true);
+        
+        if (output_every) {
+          double angle = acos((r1*r1 + r2*r2 - r3*r3) / (2.0*r1*r2)) * 180.0/MY_PI;
+          int mt = d_shake_type(m, 2);
+          Kokkos::atomic_add(&d_a_stats(mt, 0), 1.0);
+          Kokkos::atomic_add(&d_a_stats(mt, 1), angle);
+          if (angle > d_a_stats(mt, 2)) Kokkos::atomic_max(&d_a_stats(mt, 2), angle);
+          if (angle < d_a_stats(mt, 3)) Kokkos::atomic_min(&d_a_stats(mt, 3), angle);
+        }
       }
     }, ebond_sync);
 
-  // 4. Contribute forces and update global energy
   if (need_dup) Kokkos::Experimental::contribute(d_f, dup_f);
   
+  // Update global energy
   this->ebond = ebond_sync;
   atomKK->modified(execution_space, F_MASK);
-  
-  // Cleanup
+
+  // Sync statistics to host if output is required
+  if (output_every && update->ntimestep == next_output) {
+     auto h_b_stats = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_b_stats);
+     auto h_a_stats = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_a_stats);
+     for (int j = 1; j < nb; j++) {
+       b_count[j] = h_b_stats(j,0); b_ave[j] = h_b_stats(j,1);
+       b_max[j] = h_b_stats(j,2); b_min[j] = h_b_stats(j,3);
+     }
+     for (int j = 1; j < na; j++) {
+       a_count[j] = h_a_stats(j,0); a_ave[j] = h_a_stats(j,1);
+       a_max[j] = h_a_stats(j,2); a_min[j] = h_a_stats(j,3);
+     }
+     // The base class stats() will handle MPI_Allreduce and printing
+  }
+
   dup_f = {};
   ndup_f = {};
 }
