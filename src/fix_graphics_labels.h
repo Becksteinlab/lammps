@@ -50,6 +50,21 @@ class FixGraphicsLabels : public Fix {
   };
   std::vector<PixmapInfo> pixmaps;
 
+  struct TextInfo {
+    std::string text;
+    double pos[3];
+    int width;
+    int height;
+    unsigned char *pixmap;
+    double fontcolor[3];
+    double backcolor[3];
+    double transcolor[3];
+    double size;
+    int xvar, yvar, zvar, svar;
+    char *xstr, *ystr, *zstr, *sstr;
+  };
+  std::vector<TextInfo> texts;
+
   int varflag;
   int numobjs;
   int *imgobjs;

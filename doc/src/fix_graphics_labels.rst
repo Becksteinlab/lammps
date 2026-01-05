@@ -35,6 +35,26 @@ Syntax
         x, y, z  = position where the center of the text is located in the visualization
         any of x, y, or z can be a variable (see below)
 
+        keyword = *fontcolor* or *backcolor* or *transcolor* or *size*
+          *fontcolor* arg = select color for text: *white* (default) or *black* or *r/g/b*
+             *white* = uses white as color for the rendered text
+             *black* = uses black as color for the rendered text
+             *r/g/b* = provide three integers in the range 0 to 255 to select the color for the text in RGB color space
+          *backcolor* arg = select color for background of the text: *silver* (default) or *darkgray* or *r/g/b*
+             *silver* = uses a very light gray as the background color for the rendered text
+             *darkgray* = uses a very dark gray as the background color for the rendered text
+             *white* = uses white as the background color for the rendered text
+             *black* = uses black as the background color for the rendered text
+             *r/g/b* = provide three integers in the range 0 to 255 to select transparancy color in RGB color space
+          *transcolor* arg = select color for transparency: *silver* (default) or *darkgray* or *white* or *black* or *none* or *r/g/b*
+             *silver* = uses a very light gray as the color for transparency
+             *darkgray* = uses a very dark gray as the color for transparency
+             *white* = uses white as the color for transparency
+             *black* = uses black as the color for transparency
+             *none* = disables transparency
+             *r/g/b* = provide three integers in the range 0 to 255 to select transparancy color in RGB color space
+          *size* value = set the size of the characters (default 12), can be a variable (see below)
+
 Examples
 """"""""
 
@@ -42,72 +62,127 @@ Examples
 
    fix pix all graphics/labels 100 image teapot.png 5.0 -1.0 -2.0 transcolor auto
    fix pot all graphics/labels 100 image teapot.ppm 1.0 v_ypos v_zpos scale v_prog transcolor 19/92/192
-   fix lbl all graphics/labels 1000 text "LAMMPS Graphics Demo" 5.0 -1.0 -2.0
+   fix lbl all graphics/labels 1000 text "LAMMPS graphics demo" 5.0 -1.0 -2.0
+   fix info all graphics/labels 1000 text "Step: $(step)  Angle: ${rot}" 5.0 -1.0 -2.0 size 32
 
 Description
 """""""""""
 
 .. versionadded:: TBD
 
-This fix allows to add either images or text to :doc:`dump image
-<dump_image>` images using the *fix* keyword.  This can be useful to
-augment images directly with additional graphics or text directly and
-without having to post-process the images.  Since the positioning uses
-the coordinate system of the simulation and because the graphics
-object use the depth buffer of the image rasterizer, atoms can be
-located before or behind any text or image.
+This fix allows to add either images or text as "labels" to :doc:`dump
+image <dump_image>` created images by using the *fix* keyword.  This can
+be useful to augment images with additional graphics or text directly
+and without having to post-process the images.  Since the positioning
+uses the coordinate system of the simulation and because the graphics
+objects use the depth buffer of the image rasterizer, atoms and other
+graphics in the "scene" can be located before or behind any text or
+image label.
 
-The *group-ID* is ignored by this fix.
+The *group-id* is ignored by this fix.
 
-The *Nevery* keyword determines how often the arrows graphics data is
-updated.  This should be the same value as the corresponding *N*
-parameter of the :doc:`dump <dump>` image command.  LAMMPS will stop
-with an error message if the settings for this fix and the dump command
-are not compatible.
+The *Nevery* keyword determines how often the graphics data is updated.
+This should be the same value as the corresponding *N* parameter of the
+:doc:`dump <dump>` image command.  LAMMPS will stop with an error
+message if the settings for this fix and the dump command are not
+compatible.
 
-The *image* keyword...
+The *image* keyword reads an image file and adds it to the visualization
+centered around the provided position and optionally scaled by the
+provided scale factor.  The filename suffix determines whether LAMMPS
+will try to read a file in JPEG, PNG, or PPM format.  If the suffix is
+".jpg" or ".jpeg", then LAMMPS attempts to read the image in `JPEG
+format <jpeg_format_>`_, if the suffix is ".png", then lammps attempts
+to read the image in `PNG format <png_format_>`_.  Otherwise LAMMPS will
+try to read the image in `ppm (aka netpbm) format <ppm_format_>`_.  Not
+all variants of those file formats are compatible with image reader code
+in LAMMPS.  If LAMMPS encounters an incompatible or unrecognizable file
+format or a corrupted file, it will stop with an error.
 
-The filename suffix determines whether LAMMPS will try to read a file in
-JPEG, PNG, or PPM format.  If the suffix is ".jpg" or ".jpeg", then
-LAMMPS attempts to read the image in `JPEG format <jpeg_format_>`_, if
-the suffix is ".png", then LAMMPS attempts to read the image in `PNG
-format <png_format_>`_.  Otherwise LAMMPS will try to read the image in
-`PPM (aka NETPBM) format <ppm_format_>`_.
+When using the *image* keyword, the name of the image file and its position
+in the "scene" are required arguments.  Optional keyword / value pairs
+may be added:
 
-The *text* keyword...
+  The *scale* value determines if the image is scaled before it is added
+  to the :doc:`dump image <dump_image>` output.  LAMMPS currently
+  employs a bilinear scaling algorithm.
+
+  The *transcolor* value selects a color for transparency.  All pixels
+  in the image with that color will be skipped when the image is
+  rendered.  The color is specified as an R/G/B triple with values
+  ranging from 0 to 255 for each channel.  There are also two special
+  arguments: *auto* will pick the color of the pixel in the lower left
+  corner as transparency color and *none* will disable all transparency
+  processing (this is the default).
+
+
+The *text* keyword will process a provided text into a pixmap and adds
+it to the visualization centered around the provided position in a
+similar fashion as with the *image* keyword.  The requirements for the
+text argument are the same as in the :doc:`fix print <fix_print>`
+command: it must be a single argument, so text with whitespace must be
+quoted; and the text may contain equal style or immediate variables
+using the ``${name}`` or ``$(expression)`` format.  The variables are
+evaluated and expanded at every *Nevery* time step.
+
+When using the *text* keyword, the text and its position in the "scene"
+are required arguments.  Optional keyword / value pairs may be added:
+
+  The *size* value determines if the size of the letters in the text
+  in pixels.  Default value is 24.
+
+  The *fontcolor* value selects a color for the text.
+  The color is specified as an R/G/B triple with values ranging from 0 to
+  255 for each channel.  There are also two special arguments: *white*
+  and *black*. The default *fontcolor* value is *white*.
+
+  The *backcolor* value selects a color for the background of the label.
+  The color is specified as an R/G/B triple with values ranging from 0 to
+  255 for each channel.  There are also four special arguments: *silver*,
+  *darkgray*, *white*, *black*. The default *backcolor* value is *silver*.
+
+  The *transcolor* value selects a color for transparency.  All pixels
+  in the image with that color will be skipped when the image is
+  rendered.  The color is specify as an R/G/B triple with values ranging
+  from 0 to 255 for each channel.  There are also five special arguments:
+  *silver*, *darkgray*, *white*, *black*, and *none*. The *none* setting
+  will disable all transparency processing. The default *transcolor*
+  value is *silver*.
+
+  For text with transparent background it is recommended to select a
+  similar color but slightly darker or brighter color.  This will reduce
+  unwanted discolorations at the edges due to anti-aliasing.
 
 There may be multiple *image* or *text* keywords with their arguments
 in a single fix *graphics/labels* command.
 
-The arguments for the position or scale of an *image* or *text* can be
-specified as an equal-style :doc:`variable <variable>`, namely *x*, *y*,
-*z*, or the *scale* value for an image.  If any of these values is a
-variable, it should be specified as `v_name`, where `name` is the
-variable name.  In this case, the variable will be evaluated each
-*Nevery* timestep, and its value used to define the indenter geometry.
-Please see the documentation of the :doc:`fix graphics <fix_graphics>`
-command for more details on using variables with graphics objects.
+The arguments for the positions of an *image* or *text* and the *scale*
+factor of an *image* or the *size* of a *text* can be specified as
+equal-style :doc:`variables <variable>`, namely *x*, *y*, *z*, *scale*,
+or *size*.  If any of these values is a variable, it should be specified
+as `v_name`, where `name` is the variable name.  In this case, the
+variable will be evaluated each *nevery* timestep, and its value used to
+position and resize the image or text.  Please see the documentation of
+the :doc:`fix graphics <fix_graphics>` command for a more detailed
+discussion on using variables with graphics objects.
 
 .. _jpeg_format: https://jpeg.org/jpeg/
-.. _png_format: https://en.wikipedia.org/wiki/Portable_Network_Graphics
-.. _ppm_format: https://en.wikipedia.org/wiki/Netpbm
+.. _png_format: https://en.wikipedia.org/wiki/portable_network_graphics
+.. _ppm_format: https://en.wikipedia.org/wiki/netpbm
 
 -----------
 
 Dump image info
 """""""""""""""
 
-.. versionadded:: TBD
+The fix graphics/labels command is designed to be used with the *fix*
+keyword of :doc:`dump image <dump_image>`.  The fix adds images or text
+to the visualization.
 
-Fix graphics/labels is designed to be used with the *fix* keyword of
-:doc:`dump image <dump_image>`.  The fix adds images or text to the
-visualization.
-
-The color of the text is either that of the first atom type when using
-color styles "type" or "element" with the fix command.  With fix color
-style "const" the default value of "white" can be changed using
-:doc:`dump_modify fcolor <dump_image>`.  The transparency is by default
-fully opaque and can be changed with *dump\_modify ftrans*\ .
+The color style setting for the fix in the :doc:`dump image
+<dump_image>` has no effect on either image or text labels. The
+transparency is by default fully opaque and can be changed with
+*dump\_modify ftrans*\ .
 
 The *fflag1* and *fflag2* settings of *dump image fix* are ignored.
 
@@ -135,4 +210,4 @@ Related commands
 Default
 """""""
 
-transcolor = "none" for *image* and "auto" for *text*, scale = 1.0
+transcolor = "none" for *image* and "silver" for *text*, scale = 1.0, fontcolor = white, backcolor = silver, size = 24

@@ -314,6 +314,7 @@ bigint
 Bij
 bilayer
 bilayers
+bilinear
 binsize
 binstyle
 binutils
@@ -1283,6 +1284,7 @@ Fock
 Fogarty
 Foiles
 fontawesome
+fontcolor
 fopenmp
 forceclear
 forestgreen
@@ -3046,6 +3048,7 @@ Pisarev
 Pishevar
 Pitera
 pitorsion
+pixmap
 pj
 pjintve
 pKa
@@ -3977,6 +3980,7 @@ tradeoff
 traj
 Tranchida
 transactional
+transcolor
 transferability
 translational
 Translational
