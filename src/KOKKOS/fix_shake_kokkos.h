@@ -32,6 +32,9 @@ namespace LAMMPS_NS {
 
 struct TagFixShakePreNeighbor{};
 
+template<int NEIGHFLAG>
+struct TagFixShakeMinPostForce{};
+
 template<int NEIGHFLAG, int EVFLAG>
 struct TagFixShakePostForce{};
 
@@ -80,6 +83,14 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
 
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakePreNeighbor, const int&) const;
+
+  template<int NEIGHFLAG>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixShakeMinPostForce<NEIGHFLAG>, const int &i, EV_FLOAT &ev) const;
+
+  template<int NEIGHFLAG>
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagFixShakeMinPostForce<NEIGHFLAG>, const int &i) const;
 
   template<int NEIGHFLAG, int EVFLAG>
   KOKKOS_INLINE_FUNCTION
@@ -218,6 +229,9 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
   typename AT::t_int_1d d_exchange_sendlist;
   typename AT::t_int_1d d_copylist;
   typename AT::t_int_1d d_indices;
+  
+  typename AT::t_double_2d d_b_stats;
+  typename AT::t_double_2d d_a_stats;
 
   KK_FLOAT dx,dy,dz;
   KK_FLOAT dtv_kk,dtfsq_kk;

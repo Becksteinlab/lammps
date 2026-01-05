@@ -327,9 +327,7 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakePreNeighbor, const int &i
 template<class DeviceType>
 void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
 {
-  // 1. Setup and Sync
   v_init(vflag); 
-  
   atomKK->sync(execution_space, X_MASK | F_MASK);
   k_shake_flag.sync<DeviceType>();
   k_shake_type.sync<DeviceType>();
@@ -338,188 +336,155 @@ void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
   k_bond_distance.sync<DeviceType>();
   k_angle_distance.sync<DeviceType>();
 
-  // Use local variables for capture to resolve deprecated-this-capture warnings
-  // Convention: use 'l_' for variables instead of 'd_'
-  const KK_FLOAT l_kbond = this->kbond;
-  const int l_output_every = this->output_every;
-  const int l_nb = atom->nbondtypes + 1;
-  const int l_na = atom->nangletypes + 1;
-  const int l_nlocal = this->nlocal;
-  const int l_nlist = this->nlist;
+  // Assign class member views for Tagged Kernel access
+  this->d_x = atomKK->k_x.view<DeviceType>();
+  this->d_f = atomKK->k_f.view<DeviceType>();
 
-  // 2. Setup ScatterView for thread-safe forces
   neighflag = lmp->kokkos->neighflag;
-
-  // FULL neighlist still needs atomics in fix shake
-
   if (neighflag == FULL) {
-    if (lmp->kokkos->nthreads > 1 || lmp->kokkos->ngpus > 0)
-      neighflag = HALFTHREAD;
-    else
-      neighflag = HALF;
+    neighflag = (lmp->kokkos->nthreads > 1 || lmp->kokkos->ngpus > 0) ? HALFTHREAD : HALF;
   }
 
-  int l_need_dup = 0;
+  need_dup = 0;
   if (neighflag != HALF)
-    l_need_dup = std::is_same_v<NeedDup_v<HALFTHREAD,DeviceType>,Kokkos::Experimental::ScatterDuplicated>;
+    need_dup = std::is_same_v<NeedDup_v<HALFTHREAD,DeviceType>, Kokkos::Experimental::ScatterDuplicated>;
 
-  // allocate duplicated memory for lambda capture
-  decltype(dup_f) l_dup_f;
-  decltype(ndup_f) l_ndup_f;
-
-  if (l_need_dup)
+  if (need_dup)
     dup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterDuplicated>(d_f);
   else
     ndup_f = Kokkos::Experimental::create_scatter_view<Kokkos::Experimental::ScatterSum, Kokkos::Experimental::ScatterNonDuplicated>(d_f);
-  
-  // Statistics Views
-  typename AT::t_double_2d d_b_stats("shake:b_stats", l_nb, 4); // [count, sum, max, min]
-  typename AT::t_double_2d d_a_stats("shake:a_stats", l_na, 4); 
 
-  copymode = 1;
-  
-  if (l_output_every) {
-    Kokkos::parallel_for("FixShake:zero_stats", Kokkos::RangePolicy<DeviceType>(0, l_nb > l_na ? l_nb : l_na), 
+  if (output_every) {
+    d_b_stats = typename AT::t_double_2d("shake:b_stats", atom->nbondtypes + 1, 4);
+    d_a_stats = typename AT::t_double_2d("shake:a_stats", atom->nangletypes + 1, 4);
+    
+    // Capture views locally for the lambda
+    auto l_b_stats = this->d_b_stats;
+    auto l_a_stats = this->d_a_stats;
+    const int nb = atom->nbondtypes + 1;
+    const int na = atom->nangletypes + 1;
+
+    Kokkos::parallel_for("FixShake:zero_stats", Kokkos::RangePolicy<DeviceType>(0, MAX(nb, na)), 
       KOKKOS_LAMBDA(const int &i) {
-        if (i < l_nb) { d_b_stats(i,0) = 0; d_b_stats(i,1) = 0; d_b_stats(i,2) = 0; d_b_stats(i,3) = BIG; }
-        if (i < l_na) { d_a_stats(i,0) = 0; d_a_stats(i,1) = 0; d_a_stats(i,2) = 0; d_a_stats(i,3) = BIG; }
+        if (i < nb) { l_b_stats(i,0) = 0; l_b_stats(i,1) = 0; l_b_stats(i,2) = 0; l_b_stats(i,3) = BIG; }
+        if (i < na) { l_a_stats(i,0) = 0; l_a_stats(i,1) = 0; l_a_stats(i,2) = 0; l_a_stats(i,3) = BIG; }
     });
   }
 
-  // 3. Local Views for Lambda Capture
-  auto l_x = this->d_x;
-  auto l_list = this->d_list;
-  auto l_closest_list = this->d_closest_list;
-  auto l_shake_flag = this->d_shake_flag;
-  auto l_shake_type = this->d_shake_type;
-  auto l_bond_distance = this->d_bond_distance;
-  auto l_angle_distance = this->d_angle_distance;
-  auto l_dup_f = this->dup_f;
-  auto l_ndup_f = this->ndup_f;
-
-  KK_FLOAT ebond_sync = 0.0;
-
-  Kokkos::parallel_reduce("FixShake:min_post_force", 
-    Kokkos::RangePolicy<DeviceType>(0, l_nlist),
-    KOKKOS_LAMBDA(const int &i, KK_FLOAT &update_ebond) {
-      
-      auto v_f = ScatterViewHelper<NeedDup_v<HALF,DeviceType>, decltype(l_dup_f), decltype(l_ndup_f)>::get(l_dup_f, l_ndup_f);
-      auto a_f = v_f.template access<AtomicDup_v<HALF,DeviceType>>();
-
-      const int m = l_list[i];
-      const int flag = l_shake_flag[m];
-      const int i0 = l_closest_list(i, 0);
-
-      // Replicating bond_force logic EXACTLY
-      auto apply_restraint = [&](int idx0, int idx1, int type_idx, bool is_angle) {
-        const KK_FLOAT d0 = is_angle ? l_angle_distance[type_idx] : l_bond_distance[type_idx];
-        
-        // PBC handling: pre_neighbor populated closest_list with image-corrected indices
-        const KK_FLOAT delx = l_x(idx0, 0) - l_x(idx1, 0);
-        const KK_FLOAT dely = l_x(idx0, 1) - l_x(idx1, 1);
-        const KK_FLOAT delz = l_x(idx0, 2) - l_x(idx1, 2);
-        
-        const KK_FLOAT r = sqrt(delx*delx + dely*dely + delz*delz);
-        const KK_FLOAT dr = r - d0;
-        
-        // Parity with FixShake::bond_force: fbond = -2.0*rk/r, energy = rk*dr
-        const KK_FLOAT rk = l_kbond * dr;
-        const KK_FLOAT fbond = (r > 0.0) ? -2.0 * rk / r : 0.0;
-        const KK_FLOAT eb = rk * dr;
-        
-        // Tally energy based on local atom contributions
-        if (idx0 < l_nlocal) update_ebond += 0.5 * eb;
-        if (idx1 < l_nlocal) update_ebond += 0.5 * eb;
-
-        if (idx0 < l_nlocal) {
-          a_f(idx0, 0) += delx * fbond;
-          a_f(idx0, 1) += dely * fbond;
-          a_f(idx0, 2) += delz * fbond;
-        }
-        if (idx1 < l_nlocal) {
-          a_f(idx1, 0) -= delx * fbond;
-          a_f(idx1, 1) -= dely * fbond;
-          a_f(idx1, 2) -= delz * fbond;
-        }
-
-        // Tally statistics on device
-        if (l_output_every) {
-           if (!is_angle) {
-             if (idx0 < l_nlocal) {
-               Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0);
-               Kokkos::atomic_add(&d_b_stats(type_idx, 1), r);
-             }
-             if (idx1 < l_nlocal) {
-               Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0);
-               Kokkos::atomic_add(&d_b_stats(type_idx, 1), r);
-             }
-             Kokkos::atomic_max(&d_b_stats(type_idx, 2), r);
-             Kokkos::atomic_min(&d_b_stats(type_idx, 3), r);
-           }
-        }
-        return r;
-      };
-
-      // Implement cluster logic parity for types 2, 3, 4, and 1
-      if (flag == 2) { 
-        apply_restraint(i0, l_closest_list(i, 1), l_shake_type(m, 0), false);
-      } else if (flag == 3) {
-        apply_restraint(i0, l_closest_list(i, 1), l_shake_type(m, 0), false);
-        apply_restraint(i0, l_closest_list(i, 2), l_shake_type(m, 1), false);
-      } else if (flag == 4) {
-        apply_restraint(i0, l_closest_list(i, 1), l_shake_type(m, 0), false);
-        apply_restraint(i0, l_closest_list(i, 2), l_shake_type(m, 1), false);
-        apply_restraint(i0, l_closest_list(i, 3), l_shake_type(m, 2), false);
-      } else if (flag == 1) { 
-        int i1 = l_closest_list(i, 1);
-        int i2 = l_closest_list(i, 2);
-        KK_FLOAT r1 = apply_restraint(i0, i1, l_shake_type(m, 0), false);
-        KK_FLOAT r2 = apply_restraint(i0, i2, l_shake_type(m, 1), false);
-        KK_FLOAT r3 = apply_restraint(i1, i2, l_shake_type(m, 2), true);
-        
-        if (l_output_every) {
-          KK_FLOAT angle = acos((r1*r1 + r2*r2 - r3*r3) / (2.0*r1*r2)) * 180.0/MY_PI;
-          int mt = l_shake_type(m, 2);
-          int count = 0;
-          if (i0 < l_nlocal) count++;
-          if (i1 < l_nlocal) count++;
-          if (i2 < l_nlocal) count++;
-          if (count > 0) {
-            Kokkos::atomic_add(&d_a_stats(mt, 0), (double)count);
-            Kokkos::atomic_add(&d_a_stats(mt, 1), (double)count * angle);
-            Kokkos::atomic_add(&d_a_stats(mt, 0), (KK_FLOAT)count);
-            Kokkos::atomic_add(&d_a_stats(mt, 1), (KK_FLOAT)count * angle);
-            Kokkos::atomic_max(&d_a_stats(mt, 2), angle);
-            Kokkos::atomic_min(&d_a_stats(mt, 3), angle);
-          }
-        }
-      }
-    }, ebond_sync);
-    
+  EV_FLOAT ev;
+  copymode = 1;
+  if (neighflag == HALF)
+    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagFixShakeMinPostForce<HALF>>(0, nlist), *this, ev);
+  else
+    Kokkos::parallel_reduce(Kokkos::RangePolicy<DeviceType, TagFixShakeMinPostForce<HALFTHREAD>>(0, nlist), *this, ev);
   copymode = 0;
 
-  // 4. Finalize and Sync to Host
   if (need_dup) Kokkos::Experimental::contribute(d_f, dup_f);
   
-  this->ebond = ebond_sync; 
+  this->ebond = ev.evdwl; 
   atomKK->modified(execution_space, F_MASK);
 
-  if (l_output_every && update->ntimestep == next_output) {
-     auto h_b_stats = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_b_stats);
-     auto h_a_stats = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_a_stats);
-     for (int j = 1; j < l_nb; j++) {
-       b_count[j] = h_b_stats(j,0); b_ave[j] = h_b_stats(j,1);
-       b_max[j] = h_b_stats(j,2); b_min[j] = h_b_stats(j,3);
-     }
-     for (int j = 1; j < l_na; j++) {
-       a_count[j] = h_a_stats(j,0); a_ave[j] = h_a_stats(j,1);
-       a_max[j] = h_a_stats(j,2); a_min[j] = h_a_stats(j,3);
-     }
+  if (output_every && update->ntimestep == next_output) {
+    auto h_b_stats_copy = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_b_stats);
+    auto h_a_stats_copy = Kokkos::create_mirror_view_and_copy(Kokkos::HostSpace(), d_a_stats);
+    for (int j = 1; j < atom->nbondtypes + 1; j++) {
+      b_count[j] = h_b_stats_copy(j,0); b_ave[j] = h_b_stats_copy(j,1);
+      b_max[j] = h_b_stats_copy(j,2); b_min[j] = h_b_stats_copy(j,3);
+    }
+    for (int j = 1; j < atom->nangletypes + 1; j++) {
+      a_count[j] = h_a_stats_copy(j,0); a_ave[j] = h_a_stats_copy(j,1);
+      a_max[j] = h_a_stats_copy(j,2); a_min[j] = h_a_stats_copy(j,3);
+    }
   }
-
-  // free duplicated memory
   if (need_dup) dup_f = {};
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
+template<int NEIGHFLAG>
+KOKKOS_INLINE_FUNCTION
+void FixShakeKokkos<DeviceType>::operator()(TagFixShakeMinPostForce<NEIGHFLAG>, const int &i, EV_FLOAT &ev) const
+{
+  auto v_f = ScatterViewHelper<NeedDup_v<NEIGHFLAG,DeviceType>, decltype(dup_f), decltype(ndup_f)>::get(dup_f, ndup_f);
+  auto a_f = v_f.template access<AtomicDup_v<NEIGHFLAG,DeviceType>>();
+
+  const int m = d_list[i];
+  const int flag = d_shake_flag[m];
+  const int i0 = d_closest_list(i, 0);
+
+  auto apply_restraint = [&](int idx0, int idx1, int type_idx, bool is_angle) {
+    const KK_FLOAT d0 = is_angle ? d_angle_distance[type_idx] : d_bond_distance[type_idx];
     
+    const KK_FLOAT delx = d_x(idx0, 0) - d_x(idx1, 0);
+    const KK_FLOAT dely = d_x(idx0, 1) - d_x(idx1, 1);
+    const KK_FLOAT delz = d_x(idx0, 2) - d_x(idx1, 2);
+    
+    const KK_FLOAT r = sqrt(delx*delx + dely*dely + delz*delz);
+    const KK_FLOAT dr = r - d0;
+    const KK_FLOAT rk = kbond * dr;
+    const KK_FLOAT fbond = (r > 0.0) ? -2.0 * rk / r : 0.0;
+    const KK_FLOAT eb = rk * dr;
+    
+    if (idx0 < nlocal) ev.evdwl += 0.5 * eb;
+    if (idx1 < nlocal) ev.evdwl += 0.5 * eb;
+
+    if (idx0 < nlocal) {
+      a_f(idx0, 0) += delx * fbond;
+      a_f(idx0, 1) += dely * fbond;
+      a_f(idx0, 2) += delz * fbond;
+    }
+    if (idx1 < nlocal) {
+      a_f(idx1, 0) -= delx * fbond;
+      a_f(idx1, 1) -= dely * fbond;
+      a_f(idx1, 2) -= delz * fbond;
+    }
+
+    if (output_every && !is_angle) {
+      if (idx0 < nlocal) { Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0); Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r); }
+      if (idx1 < nlocal) { Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0); Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r); }
+      Kokkos::atomic_max(&d_b_stats(type_idx, 2), (double)r);
+      Kokkos::atomic_min(&d_b_stats(type_idx, 3), (double)r);
+    }
+    return r;
+  };
+
+  if (flag == 2) { 
+    apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+  } else if (flag == 3) {
+    apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+    apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
+  } else if (flag == 4) {
+    apply_restraint(i0, d_closest_list(i, 1), d_shake_type(m, 0), false);
+    apply_restraint(i0, d_closest_list(i, 2), d_shake_type(m, 1), false);
+    apply_restraint(i0, d_closest_list(i, 3), d_shake_type(m, 2), false);
+  } else if (flag == 1) { 
+    int i1 = d_closest_list(i, 1);
+    int i2 = d_closest_list(i, 2);
+    KK_FLOAT r1 = apply_restraint(i0, i1, d_shake_type(m, 0), false);
+    KK_FLOAT r2 = apply_restraint(i0, i2, d_shake_type(m, 1), false);
+    KK_FLOAT r3 = apply_restraint(i1, i2, d_shake_type(m, 2), true);
+    
+    if (output_every) {
+      KK_FLOAT angle = acos((r1*r1 + r2*r2 - r3*r3) / (2.0*r1*r2)) * 180.0/MY_PI;
+      int mt = d_shake_type(m, 2);
+      int count = (i0 < nlocal) + (i1 < nlocal) + (i2 < nlocal);
+      if (count > 0) {
+        Kokkos::atomic_add(&d_a_stats(mt, 0), (double)count);
+        Kokkos::atomic_add(&d_a_stats(mt, 1), (double)count * angle);
+        Kokkos::atomic_max(&d_a_stats(mt, 2), (double)angle);
+        Kokkos::atomic_min(&d_a_stats(mt, 3), (double)angle);
+      }
+    }
+  }
+}
+
+template<class DeviceType>
+template<int NEIGHFLAG>
+KOKKOS_INLINE_FUNCTION
+void FixShakeKokkos<DeviceType>::operator()(TagFixShakeMinPostForce<NEIGHFLAG>, const int &i) const {
+  EV_FLOAT ev;
+  this->template operator()<NEIGHFLAG>(TagFixShakeMinPostForce<NEIGHFLAG>(), i, ev);
 }
 
 /* ----------------------------------------------------------------------
