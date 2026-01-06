@@ -325,6 +325,22 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakePreNeighbor, const int &i
 ------------------------------------------------------------------------- */
 
 template<class DeviceType>
+void FixShakeKokkos<DeviceType>::min_setup(int vflag)
+{
+  // setup SHAKE output
+  bigint ntimestep = update->ntimestep;
+  if (output_every) {
+    next_output = ntimestep + output_every;
+    if (ntimestep % output_every != 0)
+      next_output = (ntimestep/output_every)*output_every + output_every;
+  } else next_output = -1;
+  
+  FixShake::min_setup(vflag);
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
 void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
 {
   
@@ -397,8 +413,6 @@ void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
   comm->reverse_comm(this);
   this->ebond = ev.evdwl;
   
-  utils::logmesg(lmp,"*** ebond {} v {} {} {} {} {} {}\n", ebond, ev.v[0], ev.v[1], ev.v[2], ev.v[3], ev.v[4], ev.v[5]);
-  
   if (vflag_global) {
     virial[0] += static_cast<double>(ev.v[0]);
     virial[1] += static_cast<double>(ev.v[1]);
@@ -409,9 +423,12 @@ void FixShakeKokkos<DeviceType>::min_post_force(int vflag)
   }
 
   atomKK->modified(execution_space, F_MASK);
-  
-  //utils::logmesg(lmp,"*** output_every {} update->ntimestep {} next_output {}\n", output_every, update->ntimestep, next_output);
 
+  if (update->ntimestep == next_output) {
+    atomKK->modified(execution_space, X_MASK);
+    stats();
+  }
+  
   if (need_dup) dup_f = {};
 }
 
@@ -463,8 +480,10 @@ void FixShakeKokkos<DeviceType>::operator()(TagFixShakeMinPostForce<NEIGHFLAG,VF
     }
 
     if (output_every && !is_angle) {
-      if (idx0 < nlocal) { Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0); Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r); }
-      if (idx1 < nlocal) { Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0); Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r); }
+      Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0);
+      Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r);
+      Kokkos::atomic_add(&d_b_stats(type_idx, 0), 1.0);
+      Kokkos::atomic_add(&d_b_stats(type_idx, 1), (double)r);
       Kokkos::atomic_max(&d_b_stats(type_idx, 2), (double)r);
       Kokkos::atomic_min(&d_b_stats(type_idx, 3), (double)r);
     }

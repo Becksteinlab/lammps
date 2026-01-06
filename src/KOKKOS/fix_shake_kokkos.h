@@ -56,8 +56,9 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
   ~FixShakeKokkos() override;
   void init() override;
   void pre_neighbor() override;
-  void post_force(int) override;
+  void min_setup(int) override;
   void min_post_force(int) override;
+  void post_force(int) override;
 
   void grow_arrays(int) override;
   void copy_arrays(int, int, int) override;
