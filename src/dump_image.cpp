@@ -714,12 +714,10 @@ void DumpImage::init_style()
       error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
   }
 
-  if (atomflag && adiam == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      diamelement[i] = image->element2diam(typenames[i]);
-      if (diamelement[i] == 0.0)
-        error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
-    }
+  for (int i = 1; i <= ntypes; i++) {
+    diamelement[i] = image->element2diam(typenames[i]);
+    if (diamelement[i] == 0.0)
+      error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
   }
 
   if (bondflag == AUTO) {
@@ -1568,7 +1566,17 @@ void DumpImage::create_image()
       }
 
       if (fixvec[i] == SPHERE) {
-        image->draw_sphere(&fixarray[i][1], color, fixarray[i][4] + ifix.flag2, opacity);
+        diameter = fixarray[i][4];
+        if (fixarray[i][4] < 0) {
+          if (adiam == NUMERIC) {
+            diameter = adiamvalue;
+          } else if (adiam == TYPE) {
+            diameter = diamtype[itype];
+          } else if (adiam == ELEMENT) {
+            diameter = diamelement[itype];
+          }
+        }
+        image->draw_sphere(&fixarray[i][1], color, diameter + ifix.flag2, opacity);
       } else if (fixvec[i] == LINE) {
         // @sjplimp for consistency this should be:
         // image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag2,ifix.flag1);
@@ -1599,27 +1607,19 @@ void DumpImage::create_image()
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
         double *color1, *color2;
-        double opacity1, opacity2;
+        double opacity = ifix.opacity;
         if (ifix.colorstyle == TYPE) {
           color1 = colortype[type1];
           color2 = colortype[type2];
-          opacity1 = aopacity[type1];
-          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == ELEMENT) {
           color1 = colorelement[type1];
           color2 = colorelement[type2];
-          opacity1 = aopacity[type1];
-          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == CONSTANT) {
           color1 = ifix.rgb;
           color2 = ifix.rgb;
-          opacity1 = ifix.opacity;
-          opacity2 = ifix.opacity;
         } else {
           color1 = image->color2rgb("white");
           color2 = image->color2rgb("white");
-          opacity1 = 1.0;
-          opacity2 = 1.0;
         }
 
         double diameter = 0.5;
@@ -1651,11 +1651,11 @@ void DumpImage::create_image()
         xmid[0] = fixarray[i][2] + 0.5 * delx;
         xmid[1] = fixarray[i][3] + 0.5 * dely;
         xmid[2] = fixarray[i][4] + 0.5 * delz;
-        image->draw_cylinder(&fixarray[i][2], xmid, color1, diameter, capflag, opacity1);
+        image->draw_cylinder(&fixarray[i][2], xmid, color1, diameter, capflag, opacity);
         xmid[0] = fixarray[i][5] - 0.5 * delx;
         xmid[1] = fixarray[i][6] - 0.5 * dely;
         xmid[2] = fixarray[i][7] - 0.5 * delz;
-        image->draw_cylinder(xmid, &fixarray[i][5], color2, diameter, capflag, opacity2);
+        image->draw_cylinder(xmid, &fixarray[i][5], color2, diameter, capflag, opacity);
       }
     }
   }

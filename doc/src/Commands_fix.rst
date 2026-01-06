@@ -86,6 +86,7 @@ OPT.
    * :doc:`graphics <fix_graphics>`
    * :doc:`graphics/arrows <fix_graphics_arrows>`
    * :doc:`graphics/isosurface <fix_graphics_isosurface>`
+   * :doc:`graphics/periodic <fix_graphics_periodic>`
    * :doc:`gravity (ko) <fix_gravity>`
    * :doc:`grem <fix_grem>`
    * :doc:`halt <fix_halt>`
