@@ -180,7 +180,11 @@ The *dipole* mode requires the use of :doc:`atom style dipole
 Related commands
 """"""""""""""""
 
-:doc:`fix_graphics <fix_graphics>`
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`
 
 Default
 """""""

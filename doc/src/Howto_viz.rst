@@ -95,7 +95,8 @@ multi-threading support for SSAO processing.
 Color selection and color management
 ------------------------------------
 
-
+The :doc:`dump image <dump_image>` command in LAMMPS has a variety
+of options to assign colors to the rendered graphics.
 
 --------------------
 
@@ -535,9 +536,11 @@ styles:
 .. table_from_list::
    :columns: 4
 
-   * :doc:`fix graphics <fix_graphics>`
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
    * :doc:`fix graphics/isosurface <fix_graphics_isosurface>`
+   * :doc:`fix graphics/labels <fix_graphics_labels>`,
+   * :doc:`fix graphics/objects <fix_graphics_objects>`,
+   * :doc:`fix graphics/periodic <fix_graphics_periodic>`,
    * :doc:`fix indent <fix_indent>`
    * :doc:`fix reaxff/bonds <fix_reaxff_bonds>`
    * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
@@ -578,13 +581,13 @@ already (see discussion above).
 
 Below are discussions about some aspects of specific fix commands and some input examples.
 
-Fix graphics
-^^^^^^^^^^^^
+Fix graphics/objects
+^^^^^^^^^^^^^^^^^^^^
 
-Fix :doc:`graphics <fix_graphics>` adds some graphics primitives and
-more complex objects like a progress bar to the visualization where
-properties of the object(s) are controlled by :doc:`equal-style or
-compatible variables <variable>`.
+Fix :doc:`graphics/objects <fix_graphics_objects>` adds some graphics
+primitives and more complex objects like a progress bar to the
+visualization where properties of the object(s) are controlled by
+:doc:`equal-style or compatible variables <variable>`.
 
 Fix graphics/arrows
 ^^^^^^^^^^^^^^^^^^^
@@ -602,8 +605,9 @@ computes where the first defines the position of the (middle of the)
 arrow and the second the direction and length of the arrow.  Popular
 choices would create per-molecule or per-bin chunks.  Below is an
 example input section that computes and displays both, the total dipole
-moment (using :doc:`fix graphics <fix_graphics>` and the per-molecule
-dipole moment as arrows in addition to the per-atom velocities:
+moment (using :doc:`fix graphics/objects <fix_graphics_objects>` and the
+per-molecule dipole moment as arrows in addition to the per-atom
+velocities:
 
 .. code-block:: LAMMPS
 

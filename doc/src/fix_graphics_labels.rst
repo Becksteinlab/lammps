@@ -171,8 +171,8 @@ or *size*.  If any of these values is a variable, it should be specified
 as `v_name`, where `name` is the variable name.  In this case, the
 variable will be evaluated each *nevery* timestep, and its value used to
 position and resize the image or text.  Please see the documentation of
-the :doc:`fix graphics <fix_graphics>` command for a more detailed
-discussion on using variables with graphics objects.
+the :doc:`fix graphics/objects <fix_graphics_objects>` command for a
+more detailed discussion on using variables with graphics objects.
 
 .. _jpeg_format: https://jpeg.org/jpeg/
 .. _png_format: https://en.wikipedia.org/wiki/portable_network_graphics
@@ -213,8 +213,11 @@ more information on how to do that.
 Related commands
 """"""""""""""""
 
-:doc:`fix graphics <fix_graphics>`, :doc:`fix graphics/arrows <fix_graphics_arrows>`,
-:doc:`fix print <fix_print>`
+:doc:`fix print <fix_print>`,
+:doc:`fix graphics/arrows <fix_graphics_arrows>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`,
 
 Default
 """""""

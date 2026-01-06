@@ -102,12 +102,16 @@ Restrictions
 """"""""""""
 
 Currently only periodic images of atoms and bonds can be displayed.
-Body particles or ellipsoids and similar are not supported.
+Body particles or ellipsoids and similar are not supported; they would
+be shown as spheres with this fix.
 
 Related commands
 """"""""""""""""
 
-:doc:`fix graphics <fix_graphics>`, :doc:`fix graphics/arrows <fix_graphics_arrows>`
+:doc:`fix graphics/arrows <fix_graphics_arrows>`,
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
 
 Default
 """""""

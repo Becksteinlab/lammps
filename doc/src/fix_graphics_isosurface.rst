@@ -155,7 +155,7 @@ Example for using STL output in VMD
 
 Below is an example input commands showcasing the use of the
 *graphics/isosurface* fix and exporting STL files.  They are added to a
-simulation of :doc:`a bulk SPC/E water system <Howto_spce>` with 1350
+simulation of :doc:`a bulk SPC/E water system <Howto_spc>` with 1350
 water molecules.
 
 .. code-block:: LAMMPS
@@ -246,7 +246,10 @@ None.
 Related commands
 """"""""""""""""
 
-:doc:`fix_graphics <fix_graphics>`, :doc:`fix_graphics/arrows <fix_graphics_arrows>`
+:doc:`fix graphics/arrows <fix_graphics_arrows>`,
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`,
 
 Defaults
 """"""""

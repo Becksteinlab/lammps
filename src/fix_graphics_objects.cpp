@@ -11,7 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#include "fix_graphics.h"
+#include "fix_graphics_objects.h"
 
 #include "comm.h"
 #include "domain.h"
@@ -36,15 +36,15 @@ enum { X = 0, Y, Z };
 
 /* ---------------------------------------------------------------------- */
 
-FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
+FixGraphicsObjects::FixGraphicsObjects(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), imgobjs(nullptr), imgparms(nullptr)
 {
-  if (narg < 4) utils::missing_cmd_args(FLERR, "fix graphics", error);
+  if (narg < 4) utils::missing_cmd_args(FLERR, "fix graphics/objects", error);
 
   // parse mandatory arg
 
   nevery = utils::inumeric(FLERR, arg[3], false, lmp);
-  if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics nevery value {}", nevery);
+  if (nevery <= 0) error->all(FLERR, 3, "Illegal fix graphics/objects nevery value {}", nevery);
   global_freq = nevery;
   dynamic_group_allow = 1;
 
@@ -54,7 +54,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "sphere") == 0) {
-      if (iarg + 6 > narg) utils::missing_cmd_args(FLERR, "fix graphics sphere", error);
+      if (iarg + 6 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects sphere", error);
       // clang-format off
       SphereItem sphere{SPHERE, 1, {0.0, 0.0, 0.0}, 0.0, nullptr, nullptr, nullptr, nullptr,
                         -1, -1, -1, -1};
@@ -84,7 +84,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       ++numobjs;
       iarg += 6;
     } else if (strcmp(arg[iarg], "cylinder") == 0) {
-      if (iarg + 9 > narg) utils::missing_cmd_args(FLERR, "fix graphics cylinder", error);
+      if (iarg + 9 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects cylinder", error);
       // clang-format off
       CylinderItem cylinder{CYLINDER, 1, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0.0,
                             nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
@@ -130,7 +130,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       ++numobjs;
       iarg += 9;
     } else if (strcmp(arg[iarg], "arrow") == 0) {
-      if (iarg + 10 > narg) utils::missing_cmd_args(FLERR, "fix graphics arrow", error);
+      if (iarg + 10 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects arrow", error);
       // clang-format off
       ArrowItem arrow{ARROW, 1, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0.0, 0.1,
                             nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
@@ -179,7 +179,7 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       numobjs += 2;
       iarg += 10;
     } else if (strcmp(arg[iarg], "progbar") == 0) {
-      if (iarg + 11 > narg) utils::missing_cmd_args(FLERR, "fix graphics progbar", error);
+      if (iarg + 11 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects progbar", error);
       // clang-format off
       ProgbarItem progbar{PROGBAR, 1, 2, Y, 0, {0.0, 0.0, 0.0}, 0.0, 0.0, 0.0, nullptr, -1};
       // clang-format on
@@ -214,16 +214,16 @@ FixGraphics::FixGraphics(LAMMPS *lmp, int narg, char **arg) :
       numobjs += 2 + progbar.tics;
       iarg += 11;
     } else {
-      error->all(FLERR, iarg, "Unknown fix graphics keyword {}", arg[iarg]);
+      error->all(FLERR, iarg, "Unknown fix graphics/objects keyword {}", arg[iarg]);
     }
   }
-  memory->create(imgobjs, numobjs, "fix_graphics:imgobjs");
-  memory->create(imgparms, numobjs, 10, "fix_graphics:imgparms");
+  memory->create(imgobjs, numobjs, "fix_graphics/objects:imgobjs");
+  memory->create(imgparms, numobjs, 10, "fix_graphics/objects:imgparms");
 }
 
 /* ---------------------------------------------------------------------- */
 
-FixGraphics::~FixGraphics()
+FixGraphicsObjects::~FixGraphicsObjects()
 {
   for (auto &gi : items) {
     switch (gi.style) {
@@ -265,14 +265,14 @@ FixGraphics::~FixGraphics()
 
 /* ---------------------------------------------------------------------- */
 
-int FixGraphics::setmask()
+int FixGraphicsObjects::setmask()
 {
   return END_OF_STEP;
 }
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphics::init()
+void FixGraphicsObjects::init()
 {
   int n = 0;
   for (auto &gi : items) {
@@ -282,41 +282,45 @@ void FixGraphics::init()
       if (gi.sphere.xstr) {
         int ivar = input->variable->find(gi.sphere.xstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.sphere.xstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.sphere.xstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.sphere.xstr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.sphere.xstr);
         gi.sphere.xvar = ivar;
       }
       if (gi.sphere.ystr) {
         int ivar = input->variable->find(gi.sphere.ystr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.sphere.ystr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.sphere.ystr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.sphere.ystr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.sphere.ystr);
         gi.sphere.yvar = ivar;
       }
       if (gi.sphere.zstr) {
         int ivar = input->variable->find(gi.sphere.zstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.sphere.zstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.sphere.zstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.sphere.zstr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.sphere.zstr);
         gi.sphere.zvar = ivar;
       }
       if (gi.sphere.dstr) {
         int ivar = input->variable->find(gi.sphere.dstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.sphere.dstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.sphere.dstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.sphere.dstr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.sphere.dstr);
         gi.sphere.dvar = ivar;
       }
       ++n;
@@ -326,71 +330,78 @@ void FixGraphics::init()
       if (gi.cylinder.x1str) {
         int ivar = input->variable->find(gi.cylinder.x1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.x1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.x1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.x1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.x1str);
         gi.cylinder.x1var = ivar;
       }
       if (gi.cylinder.y1str) {
         int ivar = input->variable->find(gi.cylinder.y1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.y1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.y1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.y1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.y1str);
         gi.cylinder.y1var = ivar;
       }
       if (gi.cylinder.z1str) {
         int ivar = input->variable->find(gi.cylinder.z1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.z1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.z1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.z1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.z1str);
         gi.cylinder.z1var = ivar;
       }
       if (gi.cylinder.x2str) {
         int ivar = input->variable->find(gi.cylinder.x2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.x2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.x2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.x2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.x2str);
         gi.cylinder.x2var = ivar;
       }
       if (gi.cylinder.y2str) {
         int ivar = input->variable->find(gi.cylinder.y2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.y2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.y2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.y2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.y2str);
         gi.cylinder.y2var = ivar;
       }
       if (gi.cylinder.z2str) {
         int ivar = input->variable->find(gi.cylinder.z2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.z2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.z2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.z2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.z2str);
         gi.cylinder.z2var = ivar;
       }
       if (gi.cylinder.dstr) {
         int ivar = input->variable->find(gi.cylinder.dstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.cylinder.dstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.cylinder.dstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.cylinder.dstr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.cylinder.dstr);
         gi.cylinder.dvar = ivar;
       }
       ++n;
@@ -400,71 +411,77 @@ void FixGraphics::init()
       if (gi.arrow.x1str) {
         int ivar = input->variable->find(gi.arrow.x1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.x1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.x1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.x1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.x1str);
         gi.arrow.x1var = ivar;
       }
       if (gi.arrow.y1str) {
         int ivar = input->variable->find(gi.arrow.y1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.y1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.y1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.y1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.y1str);
         gi.arrow.y1var = ivar;
       }
       if (gi.arrow.z1str) {
         int ivar = input->variable->find(gi.arrow.z1str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.z1str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.z1str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.z1str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.z1str);
         gi.arrow.z1var = ivar;
       }
       if (gi.arrow.x2str) {
         int ivar = input->variable->find(gi.arrow.x2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.x2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.x2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.x2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.x2str);
         gi.arrow.x2var = ivar;
       }
       if (gi.arrow.y2str) {
         int ivar = input->variable->find(gi.arrow.y2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.y2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.y2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.y2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.y2str);
         gi.arrow.y2var = ivar;
       }
       if (gi.arrow.z2str) {
         int ivar = input->variable->find(gi.arrow.z2str);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.z2str);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.z2str);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.z2str);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.arrow.z2str);
         gi.arrow.z2var = ivar;
       }
       if (gi.arrow.dstr) {
         int ivar = input->variable->find(gi.arrow.dstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.arrow.dstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.arrow.dstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.arrow.dstr);
+                     "Fix graphics/objects variable {} is not equal-style variable", gi.arrow.dstr);
         gi.arrow.dvar = ivar;
       }
       imgparms[n][9] = gi.arrow.ratio;
@@ -558,11 +575,12 @@ void FixGraphics::init()
       if (gi.progbar.pstr) {
         int ivar = input->variable->find(gi.progbar.pstr);
         if (ivar < 0)
-          error->all(FLERR, Error::NOLASTLINE, "Variable name {} for fix graphics does not exist",
-                     gi.progbar.pstr);
+          error->all(FLERR, Error::NOLASTLINE,
+                     "Variable name {} for fix graphics/objects does not exist", gi.progbar.pstr);
         if (input->variable->equalstyle(ivar) == 0)
           error->all(FLERR, Error::NOLASTLINE,
-                     "Fix graphics variable {} is not equal-style variable", gi.progbar.pstr);
+                     "Fix graphics/objects variable {} is not equal-style variable",
+                     gi.progbar.pstr);
         gi.progbar.pvar = ivar;
       }
     }
@@ -572,7 +590,7 @@ void FixGraphics::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphics::end_of_step()
+void FixGraphicsObjects::end_of_step()
 {
   // evaluate variable if necessary, wrap with clear/add
 
@@ -665,7 +683,7 @@ void FixGraphics::end_of_step()
    provide graphics information to dump image
 ------------------------------------------------------------------------- */
 
-int FixGraphics::image(int *&objs, double **&parms)
+int FixGraphicsObjects::image(int *&objs, double **&parms)
 {
   objs = imgobjs;
   parms = imgparms;
