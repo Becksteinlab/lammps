@@ -1739,6 +1739,8 @@ isoenergetic
 isoenthalpic
 isokinetic
 isomorphism
+isosurface
+isosurfaces
 isothermal
 isotropically
 isovalue

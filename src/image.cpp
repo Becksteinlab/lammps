@@ -181,7 +181,8 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
 
   ncolors = 0;
   boxcolor = color2rgb("yellow");
-  background[0] = background[1] = background[2] = 0;
+  background[0] = background[1] = background[2] = 0.0;
+  background2[0] = background2[1] = background2[2] = -1.0;
 
   // define nmap colormaps, all with default settings
 
@@ -377,22 +378,39 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
 /* ----------------------------------------------------------------------
    initialize image to background color and depth buffer
    no need to init surfaceBuffer, since will be based on depth
+   create background gradient, if background2[0] is >= 0
+     otherwise use single background color
 ------------------------------------------------------------------------- */
 
 void Image::clear()
 {
-  int red = background[0];
+  int red   = background[0];
   int green = background[1];
-  int blue = background[2];
+  int blue  = background[2];
 
-  int ix,iy;
-  for (iy = 0; iy < height; iy ++)
-    for (ix = 0; ix < width; ix ++) {
-      imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
-      imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
-      imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
-      depthBuffer[iy * width + ix] = -1;
+  if (background2[0] < 0.0) {
+    for (int iy = 0; iy < height; iy ++) {
+      for (int ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
     }
+  } else {
+    for (int iy = 0; iy < height; iy ++) {
+      double fraction = (double) iy / (double) height;
+      red   = fraction * background2[0] + (1.0 - fraction) * background[0];
+      green = fraction * background2[1] + (1.0 - fraction) * background[1];
+      blue  = fraction * background2[2] + (1.0 - fraction) * background[2];
+      for (int ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -943,27 +961,31 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
       // there can be single pixel gaps due to rounding
       // using <= if test can leave single-pixel gaps between 2 triangles
       // using < if test fixes most of them
-
+      // suggested by Nathan Fabian, Nov 2022
+      //
+      // using a < -0.000005 if test fixes even more cases and results in only slightly fuzzy edges.
+      // using a smaller magnitude value has less effect, using a large magnitude value
+      // changed 01-01-2026 by Axel Kohlmeyer
       MathExtra::sub3 (zlocal, xlocal, s1);
       MathExtra::sub3 (ylocal, xlocal, s2);
       MathExtra::sub3 (p, xlocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       MathExtra::sub3 (xlocal, ylocal, s1);
       MathExtra::sub3 (zlocal, ylocal, s2);
       MathExtra::sub3 (p, ylocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       MathExtra::sub3 (ylocal, zlocal, s1);
       MathExtra::sub3 (xlocal, zlocal, s2);
       MathExtra::sub3 (p, zlocal, s3);
       MathExtra::cross3 (s1, s2, c1);
       MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      if (MathExtra::dot3 (c1, c2) < -0.000005) continue;
 
       double cNormal[3];
       cNormal[0] = MathExtra::dot3(camRight, normal);
@@ -1699,7 +1721,7 @@ double *Image::element2color(char *element)
     {0.8, 0.2, 0.2},
     {0.7, 0.85, 0.45},
     {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6, 0.6, 0.6},
+    {0.6, 0.6, 0.8},
     {0.6, 0.6, 0.7},
     {0.6431372549, 0.6666666667, 0.6784313725},
     {0.6901960784, 0.768627451, 0.8705882353},
@@ -1707,7 +1729,7 @@ double *Image::element2color(char *element)
     {0.95, 0.9, 0.2},
     {0.15, 0.5, 0.1},
     {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5, 0.5, 0.5},
+    {0.8, 0.5, 0.5},
     {0.8, 0.8, 0.7},
     {0.6431372549, 0.6666666667, 0.6784313725},
     {0.6431372549, 0.6666666667, 0.6784313725},
