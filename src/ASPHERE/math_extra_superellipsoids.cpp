@@ -363,8 +363,31 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
   double blockmax = std::fmax(std::fmax(blocki[0],blocki[1]), std::fmax(blockj[0], blockj[1]));
 
   norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian);
-  // TODO: consider testing for convergence before attempting Newton's method.
-  //       the initial guess is the old X0, so with temporal coherence, it might still pass tolerance if deformation is slow!
+  // testing for convergence before attempting Newton's method.
+  // the initial guess is the old X0, so with temporal coherence, it might still pass tolerance if deformation is slow!
+  if (norm < TOL_NR_RES) {
+    
+    //  must compute the normal vector nij before returning since the Newton loop normally handles this upon convergence.
+    double xilocal[3], tmp_v[3], gradi[3], hess_dummy[3][3];
+
+    // Transform global X0 to local frame of particle I
+    MathExtra::sub3(X0, xci, tmp_v);
+    MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
+
+    // Compute local gradient (we could ignore the Hessian here)
+    shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hess_dummy);
+
+    // Rotate gradient back to global frame to get normal
+    MathExtra::matvec(Ri, tmp_v, gradi);
+    MathExtra::normalize3(gradi, nij);
+
+    // Return status
+    if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0) 
+      return 1; // Converged, but no contact (separated)
+    
+    return 0; // Converged and Contacting
+  }
+
 
   for (int iter = 0 ; iter < ITERMAX_NR ; iter++) {
     norm_old = norm;
@@ -496,6 +519,8 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
   // 0 = converged and grains touching
   if (!converged)
     return 2; // TODO: consider not failing if not converged but shapefuncs positive (i.e., no contact)
+              // JB: might be risky to assume no contact if not converged, NR might have gone to a far away point
+              // but no guarantee there is no contact
   if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0)
     return 1;
   return 0;
