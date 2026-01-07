@@ -138,7 +138,7 @@ void apply_regularization_shape_function(double n1, double *value, double *grad,
   // B = (1/n) * (1/n - 1) * F^(1/n - 2) simplifies to scale_grad * (inv_n1 - 1.0) / F
   double scale_hess_add = scale_grad_hess1 * (inv_n1 - 1.0) / F;
 
-  *value = pow(F, inv_n1) - 1.0; 
+  *value = (F * F_pow_1_n1_m1) - 1.0; // avoid computing pow twice
 
   // hessian update
   for (int i = 0; i < 3; i++) {

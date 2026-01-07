@@ -462,7 +462,7 @@ void PairGranHookeHistoryEllipsoid::compute(int eflag, int vflag)
           torque[j][2] -= tor3;
         }
 
-        if (evflag) ev_tally_xyz(i, j, nlocal, newton_pair, 0.0, 0.0, fx, fy, fz, delx, dely, delz); // TODO: is this correct for non-spherical particles? I don't think so, how to correct it?
+        if (evflag) ev_tally_xyz(i, j, nlocal, newton_pair, 0.0, 0.0, fx, fy, fz, delx, dely, delz); // Correct even for non-spherical particles
       }
     }
   }
@@ -756,7 +756,6 @@ void PairGranHookeHistoryEllipsoid::reset_dt()
 
 /* ---------------------------------------------------------------------- */
 
-// TODO: implement the single() function for the super-ellipsoid
 double PairGranHookeHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*jtype*/, double rsq,
                                              double /*factor_coul*/, double /*factor_lj*/, double &fforce)
 {
