@@ -733,9 +733,9 @@ void FixGraphicsLabels::end_of_step()
         free(g);
       }
 
-      txt.width = width;
-      int height = txt.height = maxy - miny + 1 + 4 * xspace;
       int xhalf = xspace / 2;
+      txt.width = width;
+      int height = txt.height = maxy - miny + 1 + 3 * xspace;
       delete[] txt.pixmap;
       txt.pixmap = new unsigned char[height * width * 3];
 
@@ -762,7 +762,7 @@ void FixGraphicsLabels::end_of_step()
 
         g = SSFN::ssfn_render(&ctx, c);
         for (int y = 0; y < g->h; ++y) {
-          const int yoffs = (g->h - 1 - y + g->baseline - miny + 2 * xspace - xhalf) * width * 3;
+          const int yoffs = (g->h - 1 - y + g->baseline - miny + xspace + xhalf/2) * width * 3;
           for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
             if (m > 0x80) {
               m = 1;
