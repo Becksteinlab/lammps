@@ -698,7 +698,7 @@ void AtomVecEllipsoidKokkos::unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_l
   }
   atomKK->modified(space,ELLIPSOID_MASK|BONUS_MASK);
 
-  nlocal_bonus = k_count_bonus.h_view();
+  nlocal_bonus = k_count_bonus.view_host()();
 }
 
 /* ---------------------------------------------------------------------- */
