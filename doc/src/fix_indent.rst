@@ -209,10 +209,9 @@ Dump image info
 Fix indent supports the *fix* keyword of :doc:`dump image <dump_image>`.
 The fix will pass geometry information about the indenter to *dump
 image* so that the indenter object will be included in the rendered
-image.  This feature currently only supports spherical, cylindrical, and
-planar indenters.  Please note, that for :doc:`2d systems <dimension>`,
-a planar indenter rendered as a plane would be invisible and it is thus
-rendered as a cylinder.
+image.  Please note, that for :doc:`2d systems <dimension>`, a planar
+indenter rendered as a plane would be invisible and it is thus rendered
+as a cylinder.
 
 The color of the indenter object is by default that of the first atom
 type when using color styles "type" or "element".  With color style
@@ -234,7 +233,7 @@ to reduce the radius of the rendered object so that it does not obscure
 atoms close to it.  For a planar indenter in 2d systems, it should be
 set to a positive value or the indenter will not be visible since there
 is no radius parameter associated with it (unlike for spherical or
-cylindrical indenters) and thus its radius set to zero internally.
+cylindrical indenters) and thus its radius is set to zero internally.
 
 Restart, fix_modify, output, run start/stop, minimize info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""
