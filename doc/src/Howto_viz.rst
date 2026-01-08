@@ -42,12 +42,13 @@ Advanced graphics features in the *dump image* command
 The following paragraphs discuss some of the more advanced features in
 the :doc:`dump image <dump_image>` command in LAMMPS with the help of
 some simple input file examples.  For exact details of keywords and
-arguments, please refer to the detailed documentation of the command.
+arguments, please refer to the detailed documentation of the respective
+commands.
 
 Please note that many of these features were added or significantly
-updated after LAMMPS version 10 Sep 2025 and well into the 2026
-stable version development cycle.  If you are using an older version
-of LAMMPS, these examples may cause errors or may look differently.
+updated after LAMMPS version 10 Sep 2025 and well into the 2026 stable
+version development cycle.  If you are using an older version of LAMMPS,
+these examples may likely cause errors or look differently.
 
 .. contents:: Available topics
    :local:
@@ -81,14 +82,16 @@ and the choice of the *fsaa* and *ssao* settings.  For high resolution
 images, a correspondingly large image size has to be chosen.  Same as it
 is done implicitly when enabling FSAA, one can improve image quality by
 rendering images at a large size and then processing and scaling them to
-the desired size in a image processing software.  Since the simulation
+the desired size in an image processing software.  Since the simulation
 has to wait for dump image to complete its image rendering, creating
-high resolution and high quality images can slow down as simulation
-significantly.  On the other hand, the image rasterizer in LAMMPS is
-fairly simple and thus fast compared to more advanced image generation
-tools like ray tracers.  At the moment there is no GPU acceleration or
-multi-threading parallelization available, except for the
-multi-threading support for SSAO processing.
+high resolution and high quality images can slow down a simulation
+significantly with frequent output.  On the other hand, the image
+rasterizer in LAMMPS is fairly simple and thus fast compared to more
+advanced image generation tools like ray tracers.  Also, the method it
+uses to generate the image allows to have each MPI create images for the
+data they own and then those images are merged in the end.  At the
+moment there is no GPU acceleration or multi-threading parallelization
+available, except for the multi-threading support for SSAO processing.
 
 --------------------
 
@@ -96,8 +99,83 @@ Color selection and color management
 ------------------------------------
 
 The :doc:`dump image <dump_image>` command in LAMMPS has a variety
-of options to assign colors to the rendered graphics.
+of options to assign colors to the rendered graphics.  In most cases
+the color is assigned to atom (or bond) types and uses a default map
+using six colors as follows:
 
+* type 1 = red
+* type 2 = green
+* type 3 = blue
+* type 4 = yellow
+* type 5 = aqua
+* type 6 = cyan
+
+and repeats itself for types :math:`> 6`.  This mapping can be changed by the
+"dump_modify acolor" command, though.  If you want to change the color of a
+specific atom type, you can use :doc:`dump modify acolor <dump_image>`.  For
+example to color atoms of type 1 in gray and type 2 in white, you would use:
+
+.. code-block:: LAMMPS
+
+   dump_modify img  acolor 1 gray acolor 2 white
+
+There are 144 predefined colors, but you can add new colors or modify
+existing ones, too, with the *dump_modify color* keyword.  The *color*
+keyword is followed by the name of the color and the intensity of the
+red, green, and blue components (R/G/B) in a range from 0.0 to 1.0. Here
+is an example to create eight new color names followed by the *acolor*
+keyword with a wildcard to replace the default map of six atom colors
+with a new map of the either newly defined colors.
+
+.. code-block:: LAMMPS
+
+   dump_modify viz color map1 0.012 0.016 0.322 color map2 0.008 0.243 0.541 &
+       color map3 0 0.467 0.714 color map4 0 0.588 0.780 color map5 0 0.706 0.847 &
+       color map6 0.282 0.792 0.894 color map7 0.565 0.878 0.937 color map8 0.792 0.941 0.973 &
+       acolor * map1/map2/map3/map4/map5/map6/map7/map8
+
+Yet another option is to color the atoms by element.  The per-element
+colors are predefined but LAMMPS does not know which element an atom
+type corresponds to and by default uses carbon for all atom types.  The
+correct element information needs to be provided with a *dump_modify
+element* command followed by an element name for each atom type. In case
+of the ``peptide`` example bundled with LAMMPS this would be:
+
+.. code-block:: LAMMPS
+
+   dump viz peptide image 1000 image-*.png element type size 600 600 zoom 2.0
+   dump_modify viz element C C O H N C C C O H H S O H
+
+Finally, atoms can be colored by the value of a per-atom property using
+a color map.  There are several variants of color maps.  Here is a
+simple example coloring the atoms in the ``peptide`` example by their
+charge with a continuous color map and also with a custom set of colors:
+
+.. code-block:: LAMMPS
+
+   dump viz peptide image 1000 image-*.png q type size 600 600 zoom 2.0
+   dump_modify viz color cmap1 0.557 0.792 0.902 color cmap2 0.129 0.620 0.737 &
+       color cmap3 0.008 0.188 0.278 color cmap4 1.000 0.718 0.012 color cmap5 0.984 0.522 0.0 &
+       amap -1.0 1.0 ca 0 5 min cmap5 -0.5 cmap4 0.0 cmap3 0.5 cmap2 max cmap1
+
+
+.. |colors1| image:: img/colors-default.png
+   :width: 24%
+.. |colors2| image:: img/colors-newmap.png
+   :width: 24%
+.. |colors3| image:: img/colors-element.png
+   :width: 24%
+.. |colors4| image:: img/colors-map.png
+   :width: 24%
+
+|colors1|  |colors2|  |colors3|  |colors4|
+
+.. raw:: html
+
+   <center>(Different colorization styles. Left to right: by default
+   type map, by custom type map, by element, and by charge. Click to see
+   the full-size images)</center>
+       
 --------------------
 
 Transparency
