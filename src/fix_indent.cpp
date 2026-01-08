@@ -21,6 +21,7 @@
 #include "domain.h"
 #include "error.h"
 #include "graphics.h"
+#include "image_objects.h"
 #include "input.h"
 #include "lattice.h"
 #include "math_extra.h"
@@ -125,11 +126,20 @@ FixIndent::FixIndent(LAMMPS *lmp, int narg, char **arg) :
   // set up indenter visualization
 
   if (istyle == SPHERE) {
-    // one sphere object to draw
-    memory->create(imgobjs, 1, "fix_indent:imgobjs");
-    memory->create(imgparms, 1, 5, "fix_indent:imgparms");
-    imgobjs[0] = Graphics::SPHERE;
-    imgparms[0][0] = 1;    // use color of first atom type
+    if (domain->dimension == 2) {
+      // one cone object to draw in 2d
+      memory->create(imgobjs, 1, "fix_indent:imgobjs");
+      memory->create(imgparms, 1, 10, "fix_indent:imgparms");
+      imgobjs[0] = Graphics::CONE;
+      imgparms[0][0] = 1;    // use color of first atom type
+      imgparms[0][9] = ImageObjects::CONE_TOP;
+    } else {
+      // one sphere object to draw in 3d
+      memory->create(imgobjs, 1, "fix_indent:imgobjs");
+      memory->create(imgparms, 1, 5, "fix_indent:imgparms");
+      imgobjs[0] = Graphics::SPHERE;
+      imgparms[0][0] = 1;    // use color of first atom type
+    }
   } else if (istyle == CYLINDER) {
     // one cylinder object to draw
     memory->create(imgobjs, 1, "fix_indent:imgobjs");
@@ -344,10 +354,15 @@ void FixIndent::post_force(int /*vflag*/)
     imgparms[0][2] = ctr[1];
     if (domain->dimension == 2) {
       imgparms[0][3] = -0.5;
+      imgparms[0][4] = ctr[0];
+      imgparms[0][5] = ctr[1];
+      imgparms[0][6] = 0.5;
+      imgparms[0][7] = radius;
+      imgparms[0][8] = radius;
     } else {
       imgparms[0][3] = ctr[2];
+      imgparms[0][4] = 2.0 * radius;
     }
-    imgparms[0][4] = 2.0 * radius;
 
     // cylindrical indenter
 
