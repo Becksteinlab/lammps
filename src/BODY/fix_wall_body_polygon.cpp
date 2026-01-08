@@ -23,7 +23,9 @@
 #include "body_rounded_polygon.h"
 #include "domain.h"
 #include "error.h"
+#include "fix_wall.h"
 #include "force.h"
+#include "graphics.h"
 #include "math_const.h"
 #include "math_extra.h"
 #include "memory.h"
@@ -36,7 +38,7 @@ using namespace LAMMPS_NS;
 using namespace FixConst;
 using namespace MathConst;
 
-enum{XPLANE=0,YPLANE=1,ZCYLINDER};    // XYZ PLANE need to be 0,1,2
+enum{XPLANE=0,YPLANE=1};    // XYZ PLANE need to be 0,1
 enum{HOOKE,HOOKE_HISTORY};
 
 enum {INVALID=0,NONE=1,VERTEX=2};
@@ -52,7 +54,7 @@ static constexpr int EFF_CONTACTS = 2;    // effective contacts for 2D models
 /* ---------------------------------------------------------------------- */
 
 FixWallBodyPolygon::FixWallBodyPolygon(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg)
+  Fix(lmp, narg, arg), imgobjs(nullptr), imgparms(nullptr)
 {
   if (narg < 7) error->all(FLERR,"Illegal fix wall/body/polygon command");
 
@@ -77,29 +79,40 @@ FixWallBodyPolygon::FixWallBodyPolygon(LAMMPS *lmp, int narg, char **arg) :
 
   // wallstyle args
 
+  numwalls = 0;
   int iarg = 6;
   if (strcmp(arg[iarg],"xplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/body/polygon command");
     wallstyle = XPLANE;
-    if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
-    if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+    if (strcmp(arg[iarg+1],"NULL") == 0) {
+      lo = -BIG;
+    } else {
+      lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      ++numwalls;
+    }
+    if (strcmp(arg[iarg+2],"NULL") == 0) {
+      hi = BIG;
+    } else {
+      hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+      ++numwalls;
+    }
     iarg += 3;
   } else if (strcmp(arg[iarg],"yplane") == 0) {
     if (narg < iarg+3) error->all(FLERR,"Illegal fix wall/body/polygon command");
     wallstyle = YPLANE;
-    if (strcmp(arg[iarg+1],"NULL") == 0) lo = -BIG;
-    else lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
-    if (strcmp(arg[iarg+2],"NULL") == 0) hi = BIG;
-    else hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+    if (strcmp(arg[iarg+1],"NULL") == 0) {
+      lo = -BIG;
+    } else {
+      lo = utils::numeric(FLERR,arg[iarg+1],false,lmp);
+      ++numwalls;
+    }
+    if (strcmp(arg[iarg+2],"NULL") == 0) {
+      hi = BIG;
+    } else {
+      hi = utils::numeric(FLERR,arg[iarg+2],false,lmp);
+      ++numwalls;
+    }
     iarg += 3;
-  } else if (strcmp(arg[iarg],"zcylinder") == 0) {
-    if (narg < iarg+2) error->all(FLERR,"Illegal fix wall/body/polygon command");
-    wallstyle = ZCYLINDER;
-    lo = hi = 0.0;
-    cylradius = utils::numeric(FLERR,arg[iarg+1],false,lmp);
-    iarg += 2;
   } else error->all(FLERR,"Unknown wall style {}",arg[iarg]);
 
   // check for trailing keyword/values
@@ -124,11 +137,6 @@ FixWallBodyPolygon::FixWallBodyPolygon(LAMMPS *lmp, int narg, char **arg) :
     error->all(FLERR,"Cannot use wall in periodic dimension");
   if (wallstyle == YPLANE && domain->yperiodic)
     error->all(FLERR,"Cannot use wall in periodic dimension");
-  if (wallstyle == ZCYLINDER && (domain->xperiodic || domain->yperiodic))
-    error->all(FLERR,"Cannot use wall in periodic dimension");
-
-  if (wiggle && wallstyle == ZCYLINDER && axis != 2)
-    error->all(FLERR,"Invalid wiggle direction for fix wall/body/polygon");
 
   // setup oscillations
 
@@ -146,6 +154,19 @@ FixWallBodyPolygon::FixWallBodyPolygon(LAMMPS *lmp, int narg, char **arg) :
 
   enclosing_radius = nullptr;
   rounded_radius = nullptr;
+
+  // for rendering walls with dump image.
+
+  if (numwalls > 0) {
+    // this body style only supports 2d
+    // one cylinder object per wall to draw
+    memory->create(imgobjs, numwalls, "fix_wall:imgobjs");
+    memory->create(imgparms, numwalls, 8, "fix_wall:imgparms");
+    for (int m = 0; m < numwalls; ++m) {
+      imgobjs[m] = Graphics::CYLINDER;
+      imgparms[m][0] = 1;    // use color of first atom type by default
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -162,6 +183,9 @@ FixWallBodyPolygon::~FixWallBodyPolygon()
 
   memory->destroy(enclosing_radius);
   memory->destroy(rounded_radius);
+
+  memory->destroy(imgobjs);
+  memory->destroy(imgparms);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -228,7 +252,6 @@ void FixWallBodyPolygon::post_force(int /*vflag*/)
   // loop over all my atoms
   // rsq = distance from wall
   // dx,dy,dz = signed distance from wall
-  // for rotating cylinder, reset vwall based on particle position
   // skip atom if not close enough to wall
   //   if wall was set to a null pointer, it's skipped since lo/hi are infinity
   // compute force and torque on atom if close enough to wall
@@ -296,14 +319,6 @@ void FixWallBodyPolygon::post_force(int /*vflag*/)
           dy = -del2;
           wall_pos = whi;
           side = YHI;
-        }
-      } else if (wallstyle == ZCYLINDER) {
-        delxy = sqrt(x[i][0]*x[i][0] + x[i][1]*x[i][1]);
-        delr = cylradius - delxy;
-        if (delr > eradi) dz = cylradius;
-        else {
-          dx = -delr/delxy * x[i][0];
-          dy = -delr/delxy * x[i][1];
         }
       }
 
@@ -374,6 +389,28 @@ void FixWallBodyPolygon::post_force(int /*vflag*/)
                        vwall, facc);
       }
     } // group bit
+  }
+
+  // update wall image information
+  int m = 0;
+  if (wallstyle == XPLANE) {
+    if (lo != -BIG) {
+      FixWall::update_image_plane(m, FixWall::XLO, wlo, imgparms, domain);
+      ++m;
+    }
+    if (hi != BIG) {
+      FixWall::update_image_plane(m, FixWall::XHI, whi, imgparms, domain);
+      ++m;
+    }
+  } else if (wallstyle == YPLANE) {
+    if (lo != -BIG) {
+      FixWall::update_image_plane(m, FixWall::YLO, wlo, imgparms, domain);
+      ++m;
+    }
+    if (hi != BIG) {
+      FixWall::update_image_plane(m, FixWall::YHI, whi, imgparms, domain);
+      ++m;
+    }
   }
 }
 
@@ -617,11 +654,6 @@ int FixWallBodyPolygon::compute_distance_to_wall(double* x0, double rradi,
     hi[0] = x0[0];
     hi[1] = wall_pos;
     hi[2] = x0[2];
-  } else if (wallstyle == ZCYLINDER) {
-    delxy = sqrt(x0[0]*x0[0] + x0[1]*x0[1]);
-    hi[0] = x0[0]*cylradius/delxy;
-    hi[1] = x0[1]*cylradius/delxy;
-    hi[2] = x0[2];
   }
 
   // distance from x0 to the wall = distance from x0 to hi
@@ -819,4 +851,16 @@ void FixWallBodyPolygon::distance(const double* x2, const double* x1,
   r = sqrt((x2[0] - x1[0]) * (x2[0] - x1[0])
     + (x2[1] - x1[1]) * (x2[1] - x1[1])
     + (x2[2] - x1[2]) * (x2[2] - x1[2]));
+}
+
+/* ----------------------------------------------------------------------
+   provide graphics information to dump image to render wall as plane
+   data has been copied to dedicated storage during fix indent execution
+------------------------------------------------------------------------- */
+
+int FixWallBodyPolygon::image(int *&objs, double **&parms)
+{
+  objs = imgobjs;
+  parms = imgparms;
+  return numwalls;
 }
