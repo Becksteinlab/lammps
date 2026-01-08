@@ -17,6 +17,7 @@
 #include "domain.h"
 #include "error.h"
 #include "fix.h"
+#include "graphics.h"
 #include "input.h"
 #include "lattice.h"
 #include "memory.h"
@@ -30,6 +31,107 @@ using namespace LAMMPS_NS;
 
 enum { XLO, XHI, YLO, YHI, ZLO, ZHI };
 enum { NONE, EDGE, CONSTANT, VARIABLE };
+
+// record wall info for dump image
+
+void FixWallSRD::update_image_plane(int m, int which, double coord)
+{
+  if (domain->dimension == 2) {
+    // one cylinder for 2d. diameter is zero and can be set with fparam2
+    switch (which) {
+      case XLO:    // fallthrough
+      case XHI:
+        imgparms[m][1] = coord;
+        imgparms[m][2] = domain->boxlo[1];
+        imgparms[m][3] = 0.0;
+        imgparms[m][4] = coord;
+        imgparms[m][5] = domain->boxhi[1];
+        imgparms[m][6] = 0.0;
+        imgparms[m][7] = 0.0;
+        break;
+      case YLO:    // fallthrough
+      case YHI:
+        imgparms[m][1] = domain->boxlo[0];
+        imgparms[m][2] = coord;
+        imgparms[m][3] = 0.0;
+        imgparms[m][4] = domain->boxhi[0];
+        imgparms[m][5] = coord;
+        imgparms[m][6] = 0.0;
+        imgparms[m][7] = 0.0;
+        break;
+      case ZLO:     // fallthrough
+      case ZHI:;    // no wall in z-direction allowed for 2d systems
+        break;
+    }
+  } else {
+    // two triangles for 3d
+    switch (which) {
+      case XLO:    // fallthrough
+      case XHI:
+        imgparms[2 * m][1] = coord;
+        imgparms[2 * m][2] = domain->boxlo[1];
+        imgparms[2 * m][3] = domain->boxlo[2];
+        imgparms[2 * m][4] = coord;
+        imgparms[2 * m][5] = domain->boxhi[1];
+        imgparms[2 * m][6] = domain->boxlo[2];
+        imgparms[2 * m][7] = coord;
+        imgparms[2 * m][8] = domain->boxlo[1];
+        imgparms[2 * m][9] = domain->boxhi[2];
+        imgparms[2 * m + 1][1] = coord;
+        imgparms[2 * m + 1][2] = domain->boxhi[1];
+        imgparms[2 * m + 1][3] = domain->boxhi[2];
+        imgparms[2 * m + 1][4] = coord;
+        imgparms[2 * m + 1][5] = domain->boxlo[1];
+        imgparms[2 * m + 1][6] = domain->boxhi[2];
+        imgparms[2 * m + 1][7] = coord;
+        imgparms[2 * m + 1][8] = domain->boxhi[1];
+        imgparms[2 * m + 1][9] = domain->boxlo[2];
+        break;
+      case YLO:    // fallthrough
+      case YHI:
+        imgparms[2 * m][1] = domain->boxlo[0];
+        imgparms[2 * m][2] = coord;
+        imgparms[2 * m][3] = domain->boxlo[2];
+        imgparms[2 * m][4] = domain->boxhi[0];
+        imgparms[2 * m][5] = coord;
+        imgparms[2 * m][6] = domain->boxlo[2];
+        imgparms[2 * m][7] = domain->boxlo[0];
+        imgparms[2 * m][8] = coord;
+        imgparms[2 * m][9] = domain->boxhi[2];
+        imgparms[2 * m + 1][1] = domain->boxhi[0];
+        imgparms[2 * m + 1][2] = coord;
+        imgparms[2 * m + 1][3] = domain->boxhi[2];
+        imgparms[2 * m + 1][4] = domain->boxlo[0];
+        imgparms[2 * m + 1][5] = coord;
+        imgparms[2 * m + 1][6] = domain->boxhi[2];
+        imgparms[2 * m + 1][7] = domain->boxhi[0];
+        imgparms[2 * m + 1][8] = coord;
+        imgparms[2 * m + 1][9] = domain->boxlo[2];
+        break;
+      case ZLO:    // fallthrough
+      case ZHI:
+        imgparms[2 * m][1] = domain->boxlo[0];
+        imgparms[2 * m][2] = domain->boxlo[1];
+        imgparms[2 * m][3] = coord;
+        imgparms[2 * m][4] = domain->boxhi[0];
+        imgparms[2 * m][5] = domain->boxlo[1];
+        imgparms[2 * m][6] = coord;
+        imgparms[2 * m][7] = domain->boxlo[0];
+        imgparms[2 * m][8] = domain->boxhi[1];
+        imgparms[2 * m][9] = coord;
+        imgparms[2 * m + 1][1] = domain->boxhi[0];
+        imgparms[2 * m + 1][2] = domain->boxhi[1];
+        imgparms[2 * m + 1][3] = coord;
+        imgparms[2 * m + 1][4] = domain->boxlo[0];
+        imgparms[2 * m + 1][5] = domain->boxhi[1];
+        imgparms[2 * m + 1][6] = coord;
+        imgparms[2 * m + 1][7] = domain->boxhi[0];
+        imgparms[2 * m + 1][8] = domain->boxlo[1];
+        imgparms[2 * m + 1][9] = coord;
+        break;
+    }
+  }
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -166,6 +268,27 @@ FixWallSRD::FixWallSRD(LAMMPS *lmp, int narg, char **arg) :
   for (int m = 0; m < nwall; m++)
     if (wallstyle[m] == VARIABLE) varflag = 1;
   laststep = -1;
+
+  // for rendering walls with dump image.
+  if (domain->dimension == 2) {
+    // one cylinder object per wall to draw in 2d
+    memory->create(imgobjs, nwall, "fix_wall:imgobjs");
+    memory->create(imgparms, nwall, 8, "fix_wall:imgparms");
+    for (int m = 0; m < nwall; ++m) {
+      imgobjs[m] = Graphics::CYLINDER;
+      imgparms[m][0] = 1;    // use color of first atom type by default
+    }
+  } else {
+    // two triangle objects per wall to draw in 3d
+    memory->create(imgobjs, 2 * nwall, "fix_wall:imgobjs");
+    memory->create(imgparms, 2 * nwall, 10, "fix_wall:imgparms");
+    for (int m = 0; m < nwall; ++m) {
+      imgobjs[2 * m] = Graphics::TRIANGLE;
+      imgobjs[2 * m + 1] = Graphics::TRIANGLE;
+      imgparms[2 * m][0] = 1;        // use color of first atom type by default
+      imgparms[2 * m + 1][0] = 1;    // use color of first atom type by default
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -176,6 +299,9 @@ FixWallSRD::~FixWallSRD()
     if (wallstyle[m] == VARIABLE) delete[] varstr[m];
   memory->destroy(fwall);
   memory->destroy(fwall_all);
+
+  memory->destroy(imgobjs);
+  memory->destroy(imgparms);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -190,10 +316,8 @@ int FixWallSRD::setmask()
 
 void FixWallSRD::init()
 {
-  int flag = 0;
-  for (int m = 0; m < modify->nfix; m++)
-    if (utils::strmatch(modify->fix[m]->style, "^srd")) flag = 1;
-  if (!flag) error->all(FLERR, "Cannot use fix wall/srd without fix srd");
+  if (modify->get_fix_by_style("^srd").size() == 0)
+    error->all(FLERR, "Cannot use fix wall/srd without fix srd");
 
   for (int m = 0; m < nwall; m++) {
     if (wallstyle[m] != VARIABLE) continue;
@@ -251,6 +375,8 @@ void FixWallSRD::wall_params(int flag)
     }
 
     fwall[m][0] = fwall[m][1] = fwall[m][2] = 0.0;
+
+    update_image_plane(m, wallwhich[m], xnew);
   }
 
   laststep = ntimestep;
@@ -261,4 +387,20 @@ void FixWallSRD::wall_params(int flag)
     for (int m = 0; m < nwall; m++) xwallhold[m] = xwall[m];
 
   force_flag = 0;
+}
+
+/* ----------------------------------------------------------------------
+   provide graphics information to dump image to render wall as plane
+   data has been copied to dedicated storage during fix indent execution
+------------------------------------------------------------------------- */
+
+int FixWallSRD::image(int *&objs, double **&parms)
+{
+  objs = imgobjs;
+  parms = imgparms;
+  if (domain->dimension == 2) {
+    return nwall;
+  } else {
+    return 2 * nwall;
+  }
 }

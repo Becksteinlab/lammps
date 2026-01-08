@@ -633,6 +633,7 @@ styles:
    * :doc:`fix wall/morse <fix_wall>`
    * :doc:`fix wall/reflect <fix_wall_reflect>`
    * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
+   * :doc:`fix wall/srd <fix_wall_srd>`
    * :doc:`fix wall/table <fix_wall>`
 
 There is no support for :doc:`fix wall/region <fix_wall_region>` and
