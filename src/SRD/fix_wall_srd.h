@@ -54,8 +54,6 @@ class FixWallSRD : public Fix {
   double **fwall_all;
   int force_flag;
 
-  void update_image_plane(int, int, double);
-
   int *imgobjs;
   double **imgparms;
 };
