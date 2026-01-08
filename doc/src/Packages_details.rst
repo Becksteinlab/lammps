@@ -1071,8 +1071,10 @@ GRAPHICS package
 
 **Contents:**
 
-Dump styles :doc:`image and movie <dump_image>`, supporting classes for rendering
-images and fonts, and several fixes for adding graphics objects to visualizations.
+Dump styles :doc:`image and movie <dump_image>`, supporting classes for
+rendering images and fonts, several fixes for adding graphics objects to
+visualizations, and the region2vmd command for exporting visualizations
+of regions scripted graphics in VMD.
 
 **Supporting info:**
 
@@ -1085,6 +1087,7 @@ images and fonts, and several fixes for adding graphics objects to visualization
 * :doc:`fix graphics/labels <fix_graphics_labels>`,
 * :doc:`fix graphics/objects <fix_graphics_objects>`,
 * :doc:`fix graphics/periodic <fix_graphics_periodic>`,
+* :doc:`region2vmd <region2vmd>`
 
 ----------
 
