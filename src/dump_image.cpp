@@ -1109,7 +1109,9 @@ void DumpImage::create_image()
 
       if (bodycolor == TYPE) {
         itype = static_cast<int>(buf[m]);
-        color = colortype[itype];
+        color = colortype[(itype % atom->ntypes) + 1];
+      } else {
+        color = image->color2rgb("white");
       }
 
       ibonus = body[j];
@@ -1283,14 +1285,14 @@ void DumpImage::create_image()
       } else if (fixvec[i] == LINE) {
         if (fixcolor == TYPE) {
           itype = static_cast<int>(fixarray[i][0]);
-          color = colortype[itype];
+          color = colortype[(itype % atom->ntypes) + 1];
         }
         image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],
                              color,fixflag1,3);
       } else if (fixvec[i] == TRI) {
         if (fixcolor == TYPE) {
           itype = static_cast<int>(fixarray[i][0]);
-          color = colortype[itype];
+          color = colortype[(itype % atom->ntypes) + 1];
         }
         p1 = &fixarray[i][1];
         p2 = &fixarray[i][4];
