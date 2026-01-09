@@ -109,10 +109,10 @@ void FixWall::update_image_plane(int m, int which, double coord, double **imgpar
         break;
       case ZLO:    // fallthrough
       case ZHI:
-        imgparms[2 * m][1] = domain->boxlo[0];
+        imgparms[2 * m][1] = domain->boxhi[0];
         imgparms[2 * m][2] = domain->boxlo[1];
         imgparms[2 * m][3] = coord;
-        imgparms[2 * m][4] = domain->boxhi[0];
+        imgparms[2 * m][4] = domain->boxlo[0];
         imgparms[2 * m][5] = domain->boxlo[1];
         imgparms[2 * m][6] = coord;
         imgparms[2 * m][7] = domain->boxlo[0];
@@ -121,11 +121,11 @@ void FixWall::update_image_plane(int m, int which, double coord, double **imgpar
         imgparms[2 * m + 1][1] = domain->boxhi[0];
         imgparms[2 * m + 1][2] = domain->boxhi[1];
         imgparms[2 * m + 1][3] = coord;
-        imgparms[2 * m + 1][4] = domain->boxlo[0];
-        imgparms[2 * m + 1][5] = domain->boxhi[1];
+        imgparms[2 * m + 1][4] = domain->boxhi[0];
+        imgparms[2 * m + 1][5] = domain->boxlo[1];
         imgparms[2 * m + 1][6] = coord;
-        imgparms[2 * m + 1][7] = domain->boxhi[0];
-        imgparms[2 * m + 1][8] = domain->boxlo[1];
+        imgparms[2 * m + 1][7] = domain->boxlo[0];
+        imgparms[2 * m + 1][8] = domain->boxhi[1];
         imgparms[2 * m + 1][9] = coord;
         break;
     }
