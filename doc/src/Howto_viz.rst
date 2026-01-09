@@ -42,12 +42,13 @@ Advanced graphics features in the *dump image* command
 The following paragraphs discuss some of the more advanced features in
 the :doc:`dump image <dump_image>` command in LAMMPS with the help of
 some simple input file examples.  For exact details of keywords and
-arguments, please refer to the detailed documentation of the command.
+arguments, please refer to the detailed documentation of the respective
+commands.
 
 Please note that many of these features were added or significantly
-updated after LAMMPS version 10 Sep 2025 and well into the 2026
-stable version development cycle.  If you are using an older version
-of LAMMPS, these examples will cause errors or may look differently.
+updated after LAMMPS version 10 Sep 2025 and well into the 2026 stable
+version development cycle.  If you are using an older version of LAMMPS,
+these examples may likely cause errors or look differently.
 
 .. contents:: Available topics
    :local:
@@ -81,14 +82,99 @@ and the choice of the *fsaa* and *ssao* settings.  For high resolution
 images, a correspondingly large image size has to be chosen.  Same as it
 is done implicitly when enabling FSAA, one can improve image quality by
 rendering images at a large size and then processing and scaling them to
-the desired size in a image processing software.  Since the simulation
+the desired size in an image processing software.  Since the simulation
 has to wait for dump image to complete its image rendering, creating
-high resolution and high quality images can slow down as simulation
-significantly.  On the other hand, the image rasterizer in LAMMPS is
-fairly simple and thus fast compared to more advanced image generation
-tools like ray tracers.  At the moment there is no GPU acceleration or
-multi-threading parallelization available, except for the
-multi-threading support for SSAO processing.
+high resolution and high quality images can slow down a simulation
+significantly with frequent output.  On the other hand, the image
+rasterizer in LAMMPS is fairly simple and thus fast compared to more
+advanced image generation tools like ray tracers.  Also, the method it
+uses to generate the image allows to have each MPI create images for the
+data they own and then those images are merged in the end.  At the
+moment there is no GPU acceleration or multi-threading parallelization
+available, except for the multi-threading support for SSAO processing.
+
+--------------------
+
+Color selection and color management
+------------------------------------
+
+The :doc:`dump image <dump_image>` command in LAMMPS has a variety
+of options to assign colors to the rendered graphics.  In most cases
+the color is assigned to atom (or bond) types and uses a default map
+using six colors as follows:
+
+* type 1 = red
+* type 2 = green
+* type 3 = blue
+* type 4 = yellow
+* type 5 = aqua
+* type 6 = cyan
+
+and repeats itself for types :math:`> 6`.  This mapping can be changed by the
+"dump_modify acolor" command, though.  If you want to change the color of a
+specific atom type, you can use :doc:`dump modify acolor <dump_image>`.  For
+example to color atoms of type 1 in gray and type 2 in white, you would use:
+
+.. code-block:: LAMMPS
+
+   dump_modify img  acolor 1 gray acolor 2 white
+
+There are 144 predefined colors, but you can add new colors or modify
+existing ones, too, with the *dump_modify color* keyword.  The *color*
+keyword is followed by the name of the color and the intensity of the
+red, green, and blue components (R/G/B) in a range from 0.0 to 1.0. Here
+is an example to create eight new color names followed by the *acolor*
+keyword with a wildcard to replace the default map of six atom colors
+with a new map of the either newly defined colors.
+
+.. code-block:: LAMMPS
+
+   dump_modify viz color map1 0.012 0.016 0.322 color map2 0.008 0.243 0.541 &
+       color map3 0 0.467 0.714 color map4 0 0.588 0.780 color map5 0 0.706 0.847 &
+       color map6 0.282 0.792 0.894 color map7 0.565 0.878 0.937 color map8 0.792 0.941 0.973 &
+       acolor * map1/map2/map3/map4/map5/map6/map7/map8
+
+Yet another option is to color the atoms by element.  The per-element
+colors are predefined but LAMMPS does not know which element an atom
+type corresponds to and by default uses carbon for all atom types.  The
+correct element information needs to be provided with a *dump_modify
+element* command followed by an element name for each atom type. In case
+of the ``peptide`` example bundled with LAMMPS this would be:
+
+.. code-block:: LAMMPS
+
+   dump viz peptide image 1000 image-*.png element type size 600 600 zoom 2.0
+   dump_modify viz element C C O H N C C C O H H S O H
+
+Finally, atoms can be colored by the value of a per-atom property using
+a color map.  There are several variants of color maps.  Here is a
+simple example coloring the atoms in the ``peptide`` example by their
+charge with a continuous color map where white is neutral, red positive,
+blue negative, and the color intensity corresponds to the magnitude of
+the charge:
+
+.. code-block:: LAMMPS
+
+   dump viz peptide image 1000 image-*.png q type size 600 600 zoom 2.0
+   dump_modify amap -1.0 1.0 ca 0 3 min blue 0.0 white max red
+
+
+.. |colors1| image:: img/colors-default.png
+   :width: 24%
+.. |colors2| image:: img/colors-newmap.png
+   :width: 24%
+.. |colors3| image:: img/colors-element.png
+   :width: 24%
+.. |colors4| image:: img/colors-map.png
+   :width: 24%
+
+|colors1|  |colors2|  |colors3|  |colors4|
+
+.. raw:: html
+
+   <center>(Different colorization styles. Left to right: by default
+   type map, by custom type map, by element, and by charge. Click to see
+   the full-size images)</center>
 
 --------------------
 
@@ -528,12 +614,18 @@ styles:
 .. table_from_list::
    :columns: 4
 
-   * :doc:`fix graphics <fix_graphics>`
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
+   * :doc:`fix graphics/isosurface <fix_graphics_isosurface>`
+   * :doc:`fix graphics/labels <fix_graphics_labels>`
+   * :doc:`fix graphics/objects <fix_graphics_objects>`
+   * :doc:`fix graphics/periodic <fix_graphics_periodic>`
    * :doc:`fix graphics/replica <fix_graphics_replica>`
    * :doc:`fix indent <fix_indent>`
    * :doc:`fix reaxff/bonds <fix_reaxff_bonds>`
    * :doc:`fix smd/wall_surface <fix_smd_wall_surface>`
+   * :doc:`fix wall/body/polygon <fix_wall_body_polygon>`
+   * :doc:`fix wall/body/polyhedron <fix_wall_body_polyhedron>`
+   * :doc:`fix wall/ees <fix_wall_ees>`
    * :doc:`fix wall/lj93 <fix_wall>`
    * :doc:`fix wall/lj126 <fix_wall>`
    * :doc:`fix wall/lj1043 <fix_wall>`
@@ -545,6 +637,7 @@ styles:
    * :doc:`fix wall/morse <fix_wall>`
    * :doc:`fix wall/reflect <fix_wall_reflect>`
    * :doc:`fix wall/reflect/stochastic <fix_wall_reflect_stochastic>`
+   * :doc:`fix wall/srd <fix_wall_srd>`
    * :doc:`fix wall/table <fix_wall>`
 
 There is no support for :doc:`fix wall/region <fix_wall_region>` and
@@ -571,13 +664,13 @@ already (see discussion above).
 
 Below are discussions about some aspects of specific fix commands and some input examples.
 
-Fix graphics
-^^^^^^^^^^^^
+Fix graphics/objects
+^^^^^^^^^^^^^^^^^^^^
 
-Fix :doc:`graphics <fix_graphics>` adds some graphics primitives and
-more complex objects like a progress bar to the visualization where
-properties of the object(s) are controlled by :doc:`equal-style or
-compatible variables <variable>`.
+Fix :doc:`graphics/objects <fix_graphics_objects>` adds some graphics
+primitives and more complex objects like a progress bar to the
+visualization where properties of the object(s) are controlled by
+:doc:`equal-style or compatible variables <variable>`.
 
 Fix graphics/arrows
 ^^^^^^^^^^^^^^^^^^^
@@ -595,8 +688,9 @@ computes where the first defines the position of the (middle of the)
 arrow and the second the direction and length of the arrow.  Popular
 choices would create per-molecule or per-bin chunks.  Below is an
 example input section that computes and displays both, the total dipole
-moment (using :doc:`fix graphics <fix_graphics>` and the per-molecule
-dipole moment as arrows in addition to the per-atom velocities:
+moment (using :doc:`fix graphics/objects <fix_graphics_objects>` and the
+per-molecule dipole moment as arrows in addition to the per-atom
+velocities:
 
 .. code-block:: LAMMPS
 
@@ -614,7 +708,7 @@ dipole moment as arrows in addition to the per-atom velocities:
    variable dip2x equal v_scale*c_dip[1]
    variable dip2y equal v_scale*c_dip[2]
    variable dip2z equal v_scale*c_dip[3]
-   fix dipole all graphics 1 arrow 1  v_dip1x v_dip1y v_dip1z v_dip2x v_dip2y v_dip2z 0.3 0.2
+   fix dipole all graphics/objects 1 arrow 1  v_dip1x v_dip1y v_dip1z v_dip2x v_dip2y v_dip2z 0.3 0.2
 
    dump viz all image 100 image-*.png element type size 600 600 zoom 1.3 view 70 20 shiny 0.1 &
                 bond atom 0.2box yes 0.025 axes no 0.0 0.0 center s 0.5 0.5 0.5 fsaa yes &
@@ -622,6 +716,61 @@ dipole moment as arrows in addition to the per-atom velocities:
    dump_modify viz pad 6 boxcolor white backcolor gray element O H  bdiam 1 0.2 &
                 adiam 1 0.5 adiam 2 0.3 acolor 1 silver acolor 2 red fcolor vec goldenrod &
                 fcolor dipole forestgreen ftrans dipole 0.75 fcolor vel cyan ftrans vel 0.5
+
+Fix graphics/isosurface
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Fix :doc:`graphics/isosurface <fix_graphics_isosurface>` adds a
+triangulated surface following a given isovalue through a 3d-grid of
+data of some per-atom property.  The data is spread out using a Gaussian
+distribution with a given width and can be just a value of 1 (leading
+to a grid representing the number density) or mass or some other computed
+per-atom property from a :doc:`compute <compute>`, :doc:`fix <fix>`, or
+atom-style :doc:`variable <variable>`.  The isosurface can be represented
+by either a wireframe or a mesh of triangles and there are five choices
+for the resolution of the grid and thus the smoothness of the surface.
+
+The commands below provide an example for how to use the
+*graphics/isosurface* fix to visualize the water and lipid bilayer of
+the "rhodo" benchmark example as isosurfaces by using a green wireframe
+and a transparent white triangle surface to represent those molecules.
+
+.. code-block:: LAMMPS
+
+   group water type 4 33
+   group membrane type 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51
+   group other subtract all water membrane
+
+   fix water water graphics/isosurface 100 30.0 3.0 quality high property mass
+   fix membrane membrane graphics/isosurface 100 25.0 4.0 quality low property mass
+
+   dump viz other image 100 image-*.png element type size 600 600 zoom 1.4641 view 80 10 &
+                  shiny 0.2 fsaa yes bond atom type box yes 0.025  &
+                  fix membrane const 2 0.33 fix water const 1 0.2
+   dump_modify viz pad 9 boxcolor silver backcolor gray &
+          fcolor membrane darkgreen ftrans membrane 1.0 ftrans water 0.5 &
+          element H H H H H H H H H C C C C C C C C C C C C C N N N N N N N O O O O S S &
+                  H H H H H C C C C C C N O O O P Cl Na H H H N C C C C C C C C C C C &
+          adiam 1 1.92 adiam 2 1.92 adiam 3 1.92 adiam 5 1.92 adiam 6 1.92 adiam 7 1.92 adiam 8 1.92 &
+          adiam 9 1.92 adiam 10 2.72 adiam 11 2.72 adiam 12 2.72 adiam 13 2.72 adiam 14 2.72 &
+          adiam 15 2.72 adiam 16 2.72 adiam 17 2.72 adiam 18 2.72 adiam 19 2.72 adiam 20 2.72 &
+          adiam 21 2.72 adiam 22 2.72 adiam 23 2.48 adiam 24 2.48 adiam 25 2.48 adiam 26 2.48 &
+          adiam 27 2.48 adiam 28 2.48 adiam 29 2.48 adiam 30 2.432 adiam 31 2.432 adiam 32 2.432 &
+          adiam 34 2.88 adiam 35 2.88 adiam 52 3.632 adiam 53 2.176 adiam 54 1.92 adiam 55 1.92 &
+          adiam 56 1.92 adiam 57 2.48 adiam 58 2.72 adiam 59 2.72 adiam 60 2.72 adiam 61 2.72 &
+          adiam 62 2.72 adiam 63 2.72 adiam 64 2.72 adiam 65 2.72 adiam 66 2.72 adiam 67 2.72 adiam 68 2.72
+
+.. |isosurface1| image:: img/rhodo-all.png
+   :width: 49%
+.. |isosurface2| image:: img/rhodo-iso.png
+   :width: 49%
+
+|isosurface1|  |isosurface2|
+
+.. raw:: html
+
+   <center>(Isosurface graphics visualization example. Click to see the full-size images)</center><br>
+
 
 Fix reaxff/bonds
 ^^^^^^^^^^^^^^^^

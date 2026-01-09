@@ -314,6 +314,7 @@ bigint
 Bij
 bilayer
 bilayers
+bilinear
 binsize
 binstyle
 binutils
@@ -1283,6 +1284,7 @@ Fock
 Fogarty
 Foiles
 fontawesome
+fontcolor
 fopenmp
 forceclear
 forestgreen
@@ -1302,6 +1304,7 @@ fplo
 fprintf
 Fqq
 Fraige
+framecolor
 framerate
 Frauenheim
 Fraunhofer
@@ -1739,6 +1742,8 @@ isoenergetic
 isoenthalpic
 isokinetic
 isomorphism
+isosurface
+isosurfaces
 isothermal
 isotropically
 isovalue
@@ -3046,6 +3051,7 @@ Pisarev
 Pishevar
 Pitera
 pitorsion
+pixmap
 pj
 pjintve
 pKa
@@ -3977,6 +3983,7 @@ tradeoff
 traj
 Tranchida
 transactional
+transcolor
 transferability
 translational
 Translational

@@ -34,6 +34,7 @@ class Image : protected Pointers {
   double ssaoint;             // strength of shading from 0 to 1
   double *boxcolor;           // color to draw box outline with
   int background[3];          // RGB values of background
+  int background2[3];         // RGB values of second background color for gradient (off if < 0.0)
 
   double ambientColor[3];    // light color settings (adjustable by caller)
   double keyLightColor[3];
@@ -58,6 +59,8 @@ class Image : protected Pointers {
                      double opacity = 1.0);
   void draw_box(double (*)[3], double, double opacity = 1.0);
   void draw_axes(double (*)[3], double, double opacity = 1.0);
+  void draw_pixmap(const double *, int, int, const unsigned char *, double *, double scale = 1.0,
+                   double opacity = 1.0);
 
   int map_dynamic(int);
   int map_reset(int, int, char **);

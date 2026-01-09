@@ -28,6 +28,7 @@
 #include "error.h"
 #include "fix.h"
 #include "force.h"
+#include "graphics.h"
 #include "grid2d.h"
 #include "grid3d.h"
 #include "image.h"
@@ -68,7 +69,7 @@ using namespace ImageObjects;
 
 namespace {
 static constexpr double BIG = 1.0e20;
-enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT };
+enum { NUMERIC, ATOM, TYPE, ELEMENT, ATTRIBUTE, CONSTANT, INDEX };
 enum { STATIC, DYNAMIC };
 enum { NO = 0, YES = 1, AUTO = 2 };
 enum { FILLED, FRAME, POINTS, TRANSPARENT };
@@ -278,7 +279,11 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
       if (iarg+4 > narg) utils::missing_cmd_args(FLERR,"dump image body", error);
       bodyflag = YES;
       if (strcmp(arg[iarg+1],"type") == 0) bodycolor = TYPE;
-      else error->all(FLERR, iarg+1, "Dump image body only supports color by type");
+      else if (strcmp(arg[iarg+1],"index") == 0) bodycolor = INDEX;
+      else
+        error->all(FLERR, iarg+1, "Dump image body only supports color by type or index");
+      if (acolor != TYPE)
+        error->all(FLERR, iarg+1, "Must color atoms by type with body particles");
       bodyflag1 = utils::numeric(FLERR,arg[iarg+2],false,lmp);
       bodyflag2 = utils::numeric(FLERR,arg[iarg+3],false,lmp);
       iarg += 4;
@@ -708,20 +713,16 @@ void DumpImage::init_style()
 
   // set up type -> element mapping
 
-  if (atomflag && acolor == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      colorelement[i] = image->element2color(typenames[i]);
-      if (colorelement[i] == nullptr)
-        error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
-    }
+  for (int i = 1; i <= ntypes; i++) {
+    colorelement[i] = image->element2color(typenames[i]);
+    if (colorelement[i] == nullptr)
+      error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
   }
 
-  if (atomflag && adiam == ELEMENT) {
-    for (int i = 1; i <= ntypes; i++) {
-      diamelement[i] = image->element2diam(typenames[i]);
-      if (diamelement[i] == 0.0)
-        error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
-    }
+  for (int i = 1; i <= ntypes; i++) {
+    diamelement[i] = image->element2diam(typenames[i]);
+    if (diamelement[i] == 0.0)
+      error->all(FLERR, Error::NOLASTLINE, "Invalid dump image element name");
   }
 
   if (bondflag == AUTO) {
@@ -1266,17 +1267,22 @@ void DumpImage::create_image()
       if (bodycolor == TYPE) {
         itype = static_cast<int>(buf[m]);
         color = colortype[itype];
+      } else if (bodycolor == INDEX) {
+        itype = (body[j] % atom->ntypes) + 1;
+        color = colortype[itype];
+      } else {
+        color = image->color2rgb("white");
       }
       double opacity = aopacity[atom->type[j]];
 
       ibonus = body[j];
       n = bptr->image(ibonus,bodyflag1,bodyflag2,bodyvec,bodyarray);
       for (k = 0; k < n; k++) {
-        if (bodyvec[k] == SPHERE)
+        if (bodyvec[k] == Graphics::SPHERE)
           image->draw_sphere(bodyarray[k],color,bodyarray[k][3],opacity);
-        else if (bodyvec[k] == LINE)
+        else if (bodyvec[k] == Graphics::LINE)
           image->draw_cylinder(&bodyarray[k][0],&bodyarray[k][3],color,bodyarray[k][6],3,opacity);
-        else if (bodyvec[k] == TRI)
+        else if (bodyvec[k] == Graphics::TRI)
           image->draw_triangle(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],color,opacity);
       }
 
@@ -1555,30 +1561,37 @@ void DumpImage::create_image()
       if (!fixvec || !fixarray) continue;
 
       // set color and transparency
-      double opacity;
+      double opacity = ifix.opacity;
       if (ifix.colorstyle == TYPE) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colortype[itype];
-        opacity = aopacity[itype];
       } else if (ifix.colorstyle == ELEMENT) {
         itype = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         color = colorelement[itype];
-        opacity = aopacity[itype];
       } else if (ifix.colorstyle == CONSTANT) {
         color = ifix.rgb;
-        opacity = ifix.opacity;
       } else {
         color = image->color2rgb("white");
         opacity = 1.0;
       }
 
-      if (fixvec[i] == SPHERE) {
-        image->draw_sphere(&fixarray[i][1], color, fixarray[i][4] + ifix.flag2, opacity);
-      } else if (fixvec[i] == LINE) {
+      if (fixvec[i] == Graphics::SPHERE) {
+        diameter = fixarray[i][4];
+        if (fixarray[i][4] < 0) {
+          if (adiam == NUMERIC) {
+            diameter = adiamvalue;
+          } else if (adiam == TYPE) {
+            diameter = diamtype[itype];
+          } else if (adiam == ELEMENT) {
+            diameter = diamelement[itype];
+          }
+        }
+        image->draw_sphere(&fixarray[i][1], color, diameter + ifix.flag2, opacity);
+      } else if (fixvec[i] == Graphics::LINE) {
         // @sjplimp for consistency this should be:
         // image->draw_cylinder(&fixarray[i][1],&fixarray[i][4],color,ifix.flag2,ifix.flag1);
         image->draw_cylinder(&fixarray[i][1], &fixarray[i][4], color, ifix.flag1, 3, opacity);
-      } else if (fixvec[i] == TRI) {    // don't render surface meshes in 2d
+      } else if (fixvec[i] == Graphics::TRI) {    // don't render surface meshes in 2d
         if (domain->dimension == 3) {
           p1 = &fixarray[i][1];
           p2 = &fixarray[i][4];
@@ -1591,40 +1604,42 @@ void DumpImage::create_image()
             image->draw_cylinder(p3, p1, color, ifix.flag2, 3, opacity);
           }
         }
-      } else if (fixvec[i] == CYLINDER) {
+      } else if (fixvec[i] == Graphics::CYLINDER) {
         image->draw_cylinder(&fixarray[i][1], &fixarray[i][4], color, fixarray[i][7] + ifix.flag2,
                              (int) ifix.flag1, opacity);
-      } else if (fixvec[i] == TRIANGLE) {
+      } else if (fixvec[i] == Graphics::TRIANGLE) {
         image->draw_triangle(&fixarray[i][1], &fixarray[i][4], &fixarray[i][7], color, opacity);
-      } else if (fixvec[i] == ARROW) {
+      } else if (fixvec[i] == Graphics::ARROW) {
         ArrowObj a(fixarray[i][9]);
         a.draw(image, color, &fixarray[i][1], fixarray[i][7], &fixarray[i][4], fixarray[i][8],
                opacity);
-      } else if (fixvec[i] == BOND) {
+      } else if (fixvec[i] == Graphics::CONE) {
+        ConeObj c(1.0, fixarray[i][7] + ifix.flag2, fixarray[i][8] + ifix.flag2, fixarray[i][9]);
+        c.draw(image, vec3{fixarray[i][1], fixarray[i][2], fixarray[i][3]},
+               vec3{fixarray[i][4], fixarray[i][5], fixarray[i][6]}, color, opacity);
+      } else if (fixvec[i] == Graphics::PIXMAP) {
+        // get pointer to pixmap buffer and background transparency color
+        auto *pixmap = (const unsigned char *) ubuf(fixarray[i][6]).i;
+        double transcolor[3] = {fixarray[i][7], fixarray[i][8], fixarray[i][9]};
+        image->draw_pixmap(&fixarray[i][1], fixarray[i][4], fixarray[i][5], pixmap, transcolor,
+                           fixarray[i][10], opacity);
+      } else if (fixvec[i] == Graphics::BOND) {
         int type1 = static_cast<int>(fixarray[i][0] - 1.0) % ntypes + 1;
         int type2 = static_cast<int>(fixarray[i][1] - 1.0) % ntypes + 1;
         double *color1, *color2;
-        double opacity1, opacity2;
+        double opacity = ifix.opacity;
         if (ifix.colorstyle == TYPE) {
           color1 = colortype[type1];
           color2 = colortype[type2];
-          opacity1 = aopacity[type1];
-          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == ELEMENT) {
           color1 = colorelement[type1];
           color2 = colorelement[type2];
-          opacity1 = aopacity[type1];
-          opacity2 = aopacity[type2];
         } else if (ifix.colorstyle == CONSTANT) {
           color1 = ifix.rgb;
           color2 = ifix.rgb;
-          opacity1 = ifix.opacity;
-          opacity2 = ifix.opacity;
         } else {
           color1 = image->color2rgb("white");
           color2 = image->color2rgb("white");
-          opacity1 = 1.0;
-          opacity2 = 1.0;
         }
 
         double diameter = 0.5;
@@ -1656,11 +1671,11 @@ void DumpImage::create_image()
         xmid[0] = fixarray[i][2] + 0.5 * delx;
         xmid[1] = fixarray[i][3] + 0.5 * dely;
         xmid[2] = fixarray[i][4] + 0.5 * delz;
-        image->draw_cylinder(&fixarray[i][2], xmid, color1, diameter, capflag, opacity1);
+        image->draw_cylinder(&fixarray[i][2], xmid, color1, diameter, capflag, opacity);
         xmid[0] = fixarray[i][5] - 0.5 * delx;
         xmid[1] = fixarray[i][6] - 0.5 * dely;
         xmid[2] = fixarray[i][7] - 0.5 * delz;
-        image->draw_cylinder(xmid, &fixarray[i][5], color2, diameter, capflag, opacity2);
+        image->draw_cylinder(xmid, &fixarray[i][5], color2, diameter, capflag, opacity);
       }
     }
   }
@@ -2312,6 +2327,22 @@ int DumpImage::modify_param(int narg, char **arg)
     image->background[0] = static_cast<int>(color[0]*255.0);
     image->background[1] = static_cast<int>(color[1]*255.0);
     image->background[2] = static_cast<int>(color[2]*255.0);
+    return 2;
+  }
+
+  if (strcmp(arg[0],"backcolor2") == 0) {
+    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (strcmp(arg[1],"none") == 0) {
+      image->background2[0] = -1;
+      image->background2[1] = -1;
+      image->background2[2] = -1;
+    } else {
+      double *color = image->color2rgb(arg[1]);
+      if (color == nullptr) error->all(FLERR,"Invalid color in dump_modify command");
+      image->background2[0] = static_cast<int>(color[0]*255.0);
+      image->background2[1] = static_cast<int>(color[1]*255.0);
+      image->background2[2] = static_cast<int>(color[2]*255.0);
+    }
     return 2;
   }
 

@@ -150,9 +150,8 @@ are included in the rendered image.
 The color of the arrows is by default that of the atoms when using color
 styles "type" or "element".  With color style "const" the default value
 of "white" can be changed using :doc:`dump_modify fcolor <dump_image>`.
-Similarly, the transparency follows the atom type or can be changed for
-color style "const" with *dump\_modify ftrans*\ .
-
+The transparency is by default fully opaque and can be changed with
+*dump\_modify ftrans*\ .
 
 The *fflag1* and *fflag2* settings of *dump image fix* are currently ignored.
 
@@ -175,13 +174,22 @@ The scalar value calculated by this fix is "intensive".
 Restrictions
 """"""""""""
 
+This fix is part of the GRAPHICS package.  It is only enabled if LAMMPS
+was built with that package.  See the :doc:`Build package
+<Build_package>` page for more info.
+
 The *dipole* mode requires the use of :doc:`atom style dipole
 <atom_style>` or a hybrid atom style that includes it.
 
 Related commands
 """"""""""""""""
 
-:doc:`fix_graphics <fix_graphics>`, :doc:`fix graphics <fix_graphics/replica>`
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics <fix_graphics/replica>`
 
 Default
 """""""

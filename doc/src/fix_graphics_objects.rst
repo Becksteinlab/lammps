@@ -1,17 +1,17 @@
-.. index:: fix graphics
+.. index:: fix graphics/objects
 
-fix graphics command
-====================
+fix graphics/objects command
+============================
 
 Syntax
 """"""
 
 .. code-block:: LAMMPS
 
-   fix ID group-ID graphics Nevery keyword args ...
+   fix ID group-ID graphics/objects Nevery keyword args ...
 
 * ID, group-ID are documented in :doc:`fix <fix>` command
-* graphics = style name of this fix command
+* graphics/objects = style name of this fix command
 * Nevery = update graphics information every this many time steps
 * one or more keyword/args pairs may be appended
 * keyword = *sphere* or *cylinder* or *arrow* or *progbar*
@@ -50,9 +50,9 @@ Examples
 
 .. code-block:: LAMMPS
 
-   fix 1 all graphics 100 sphere 1 0.0 0.0 15.0 3.0 sphere 2 0.0 0.0 5.0 1.0
-   fix 1 all graphics 1000 sphere 1 v_x v_y 0.0 v_radius cylinder 1 v_x v_y 0.0 v_x v_y 10.0 3.0
-   fix 2 all graphics 100 progbar 3 1 z 0.012 -0.012 0.0025 0.03 0.0003 v_prog 10
+   fix 1 all graphics/objects 100 sphere 1 0.0 0.0 15.0 3.0 sphere 2 0.0 0.0 5.0 1.0
+   fix 1 all graphics/objects 1000 sphere 1 v_x v_y 0.0 v_radius cylinder 1 v_x v_y 0.0 v_x v_y 10.0 3.0
+   fix 2 all graphics/objects 100 progbar 3 1 z 0.012 -0.012 0.0025 0.03 0.0003 v_prog 10
 
 Description
 """""""""""
@@ -61,6 +61,8 @@ Description
 
 This fix allows to add arbitrary objects to images rendered with
 :doc:`dump image <dump_image>` using the *fix* keyword.
+
+The *group-ID* is ignored by this fix.
 
 The *Nevery* keyword determines how often the graphics object data is
 updated.  This should be the same value as the corresponding *N*
@@ -78,13 +80,12 @@ Available graphics objects are (see above for exact command line syntax):
 The *type* quantity determines the color of the object.  Its represents
 an *atom* type and the object will be colored the same as the
 corresponding atom type when the "type" or "element" color style is used
-in the :doc:`dump image fix <dump_image>` command.  For color style
-"const" color will be set globally to the same color for *all* objects
-of this fix instance, which can be changed using a :doc:`dump modify
-fcolor <dump_image>` command.  Similarly, the transparency of the
-objects follows the atom type except for color style "const" where it
-can be changed with :doc:`dump modify ftrans <dump_image>`.  For the
-*progbar* object **two** atom type values must be specified.
+in the :doc:`dump image fix <dump_image>` command.  For the *progbar*
+object **two** atom type values must be specified.  For color style
+"const" the color will be set globally to the same color for *all*
+objects of this fix instance, which can be changed using a :doc:`dump
+modify fcolor <dump_image>` command.  The transparency is by default
+fully opaque and can be changed globally with *dump\_modify ftrans*\ .
 
 The *x*\, *y*\, and *z* parameters correspond to the position of the
 center of the object (*sphere* and *progbar*). *x1*\, *y1*\, and *z1* as
@@ -160,7 +161,7 @@ Dump image info
 
 .. versionadded:: TBD
 
-Fix graphics is designed to be used with the *fix* keyword of :doc:`dump
+Fix graphics/objects is designed to be used with the *fix* keyword of :doc:`dump
 image <dump_image>`.  The fix will pass geometry information about the
 objects listed on the command line to *dump image* so that they are
 included in the rendered image.
@@ -179,7 +180,7 @@ set this flag to 0.0.
 .. figure:: JPG/fix-graphics-example.png
    :figclass: align-center
 
-   Example of graphics objects rendered with *fix graphics* with *fflag1* setting of 0 (left) and 3 (right)
+   Example of graphics objects rendered with *fix graphics/objects* with *fflag1* setting of 0 (left) and 3 (right)
 
 These images were created with the following input file:
 
@@ -194,7 +195,7 @@ These images were created with the following input file:
    variable ypos equal 0.004*cos(PI*step/1000)
    variable zpos equal 5.0*v_xpos
    variable prog equal (step)/10000.0
-   fix gra all graphics 50 sphere 5 v_xpos v_ypos -0.009 0.002 &
+   fix gra all graphics/objects 50 sphere 5 v_xpos v_ypos -0.009 0.002 &
                            sphere 1 0.01 -0.005 0.01 0.005 &
                            progbar 3 1 z 0.012 -0.012 0.002 0.02 0.0005 v_prog 10 &
                            cylinder 4 0.01 -0.005 -0.01 0.01 -0.005 0.01 0.003  &
@@ -218,12 +219,19 @@ None of the :doc:`fix_modify <fix_modify>` options apply to this fix.
 Restrictions
 """"""""""""
 
-none
+This fix is part of the GRAPHICS package.  It is only enabled if LAMMPS
+was built with that package.  See the :doc:`Build package
+<Build_package>` page for more info.
+
 
 Related commands
 """"""""""""""""
 
-:doc:`fix graphics/arrows <fix_graphics_arrows>`, :doc:`fix graphics <fix_graphics/replica>`
+:doc:`fix graphics/arrows <fix_graphics_arrows>`,
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`,
+:doc:`fix graphics <fix_graphics/replica>`
 
 Default
 """""""

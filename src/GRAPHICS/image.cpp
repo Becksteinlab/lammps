@@ -18,11 +18,14 @@
 
 #include "image.h"
 
+#include "domain.h"
 #include "error.h"
+#include "image_objects.h"
 #include "math_const.h"
 #include "math_extra.h"
 #include "memory.h"
 #include "random_mars.h"
+#include "version.h"
 
 #include <cctype>
 #include <cmath>
@@ -36,7 +39,6 @@
 #include <png.h>
 #include <zlib.h>
 #include <csetjmp>
-#include "version.h"
 #endif
 
 using namespace LAMMPS_NS;
@@ -149,8 +151,173 @@ constexpr double transthresh[TRANK][TRANK] = {
     {0.666015625, 0.416015625, 0.603515625, 0.353515625, 0.650390625, 0.400390625, 0.587890625,
      0.337890625, 0.662109375, 0.412109375, 0.599609375, 0.349609375, 0.646484375, 0.396484375,
      0.583984375, 0.333984375}};
-}    // namespace
+
+// function to apply bilinear scaling to pixmap
+void scale_pixmap(int ow, int oh, const unsigned char *opix, int nw, int nh, unsigned char *npix)
+{
+  double x_ratio = (double) (ow - 1) / nw;
+  double y_ratio = (double) (oh - 1) / nh;
+
+  for (int i = 0; i < nh; i++) {
+    for (int j = 0; j < nw; j++) {
+      int x = (int) (x_ratio * j);
+      int y = (int) (y_ratio * i);
+      double x_diff = (x_ratio * j) - x;
+      double y_diff = (y_ratio * i) - y;
+
+      // Get the four neighboring pixels in the original pixmap
+      int offs = y * 3 * ow + 3 * x;
+      unsigned char a[3] = {opix[offs], opix[offs + 1], opix[offs + 2]};
+      offs = y * 3 * ow + 3 * (x + 1);
+      unsigned char b[3] = {opix[offs], opix[offs + 1], opix[offs + 2]};
+      offs = (y + 1) * 3 * ow + 3 * x;
+      unsigned char c[3] = {opix[offs], opix[offs + 1], opix[offs + 2]};
+      offs = (y + 1) * 3 * ow + 3 * (x + 1);
+      unsigned char d[3] = {opix[offs], opix[offs + 1], opix[offs + 2]};
+
+      // interpolate R, G, and B channels separately with bilinear scaling
+      npix[i * 3 * nw + 3 * j] =
+          (unsigned char) (a[0] * (1 - x_diff) * (1 - y_diff) + b[0] * (x_diff) * (1 - y_diff) +
+                           c[0] * (y_diff) * (1 - x_diff) + d[0] * (x_diff * y_diff));
+
+      npix[i * 3 * nw + 3 * j + 1] =
+          (unsigned char) (a[1] * (1 - x_diff) * (1 - y_diff) + b[1] * (x_diff) * (1 - y_diff) +
+                           c[1] * (y_diff) * (1 - x_diff) + d[1] * (x_diff * y_diff));
+
+      npix[i * 3 * nw + 3 * j + 2] =
+          (unsigned char) (a[2] * (1 - x_diff) * (1 - y_diff) + b[2] * (x_diff) * (1 - y_diff) +
+                           c[2] * (y_diff) * (1 - x_diff) + d[2] * (x_diff * y_diff));
+    }
+  }
+}
+
+// convert an RGB color to YUV colorspace
+void rgb2yuv(int *rgb, int *yuv)
+{
+  yuv[0] = (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
+  yuv[1] = -(0.14713 * rgb[0]) - (0.28886 * rgb[1]) + (0.436 * rgb[2]);
+  yuv[2] = (0.615 * rgb[0]) - (0.51499 * rgb[1]) - (0.10001 * rgb[2]);
+}
+
+// convert XPM-like bitmap to 8-bit pixmap
+void xpm2pix(int width, int height, const char *xpm, unsigned char *pix, double *fg, double *bg)
+{
+  for (int j = height; j > 0; --j) {
+    for (int i = 0; i < width; ++i) {
+      double *color = (xpm[(j - 1) * width + i] == '#') ? fg : bg;
+      int idx = (height - j) * width * 3 + 3 * i;
+      pix[idx] = static_cast<unsigned char>(color[0] * 255.0);
+      pix[idx + 1] = static_cast<unsigned char>(color[1] * 255.0);
+      pix[idx + 2] = static_cast<unsigned char>(color[2] * 255.0);
+    }
+  }
+}
 // clang-format off
+
+// the following are 32x32 pixel XPM-like bitmaps of the letters X, Y, and Z for the axis labels.
+constexpr char letter_x[] = {
+  "                                "
+  "                                "
+  "    #####             #####     "
+  "     #####           #####      "
+  "      #####         #####       "
+  "      #####         #####       "
+  "       #####       #####        "
+  "        #####     #####         "
+  "        #####     #####         "
+  "         #####   #####          "
+  "          ##### #####           "
+  "          ##### #####           "
+  "           #########            "
+  "            #######             "
+  "            #######             "
+  "             #####              "
+  "            ######              "
+  "            #######             "
+  "           ########             "
+  "          ##########            "
+  "          ##### #####           "
+  "         #####   ####           "
+  "         ####    #####          "
+  "        #####     #####         "
+  "       #####       #####        "
+  "       ####        #####        "
+  "      #####         #####       "
+  "     #####           #####      "
+  "     ####            #####      "
+  "    #####             #####     "
+  "   #####               #####    "
+  "                                "};
+
+constexpr char letter_y[] = {
+  "                                "
+  "                                "
+  "    #####              #####    "
+  "     #####            #####     "
+  "      ####            ####      "
+  "      #####          #####      "
+  "       #####        #####       "
+  "        ####        ####        "
+  "        #####      #####        "
+  "         #####    #####         "
+  "          ####    ####          "
+  "          #####  #####          "
+  "           ##########           "
+  "            ########            "
+  "            ########            "
+  "             ######             "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "              ####              "
+  "                                "};
+
+constexpr char letter_z[] = {
+  "                                "
+  "                                "
+  "    #######################     "
+  "    #######################     "
+  "    #######################     "
+  "                     ######     "
+  "                     #####      "
+  "                    #####       "
+  "                   #####        "
+  "                  ######        "
+  "                  #####         "
+  "                 #####          "
+  "                #####           "
+  "               #####            "
+  "              ######            "
+  "              #####             "
+  "             #####              "
+  "            #####               "
+  "           #####                "
+  "           #####                "
+  "          #####                 "
+  "         #####                  "
+  "        #####                   "
+  "       ######                   "
+  "       #####                    "
+  "      #####                     "
+  "     #####                      "
+  "    #####                       "
+  "    ########################    "
+  "    ########################    "
+  "    ########################    "
+  "                                "};
+
+}    // namespace
 
 /* ---------------------------------------------------------------------- */
 
@@ -181,7 +348,8 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
 
   ncolors = 0;
   boxcolor = color2rgb("yellow");
-  background[0] = background[1] = background[2] = 0;
+  background[0] = background[1] = background[2] = 0.0;
+  background2[0] = background2[1] = background2[2] = -1.0;
 
   // define nmap colormaps, all with default settings
 
@@ -377,22 +545,39 @@ void Image::view_params(double boxxlo, double boxxhi, double boxylo,
 /* ----------------------------------------------------------------------
    initialize image to background color and depth buffer
    no need to init surfaceBuffer, since will be based on depth
+   create background gradient, if background2[0] is >= 0
+     otherwise use single background color
 ------------------------------------------------------------------------- */
 
 void Image::clear()
 {
-  int red = background[0];
+  int red   = background[0];
   int green = background[1];
-  int blue = background[2];
+  int blue  = background[2];
 
-  int ix,iy;
-  for (iy = 0; iy < height; iy ++)
-    for (ix = 0; ix < width; ix ++) {
-      imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
-      imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
-      imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
-      depthBuffer[iy * width + ix] = -1;
+  if (background2[0] < 0.0) {
+    for (int iy = 0; iy < height; iy ++) {
+      for (int ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
     }
+  } else {
+    for (int iy = 0; iy < height; iy ++) {
+      double fraction = (double) iy / (double) height;
+      red   = fraction * background2[0] + (1.0 - fraction) * background[0];
+      green = fraction * background2[1] + (1.0 - fraction) * background[1];
+      blue  = fraction * background2[2] + (1.0 - fraction) * background[2];
+      for (int ix = 0; ix < width; ix ++) {
+        imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
+        imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
+        imageBuffer[iy * width * 3 + ix * 3 + 2] = blue;
+        depthBuffer[iy * width + ix] = -1;
+      }
+    }
+  }
 }
 
 /* ----------------------------------------------------------------------
@@ -420,8 +605,7 @@ void Image::merge()
       else MPI_Waitall(2,requests,MPI_STATUS_IGNORE);
 
       for (int i = 0; i < npixels; i++) {
-        if (depthBuffer[i] < 0 || (depthcopy[i] >= 0 &&
-                                   depthcopy[i] < depthBuffer[i])) {
+        if (depthBuffer[i] < 0 || (depthcopy[i] >= 0 && depthcopy[i] < depthBuffer[i])) {
           depthBuffer[i] = depthcopy[i];
           imageBuffer[i*3+0] = rgbcopy[i*3+0];
           imageBuffer[i*3+1] = rgbcopy[i*3+1];
@@ -508,6 +692,8 @@ void Image::merge()
 
 void Image::draw_box(double (*corners)[3], double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   draw_cylinder(corners[0],corners[1],boxcolor,diameter,3,opacity);
   draw_cylinder(corners[2],corners[3],boxcolor,diameter,3,opacity);
   draw_cylinder(corners[0],corners[2],boxcolor,diameter,3,opacity);
@@ -523,15 +709,149 @@ void Image::draw_box(double (*corners)[3], double diameter, double opacity)
 }
 
 /* ----------------------------------------------------------------------
-   draw XYZ axes in red/green/blue
+   draw XYZ axes with X, Y, and Z labels in red/green/blue
    axes = 4 end points
+   user arrow image object to draw axes as arrows
+
+   labels are created from 32x32 size bitmaps stored as string in an XPM-like format
+   convert the bitmap into an RGB pixmap with foreground and transparent background
+      choose text and background color to be somewhat similar to minimize artifacts from scaling
+   switch colors from white/silver to black/darkgray depending on the luminance of the background
+   offset labels in every direction to avoid them being obscured by the arrows
+   scale letter pixmaps based on the smaller of image width or height
 ------------------------------------------------------------------------- */
 
 void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
 {
-  draw_cylinder(axes[0],axes[1],color2rgb("red"),diameter,3,opacity);
-  draw_cylinder(axes[0],axes[2],color2rgb("green"),diameter,3,opacity);
-  draw_cylinder(axes[0],axes[3],color2rgb("blue"),diameter,3,opacity);
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
+  // draw arrows
+
+  const double radius = 0.5 * diameter;
+  draw_sphere(axes[0], color2rgb("gray"), radius, opacity);
+  ImageObjects::ArrowObj arrow;
+  arrow.draw(this, color2rgb("red"), axes[0], axes[1], radius, opacity);
+  arrow.draw(this, color2rgb("green"), axes[0], axes[2], radius, opacity);
+  if (domain->dimension == 3)
+    arrow.draw(this, color2rgb("blue"), axes[0], axes[3], radius, opacity);
+
+  // adjust size of labels based on image size,
+  // with FSAA active, width and height are doubled; adjust the scale factor accordingly
+
+  double scale = static_cast<double>(MIN(width, height)) / 1440.0;
+  if (fsaa) scale *= 0.5;
+
+  // determine color of labels
+
+  double *fontcolor = color2rgb("white");
+  double *backcolor = color2rgb("silver");
+  int bgyuv[3];
+  rgb2yuv(background, bgyuv);
+  if (bgyuv[0] > 192) {    // switch to black text only for very bright backgrounds
+    fontcolor = color2rgb("black");
+    backcolor = color2rgb("darkgray");
+  }
+
+  // convert bitmap of letters to pixmap and scale/draw.
+
+  unsigned char rgbbuffer[32 * 32 * 3];
+  double shiftedpos[3];
+  constexpr double DIROFFS = 0.05;
+  xpm2pix(32, 32, letter_x, rgbbuffer, fontcolor, backcolor);
+  shiftedpos[0] = axes[1][0] + DIROFFS * (axes[1][0] - axes[0][0]);
+  shiftedpos[1] = axes[1][1] + radius;
+  shiftedpos[2] = axes[1][2] - radius;    // moving in lower z-direction reduces overlap for X
+  draw_pixmap(shiftedpos, 32, 32, rgbbuffer, backcolor, scale, opacity);
+
+  xpm2pix(32, 32, letter_y, rgbbuffer, fontcolor, backcolor);
+  shiftedpos[0] = axes[2][0] + radius;
+  shiftedpos[1] = axes[2][1] + DIROFFS * (axes[2][1] - axes[0][1]);
+  shiftedpos[2] = axes[2][2] + radius;
+  draw_pixmap(shiftedpos, 32, 32, rgbbuffer, backcolor, scale, opacity);
+
+  if (domain->dimension == 3) {
+    xpm2pix(32, 32, letter_z, rgbbuffer, fontcolor, backcolor);
+    shiftedpos[0] = axes[3][0] + radius;
+    shiftedpos[1] = axes[3][1] + radius;
+    shiftedpos[2] = axes[3][2] + DIROFFS * (axes[3][2] - axes[0][2]);
+    draw_pixmap(shiftedpos, 32, 32, rgbbuffer, backcolor, scale, opacity);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   scale and add pixmap centered at location x into image with depth buffering
+   background color indicates transparency and pixels in that color are skipped
+------------------------------------------------------------------------- */
+
+void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsigned char *pixmap,
+                        double *transcolor, double scale, double opacity)
+{
+  // nothing to do
+  if (!pixmap || (pixwidth == 0) || (pixheight == 0) || (scale <= 0.0) || (opacity <= 0.0)) return;
+
+  double xlocal[3] = {x[0] - xctr, x[1] - yctr, x[2] - zctr};
+  double xmap = MathExtra::dot3(camRight,xlocal);
+  double ymap = MathExtra::dot3(camUp,xlocal);
+  double dist = MathExtra::dot3(camPos,camDir) - MathExtra::dot3(xlocal,camDir);
+
+  double pixelWidth = (tanPerPixel > 0) ? tanPerPixel * dist : -tanPerPixel / zoom;
+  double xf = xmap / pixelWidth;
+  double yf = ymap / pixelWidth;
+  int xc = static_cast<int>(xf);
+  int yc = static_cast<int>(yf);
+
+  // shift 0,0 to screen center (vs lower left)
+
+  xc += width / 2;
+  yc += height / 2;
+
+  const unsigned char *mypixmap = pixmap;
+  unsigned char *npixmap = nullptr;
+
+  // adjust scale factor for FSAA and only scale as much as needed.
+  if (fsaa) scale *= 2.0;
+  if (scale != 1.0) {
+    int nwidth = scale * pixwidth + 0.5;
+    int nheight = scale * pixheight + 0.5;
+    npixmap = new unsigned char[3*nwidth*nheight];
+    scale_pixmap(pixwidth, pixheight, pixmap, nwidth, nheight, npixmap);
+    mypixmap = npixmap;
+    pixwidth = nwidth;
+    pixheight = nheight;
+  }
+
+  int ylo = yc;
+  int xlo = xc;
+  double normal[3] = {0.0, 0.0, 1.0};
+
+  for (int j = 0; j < pixheight; ++j) {
+    for (int i = 0; i < pixwidth; ++i) {
+      int iy = ylo + j - pixheight/2;
+      int ix = xlo + i - pixwidth/2;
+      if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+        continue;
+
+      // get color of pixel at x/y position of pixmap
+
+      double pixelcolor[3];
+      int offs = 3*j*pixwidth + 3*i;
+      pixelcolor[0] = (double)mypixmap[offs] / 255.0;
+      pixelcolor[1] = (double)mypixmap[offs + 1] / 255.0;
+      pixelcolor[2] = (double)mypixmap[offs + 2] / 255.0;
+
+      // check for transparency color and skip if it matches
+      // we allow a few steps difference for each channel to account
+      // for rounding errors and reduce "bleeding" from interpolation
+
+      if ((fabs(pixelcolor[0] - transcolor[0]) < 0.01) &&
+          (fabs(pixelcolor[1] - transcolor[1]) < 0.01) &&
+          (fabs(pixelcolor[2] - transcolor[2]) < 0.01)) continue;
+
+      draw_pixel(ix, iy, dist, normal, pixelcolor);
+    }
+  }
+  delete[] npixmap;
 }
 
 /* ----------------------------------------------------------------------
@@ -539,8 +859,11 @@ void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
    render pixel by pixel onto image plane with depth buffering
 ------------------------------------------------------------------------- */
 
-void Image::draw_sphere(const double *x, const double *surfaceColor, double diameter, double opacity)
+void Image::draw_sphere(const double *x, const double *surfaceColor, double diameter,
+                        double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   double xlocal[3];
 
   xlocal[0] = x[0] - xctr;
@@ -602,6 +925,8 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
 
 void Image::draw_cube(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   double xlocal[3],surface[3];
   double normal[3] = {0.0, 0.0, 1.0};
   double t = 1.0;
@@ -713,6 +1038,8 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
 void Image::draw_cylinder(const double *x, const double *y,
                           const double *surfaceColor, double diameter, int sflag, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
   double camLDir[3], camLRight[3], camLUp[3];
   double zmin, zmax;
@@ -734,6 +1061,7 @@ void Image::draw_cylinder(const double *x, const double *y,
   mid[2] = (y[2] + x[2]) * 0.5 - zctr;
 
   double len = MathExtra::len3(zaxis);
+  if (len == 0.0) return;       // nothing left to do
   MathExtra::scale3(1.0/len,zaxis);
   len *= 0.5;
   zmax = len;
@@ -826,9 +1154,9 @@ void Image::draw_cylinder(const double *x, const double *y,
 
       // in camera space
 
-      surface[0] = MathExtra::dot3 (normal, camLRight);
-      surface[1] = MathExtra::dot3 (normal, camLUp);
-      surface[2] = MathExtra::dot3 (normal, camLDir);
+      surface[0] = MathExtra::dot3(normal, camLRight);
+      surface[1] = MathExtra::dot3(normal, camLUp);
+      surface[2] = MathExtra::dot3(normal, camLDir);
 
       double depth = dist - t;
       draw_pixel(ix, iy, depth, surface, surfaceColor);
@@ -843,6 +1171,8 @@ void Image::draw_cylinder(const double *x, const double *y,
 void Image::draw_triangle(const double *x, const double *y, const double *z,
                           const double *surfaceColor, const double opacity)
 {
+  if (opacity <= 0.0) return;  // nothing to do
+
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
   double surface[3];
@@ -858,20 +1188,23 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   zlocal[1] = z[1] - yctr;
   zlocal[2] = z[2] - zctr;
 
-  MathExtra::sub3 (xlocal, ylocal, d1);
-  d1len = MathExtra::len3 (d1);
-  MathExtra::scale3 (1.0 / d1len, d1);
-  MathExtra::sub3 (zlocal, ylocal, d2);
-  d2len = MathExtra::len3 (d2);
-  MathExtra::scale3 (1.0 / d2len, d2);
+  MathExtra::sub3(xlocal, ylocal, d1);
+  d1len = MathExtra::len3(d1);
+  if (d1len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d1len, d1);
 
-  MathExtra::cross3 (d1, d2, normal);
-  MathExtra::norm3 (normal);
-  invndotd = 1.0 / MathExtra::dot3(normal, camDir);
+  MathExtra::sub3(zlocal, ylocal, d2);
+  d2len = MathExtra::len3(d2);
+  if (d2len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d2len, d2);
 
-  // invalid triangle (parallel)
+  MathExtra::cross3(d1, d2, normal);
+  MathExtra::norm3(normal);
+  invndotd = MathExtra::dot3(normal, camDir);
 
-  if (invndotd == 0) return;
+  // triangle parallel to camera and thus invisible
+  if (invndotd == 0.0) return;
+  invndotd = 1.0 / invndotd;
 
   double r[3],u[3];
 
@@ -893,7 +1226,6 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   double dist = MathExtra::dot3(camPos,camDir) - MathExtra::dot3(xlocal,camDir);
 
   double pixelWidth = (tanPerPixel > 0) ? tanPerPixel * dist : -tanPerPixel / zoom;
-
   double xf = xmap / pixelWidth;
   double yf = ymap / pixelWidth;
   int xc = static_cast<int>(xf);
@@ -943,27 +1275,28 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
       // there can be single pixel gaps due to rounding
       // using <= if test can leave single-pixel gaps between 2 triangles
       // using < if test fixes most of them
+      // suggested by Nathan Fabian, Nov 2022
 
-      MathExtra::sub3 (zlocal, xlocal, s1);
-      MathExtra::sub3 (ylocal, xlocal, s2);
-      MathExtra::sub3 (p, xlocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      MathExtra::sub3(zlocal, xlocal, s1);
+      MathExtra::sub3(ylocal, xlocal, s2);
+      MathExtra::sub3(p, xlocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
 
-      MathExtra::sub3 (xlocal, ylocal, s1);
-      MathExtra::sub3 (zlocal, ylocal, s2);
-      MathExtra::sub3 (p, ylocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      MathExtra::sub3(xlocal, ylocal, s1);
+      MathExtra::sub3(zlocal, ylocal, s2);
+      MathExtra::sub3(p, ylocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
 
-      MathExtra::sub3 (ylocal, zlocal, s1);
-      MathExtra::sub3 (xlocal, zlocal, s2);
-      MathExtra::sub3 (p, zlocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < 0) continue;
+      MathExtra::sub3(ylocal, zlocal, s1);
+      MathExtra::sub3(xlocal, zlocal, s2);
+      MathExtra::sub3(p, zlocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
 
       double cNormal[3];
       cNormal[0] = MathExtra::dot3(camRight, normal);
@@ -981,9 +1314,10 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
 void Image::draw_pixel(int ix, int iy, double depth,
                        const double *surface, const double *surfaceColor)
 {
+  if (!std::isfinite(depth)) return; // reject pixels with invalid depth buffer values
+
   double diffuseKey,diffuseFill,diffuseBack,specularKey;
-  if (depth < 0 || (depthBuffer[ix + iy*width] >= 0 &&
-                    depth >= depthBuffer[ix + iy*width])) return;
+  if (depth < 0 || (depthBuffer[ix + iy*width] >= 0 && depth >= depthBuffer[ix + iy*width])) return;
   depthBuffer[ix + iy*width] = depth;
 
   // store only the tangent relative to the camera normal (0,0,-1)
@@ -1265,10 +1599,10 @@ void Image::write_PPM(FILE *fp)
   const int ppmheight = height/aafactor;
   const int ppmwidth = width/aafactor;
 
-  fprintf(fp,"P6\n%d %d\n255\n",ppmwidth,ppmheight);
+  fprintf(fp,"P6\n%d %d\n",ppmwidth,ppmheight);
+  fprintf(fp,"# CREATOR: dump image\n# SOFTWARE: LAMMPS version %s\n255\n", LAMMPS_VERSION);
 
-  int y;
-  for (y = ppmheight-1; y >= 0; y--)
+  for (int y = ppmheight-1; y >= 0; y--)
     fwrite(&writeBuffer[y*ppmwidth*3],3,ppmwidth,fp);
 }
 
@@ -1699,7 +2033,7 @@ double *Image::element2color(char *element)
     {0.8, 0.2, 0.2},
     {0.7, 0.85, 0.45},
     {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.6, 0.6, 0.6},
+    {0.6, 0.6, 0.8},
     {0.6, 0.6, 0.7},
     {0.6431372549, 0.6666666667, 0.6784313725},
     {0.6901960784, 0.768627451, 0.8705882353},
@@ -1707,7 +2041,7 @@ double *Image::element2color(char *element)
     {0.95, 0.9, 0.2},
     {0.15, 0.5, 0.1},
     {0.6431372549, 0.6666666667, 0.6784313725},
-    {0.5, 0.5, 0.5},
+    {0.8, 0.5, 0.5},
     {0.8, 0.8, 0.7},
     {0.6431372549, 0.6666666667, 0.6784313725},
     {0.6431372549, 0.6666666667, 0.6784313725},

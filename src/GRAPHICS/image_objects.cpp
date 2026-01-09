@@ -30,7 +30,7 @@ namespace {
 
 using LAMMPS_NS::MathConst::MY_2PI;
 constexpr double RADINC = MY_2PI / RESOLUTION;
-constexpr double RADOVERLAP = 0.00001;
+constexpr double RADOVERLAP = 0.01;
 constexpr double SMALL = 1.0e-10;
 
 // helper functions for generating and transforming triangle meshes
@@ -158,7 +158,7 @@ ArrowObj::ArrowObj(double _tipl, double _tipw, double radius, int res)
   }
 }
 
-// draw custom arrow from unit template
+// draw custom arrow from unit template using center, direction, and length
 void ArrowObj::draw(Image *img, const double *color, const double *center, double length,
                     const double *data, double scale, double opacity)
 {
@@ -184,8 +184,39 @@ void ArrowObj::draw(Image *img, const double *color, const double *center, doubl
   // infer cylinder end points for body from list of triangles
   // (middle corner of all triangles in the the second and last set of triangles)
   if (arrow.size() > resolution + 2)
-    img->draw_cylinder(arrow[1][1].data(), arrow[arrow.size() - 1][1].data(), color,
-                       scale, 0, opacity);
+    img->draw_cylinder(arrow[1][1].data(), arrow[arrow.size() - 1][1].data(), color, scale, 0,
+                       opacity);
+}
+
+// draw custom arrow from unit template using center, direction, and length
+void ArrowObj::draw(Image *img, const double *color, const double *bottom, const double *tip,
+                    double scale, double opacity)
+{
+  // nothing to draw
+  if (!triangles.size()) return;
+
+  // transform the template into the arrow object we want to draw
+
+  vec3 dir{vec3{tip[0], tip[1], tip[2]} - vec3{bottom[0], bottom[1], bottom[2]}};
+  vec3 center{0.5 * dir + vec3{bottom[0], bottom[1], bottom[2]}};
+  double lscale = vec3len(dir);
+  double wscale = scale / diameter;
+
+  auto arrow =
+      std::move(transform(triangles, dir, {center[0], center[1], center[2]}, lscale, wscale));
+
+  // nothing to draw
+  if (!arrow.size()) return;
+
+  // draw tip and bottom from list of triangles
+  for (const auto &tri : arrow)
+    img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
+
+  // infer cylinder end points for body from list of triangles
+  // (middle corner of all triangles in the the second and last set of triangles)
+  if (arrow.size() > resolution + 2)
+    img->draw_cylinder(arrow[1][1].data(), arrow[arrow.size() - 1][1].data(), color, scale, 0,
+                       opacity);
 }
 
 // construct a truncated cone from triangles and draw them
@@ -215,9 +246,9 @@ ConeObj::ConeObj(double length, double topwidth, double botwidth, int flag, int 
 
   // store settings for cone
 
-  bool dotop = (flag & CONE_TOP) > 0;
-  bool dobot = (flag & CONE_BOT) > 0;
-  bool doside = (flag & CONE_SIDE) > 0;
+  bool dotop = (flag & Graphics::CONE_TOP) > 0;
+  bool dobot = (flag & Graphics::CONE_BOT) > 0;
+  bool doside = (flag & Graphics::CONE_SIDE) > 0;
 
   vec3 top{0.5 * length, 0.0, 0.0};
   vec3 bot{-0.5 * length, 0.0, 0.0};
@@ -288,6 +319,33 @@ void ConeObj::draw(Image *img, int flag, const vec3 &dir, const vec3 &mid, const
       ++n;
       if (n & 1) img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3, opacity);
     }
+  }
+}
+
+// draw triangle mesh for fix.
+
+void ConeObj::draw(Image *img, const vec3 &bot, const vec3 &top, const double *color,
+                   double opacity)
+{
+  // nothing to draw
+  if (!triangles.size()) return;
+
+  vec3 mid{0.5*(top + bot)};
+  vec3 dir{top - bot};
+  double length = vec3len(dir);
+  dir = vec3norm(dir);
+
+  // rotate to selected axis and translate from origin to original center
+  // no need of scaling here since length and width was already applied during construction
+  auto cone = std::move(transform(triangles, dir, mid, length, 1.0));
+
+  // nothing to draw
+  if (!cone.size()) return;
+
+  int n = 0;
+  for (auto &tri : cone) {
+    // draw triangle
+    img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
   }
 }
 

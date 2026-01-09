@@ -87,6 +87,12 @@ so that they can be included in the rendered image.  Only bonds where
 *both* atoms are within the fix group generate graphics objects that are
 displayed in the dumped images.  That group may be a dynamic group.
 
+The color of the bonds is by default that of the atoms when using color
+styles "type" or "element".  With color style "const" the default value
+of "white" can be changed using :doc:`dump_modify fcolor <dump_image>`.
+The transparency is by default fully opaque and can be changed with
+*dump\_modify ftrans*\ .
+
 The *fflag1* setting of *dump image fix* determines whether the bonds
 will be capped with spheres (1) or not (0).
 

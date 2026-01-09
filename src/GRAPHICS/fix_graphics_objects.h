@@ -13,21 +13,21 @@
 
 #ifdef FIX_CLASS
 // clang-format off
-FixStyle(graphics,FixGraphics);
+FixStyle(graphics/objects,FixGraphicsObjects);
 // clang-format on
 #else
 
-#ifndef LMP_FIX_GRAPHICS_H
-#define LMP_FIX_GRAPHICS_H
+#ifndef LMP_FIX_GRAPHICS_OBJECTS_H
+#define LMP_FIX_GRAPHICS_OBJECTS_H
 
 #include "fix.h"
 
 namespace LAMMPS_NS {
 
-class FixGraphics : public Fix {
+class FixGraphicsObjects : public Fix {
  public:
-  FixGraphics(class LAMMPS *, int, char **);
-  ~FixGraphics() override;
+  FixGraphicsObjects(class LAMMPS *, int, char **);
+  ~FixGraphicsObjects() override;
   int setmask() override;
   void init() override;
   void end_of_step() override;
@@ -100,8 +100,6 @@ class FixGraphics : public Fix {
 
   std::vector<GraphicsItem> items;
 };
-
 }    // namespace LAMMPS_NS
-
 #endif
 #endif

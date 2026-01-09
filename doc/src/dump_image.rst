@@ -56,7 +56,7 @@ Syntax
          level = mesh refinement level, value between 1 (low resolution) and 6 (ultra high resolution)
          width = diameter of wireframe edges (distance units) (ignored for triangles)
        *body* = color bflag1 bflag2
-         color = *type*
+         color = *type* or *index*
          bflag1,bflag2 = 2 numeric flags to affect how bodies are drawn
        *fix* = fixID color fflag1 fflag2
          fixID = ID of fix that generates objects to draw
@@ -122,7 +122,7 @@ Syntax
    dump_modify dump-ID keyword values ...
 
 * these keywords apply only to the *image* and *movie* styles and are documented on this page
-* keyword = *acolor* or *adiam* or *amap* or *gmap* or *atrans* or *backcolor* or *bcolor* or *bdiam* or *btrans* or *bitrate* or *boxcolor* or *color* or *framerate* or *axestrans* or *boxtrans* or *subboxtrans*
+* keyword = *acolor* or *adiam* or *amap* or *gmap* or *atrans* or *backcolor* or *backcolor2* or *bcolor* or *bdiam* or *btrans* or *bitrate* or *boxcolor* or *color* or *framerate* or *axestrans* or *boxtrans* or *subboxtrans*
 * see the :doc:`dump modify <dump_modify>` doc page for more general keywords
 
   .. parsed-literal::
@@ -158,6 +158,8 @@ Syntax
          transparency = transparency of atoms of that type (value between 0 (invisible) and 1 (fully opaque))
        *backcolor* arg = color
          color = name of color for background
+       *backcolor2* arg = color
+         color = name of second color for vertical background gradiant. "none" to disable gradient
        *bcolor* args = type color
          type = bond type (numeric or type label) or range of numeric types (see below)
          color = name of color or color1/color2/...
@@ -229,7 +231,7 @@ script to generate the images/movie.
 
 .. |dump1| image:: img/dump1.jpg
    :width: 19%
-.. |dump2| image:: img/dump2.jpg
+.. |dump2| image:: img/dump2.png
    :width: 19%
 .. |dump3| image:: img/dump3.png
    :width: 19%
@@ -533,23 +535,22 @@ The *level* setting determines the number of triangles in the mesh of
 triangles and thus the resolution of the representation of the
 ellipsoid.  At level 1 the ellipsoid is represented by an octahedron
 that is stretched according to the ellipsoid's shape parameters.  For
-each higher level, each of the triangles is replaced by four triangles
+each higher level, any of the triangles is replaced by four triangles
 and their edges are shifted to be on the surface of the ellipsoid.  The
 maximum allowed level is 6 (corresponding to 8192 triangles).
 
 .. admonition:: Image quality versus rendering speed
    :class: Hint
 
-   Since the rendered ellipsoids are constructed from iteratively refined
-   triangle meshes, the image quality increases with each refinement
-   level, but so does the computational effort to render the image.
-   Rendering only triangles is much faster than rendering the wireframe
-   edges, but the image quality for the same refinement level is usually
-   best when using both.  At higher mesh refinement levels (4 and up)
-   some artifacts from the image rendering library can appear due to
-   rounding.  These artifacts can be somewhat hidden by using the *fsaa
-   yes* setting, but are also less visible when rendering both, edges
-   and triangles.
+   Since the rendered ellipsoids are constructed from iteratively
+   refined triangle meshes, the image quality increases with each
+   refinement level, but so does the computational effort to render the
+   image.  Rendering only triangles is much faster than rendering the
+   wireframe edges.  However, at mesh refinement levels of 4 and up,
+   artifacts from the image rendering library are more common where
+   triangles meet.  These artifacts can be somewhat hidden by using the
+   *fsaa yes* setting, but are also less visible when rendering both
+   edges and triangles.
 
 ----------
 
@@ -570,9 +571,14 @@ passed to the body style to affect how the drawing of a body particle
 is done.  See the :doc:`Howto body <Howto_body>` page for a
 description of what these parameters mean for each body style.
 
-The only setting currently allowed for the *color* value is *type*,
-which will color the body particles according to the atom type of the
-particle.  By default the mapping of types to colors is as follows:
+.. versionchanged:: TDB
+
+The there are currently two supported settings for the *color* value:
+*type*, or *index*.  With the *type* setting the body particles will be
+colored according to the atom type of the particle.  With the *index*
+setting the coloring follows the body index instead.  For both settings,
+the value (type or index) is mapped to the colors of atom types.  The
+list of colors is by default as follows:
 
 * type 1 = red
 * type 2 = green
@@ -581,7 +587,11 @@ particle.  By default the mapping of types to colors is as follows:
 * type 5 = aqua
 * type 6 = cyan
 
-and repeats itself for types > 6.
+and repeats itself for types > 6.  This list can by changed with the
+:doc:`dump_modify acolor <dump_image>` command.  If more different
+colors than atom types are desired, the number of atom types must be
+increased when using either the :doc:`create_box <create_box>` or the
+:doc:`read_data <read_data>` command.
 
 ----------
 
@@ -953,6 +963,17 @@ The *backcolor* sets the background color of the images.  The color
 name can be any of the 140 pre-defined colors (see below) or a color
 name defined by the dump_modify color option.
 
+.. versionadded:: TBD
+
+The *backcolor2* sets a second background color of the images to create
+a vertical background gradient.  The regular background color is the
+color at the bottom and *backcolor2* sets the background color at the
+top.  The color in between is a linear interpolation between those two
+colors.  The color name can be any of the 140 pre-defined colors (see
+below) or a color name defined by the dump_modify color option.  Using a
+color name of "none" will disable the background gradient feature (this
+is the default).
+
 ----------
 
 The *bcolor* keyword can be used with the dump image command, with its
@@ -1097,17 +1118,19 @@ The arguments for the *gmap* keyword are identical to those for the
 Restrictions
 """"""""""""
 
-To write JPEG images, you must use the -DLAMMPS_JPEG switch when
-building LAMMPS and link with a JPEG library. To write PNG images, you
-must use the -DLAMMPS_PNG switch when building LAMMPS and link with a
-PNG library.
+The *dump image* and *dump movie* commands are part of the GRAPHICS
+package.  They are only enabled if LAMMPS was built with that package.
+See the :doc:`Build package <Build_package>` page for more info.
+
+To write JPEG or PNG format images, support for the corresponding
+graphics libraries must have been compiled and linked into LAMMPS.
+Please see the :ref:`instructions for building LAMMPS with the
+GRAPHICS package <graphics>` for more information on how to do that.
 
 To write *movie* dumps, you must use the -DLAMMPS_FFMPEG switch when
 building LAMMPS and have the FFmpeg executable available on the
 machine where LAMMPS is being run.  Typically its name is lowercase
 (i.e., "ffmpeg").
-
-See the :doc:`Build settings <Build_settings>` page for details.
 
 Note that since FFmpeg is run as an external program via a pipe,
 LAMMPS has limited control over its execution and no knowledge about
@@ -1139,7 +1162,12 @@ FFmpeg and which does not have this limitation (e.g., .avi, .mkv, mp4).
 Related commands
 """"""""""""""""
 
-:doc:`dump <dump>`, :doc:`dump_modify <dump_modify>`, :doc:`undump <undump>`
+:doc:`dump <dump>`, :doc:`dump_modify <dump_modify>`, :doc:`undump <undump>`,
+:doc:`fix graphics/arrows <fix_graphics_arrows>`,
+:doc:`fix graphics/isosurface <fix_graphics_isosurface>`,
+:doc:`fix graphics/labels <fix_graphics_labels>`,
+:doc:`fix graphics/objects <fix_graphics_objects>`,
+:doc:`fix graphics/periodic <fix_graphics_periodic>`
 
 Default
 """""""
@@ -1173,6 +1201,7 @@ The defaults for the dump_modify keywords specific to dump image and dump movie 
 * amap = min max cf 0.0 2 min blue max red
 * atrans = 1.0
 * backcolor = black
+* backcolor2 = none
 * bcolor = \* red/green/blue/yellow/aqua/cyan
 * bdiam = \* 0.5
 * btrans = 1.0
