@@ -588,7 +588,7 @@ list of colors is by default as follows:
 * type 6 = cyan
 
 and repeats itself for types > 6.  This list can by changed with the
-:doc:`dump_modify acolor <dump_index>` command.  If more different
+:doc:`dump_modify acolor <dump_image>` command.  If more different
 colors than atom types are desired, the number of atom types must be
 increased when using either the :doc:`create_box <create_box>` or the
 :doc:`read_data <read_data>` command.
