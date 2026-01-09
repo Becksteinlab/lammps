@@ -16,8 +16,8 @@
 #include "atom.h"
 #include "comm.h"
 #include "domain.h"
-#include "dump_image.h"
 #include "error.h"
+#include "graphics.h"
 #include "group.h"
 #include "math_special.h"
 #include "memory.h"
@@ -207,7 +207,7 @@ void FixGraphicsReplica::end_of_step()
 
     if (dflag) {
       for (int i = 0; i < nper; ++i) {
-        imgobjs[n] = DumpImage::SPHERE;
+        imgobjs[n] = Graphics::SPHERE;
         imgparms[n][0] = (dtype) ? dtype : type[i];
         domain->remap(buf.data() + 3 * i);
         imgparms[n][1] = buf[3 * i];
@@ -234,7 +234,7 @@ void FixGraphicsReplica::end_of_step()
           avg[3 * i + 2] += (buf[3 * i + 2] - avg[3 * i + 2]) / ((double) j + 1.0);
         }
         if (dflag) {
-          imgobjs[n] = DumpImage::SPHERE;
+          imgobjs[n] = Graphics::SPHERE;
           imgparms[n][0] = (dtype) ? dtype : type[i];
           domain->remap(buf.data() + 3 * i);
           imgparms[n][1] = buf[3 * i];
@@ -249,7 +249,7 @@ void FixGraphicsReplica::end_of_step()
     if (aflag) {
       double norm = 1.0 / (double) universe->nworlds;
       for (int i = 0; i < nper; ++i) {
-        imgobjs[n] = DumpImage::SPHERE;
+        imgobjs[n] = Graphics::SPHERE;
         imgparms[n][0] = (atype) ? atype : type[i];
         var[3 * i] *= norm;
         var[3 * i + 1] *= norm;
