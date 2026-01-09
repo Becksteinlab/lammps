@@ -692,6 +692,8 @@ void Image::merge()
 
 void Image::draw_box(double (*corners)[3], double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   draw_cylinder(corners[0],corners[1],boxcolor,diameter,3,opacity);
   draw_cylinder(corners[2],corners[3],boxcolor,diameter,3,opacity);
   draw_cylinder(corners[0],corners[2],boxcolor,diameter,3,opacity);
@@ -721,6 +723,8 @@ void Image::draw_box(double (*corners)[3], double diameter, double opacity)
 
 void Image::draw_axes(double (*axes)[3], double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   // draw arrows
   const double radius = 0.5 * diameter;
   draw_sphere(axes[0], color2rgb("gray"), radius, opacity);
@@ -780,7 +784,7 @@ void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsi
                         double *transcolor, double scale, double opacity)
 {
   // nothing to do
-  if (!pixmap || (pixwidth == 0) || (pixheight == 0) || (scale <= 0.0)) return;
+  if (!pixmap || (pixwidth == 0) || (pixheight == 0) || (scale <= 0.0) || (opacity <= 0.0)) return;
 
   double xlocal[3] = {x[0] - xctr, x[1] - yctr, x[2] - zctr};
   double xmap = MathExtra::dot3(camRight,xlocal);
@@ -854,6 +858,7 @@ void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsi
 
 void Image::draw_sphere(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
   double xlocal[3];
 
   xlocal[0] = x[0] - xctr;
@@ -915,6 +920,8 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
 
 void Image::draw_cube(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   double xlocal[3],surface[3];
   double normal[3] = {0.0, 0.0, 1.0};
   double t = 1.0;
@@ -1026,6 +1033,8 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
 void Image::draw_cylinder(const double *x, const double *y,
                           const double *surfaceColor, double diameter, int sflag, double opacity)
 {
+  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
+
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
   double camLDir[3], camLRight[3], camLUp[3];
   double zmin, zmax;
@@ -1047,6 +1056,7 @@ void Image::draw_cylinder(const double *x, const double *y,
   mid[2] = (y[2] + x[2]) * 0.5 - zctr;
 
   double len = MathExtra::len3(zaxis);
+  if (len == 0.0) return;       // nothing left to do
   MathExtra::scale3(1.0/len,zaxis);
   len *= 0.5;
   zmax = len;
@@ -1156,6 +1166,8 @@ void Image::draw_cylinder(const double *x, const double *y,
 void Image::draw_triangle(const double *x, const double *y, const double *z,
                           const double *surfaceColor, const double opacity)
 {
+  if (opacity <= 0.0) return;  // nothing to do
+
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
   double surface[3];
@@ -1171,20 +1183,23 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   zlocal[1] = z[1] - yctr;
   zlocal[2] = z[2] - zctr;
 
-  MathExtra::sub3 (xlocal, ylocal, d1);
-  d1len = MathExtra::len3 (d1);
-  MathExtra::scale3 (1.0 / d1len, d1);
-  MathExtra::sub3 (zlocal, ylocal, d2);
-  d2len = MathExtra::len3 (d2);
-  MathExtra::scale3 (1.0 / d2len, d2);
+  MathExtra::sub3(xlocal, ylocal, d1);
+  d1len = MathExtra::len3(d1);
+  if (d1len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d1len, d1);
 
-  MathExtra::cross3 (d1, d2, normal);
-  MathExtra::norm3 (normal);
-  invndotd = 1.0 / MathExtra::dot3(normal, camDir);
+  MathExtra::sub3(zlocal, ylocal, d2);
+  d2len = MathExtra::len3(d2);
+  if (d2len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d2len, d2);
 
-  // invalid triangle (parallel)
+  MathExtra::cross3(d1, d2, normal);
+  MathExtra::norm3(normal);
+  invndotd = MathExtra::dot3(normal, camDir);
 
-  if (invndotd == 0) return;
+  // triangle parallel to camera and thus invisible
+  if (invndotd == 0.0) return;
+  invndotd = 1.0 / invndotd;
 
   double r[3],u[3];
 
