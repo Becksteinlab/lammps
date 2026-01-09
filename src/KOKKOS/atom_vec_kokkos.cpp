@@ -2938,19 +2938,23 @@ int AtomVecKokkos::field2size(std::string field)
 
 void AtomVecKokkos::set_atom_masks()
 {
+  auto datamask_bonus = EMPTY_MASK;
+  if (atom->ellipsoid_flag)
+    datamask_bonus = ELLIPSOID_MASK|BONUS_MASK;
+
   datamask_grow = EMPTY_MASK;
   for (int i = 0; i < default_grow.size(); i++)
     datamask_grow |= field2mask(default_grow[i]);
   for (int i = 0; i < ngrow; i++)
     datamask_grow |= field2mask(fields_grow[i]);
 
-  datamask_comm = EMPTY_MASK;
+  datamask_comm = datamask_bonus;
   for (int i = 0; i < default_comm.size(); i++)
     datamask_comm |= field2mask(default_comm[i]);
   for (int i = 0; i < ncomm; i++)
     datamask_comm |= field2mask(fields_comm[i]);
 
-  datamask_comm_vel = EMPTY_MASK;
+  datamask_comm_vel = datamask_bonus;
   for (int i = 0; i < default_comm_vel.size(); i++)
     datamask_comm_vel |= field2mask(default_comm_vel[i]);
   for (int i = 0; i < ncomm_vel; i++)
@@ -2962,19 +2966,19 @@ void AtomVecKokkos::set_atom_masks()
   for (int i = 0; i < nreverse; i++)
     datamask_reverse |= field2mask(fields_reverse[i]);
 
-  datamask_border = EMPTY_MASK;
+  datamask_border = datamask_bonus;
   for (int i = 0; i < default_border.size(); i++)
     datamask_border |= field2mask(default_border[i]);
   for (int i = 0; i < nborder; i++)
     datamask_border |= field2mask(fields_border[i]);
 
-  datamask_border_vel = EMPTY_MASK;
+  datamask_border_vel = datamask_bonus;
   for (int i = 0; i < default_border_vel.size(); i++)
     datamask_border_vel |= field2mask(default_border_vel[i]);
   for (int i = 0; i < nborder_vel; i++)
     datamask_border_vel |= field2mask(fields_border_vel[i]);
 
-  datamask_exchange = EMPTY_MASK;
+  datamask_exchange = datamask_bonus;
   for (int i = 0; i < default_exchange.size(); i++)
     datamask_exchange |= field2mask(default_exchange[i]);
   for (int i = 0; i < nexchange; i++)
