@@ -141,6 +141,7 @@ class AtomVecKokkos : virtual public AtomVec {
   uint64_t datamask_border;
   uint64_t datamask_border_vel;
   uint64_t datamask_exchange;
+  uint64_t datamask_bonus;
 
   virtual void set_size_exchange();
 

@@ -36,7 +36,8 @@ AtomVecKokkos::AtomVecKokkos(LAMMPS *lmp) : AtomVec(lmp)
   size_exchange = 0;
 
   datamask_grow = datamask_comm = datamask_comm_vel = datamask_reverse =
-    datamask_border = datamask_border_vel = datamask_exchange = EMPTY_MASK;
+    datamask_border = datamask_border_vel = datamask_exchange =
+    datamask_bonus = EMPTY_MASK;
 
   k_count = DAT::tdual_int_1d("atom:k_count",1);
   atomKK = (AtomKokkos *) atom;
@@ -2938,7 +2939,7 @@ int AtomVecKokkos::field2size(std::string field)
 
 void AtomVecKokkos::set_atom_masks()
 {
-  auto datamask_bonus = EMPTY_MASK;
+  datamask_bonus = EMPTY_MASK;
   if (atom->ellipsoid_flag)
     datamask_bonus = ELLIPSOID_MASK|BONUS_MASK;
 
