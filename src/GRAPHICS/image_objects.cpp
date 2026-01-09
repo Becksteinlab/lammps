@@ -30,7 +30,7 @@ namespace {
 
 using LAMMPS_NS::MathConst::MY_2PI;
 constexpr double RADINC = MY_2PI / RESOLUTION;
-constexpr double RADOVERLAP = 0.00001;
+constexpr double RADOVERLAP = 0.01;
 constexpr double SMALL = 1.0e-10;
 
 // helper functions for generating and transforming triangle meshes
