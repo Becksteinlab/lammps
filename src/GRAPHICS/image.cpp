@@ -920,8 +920,6 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
 
 void Image::draw_cube(const double *x, const double *surfaceColor, double diameter, double opacity)
 {
-  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
-
   double xlocal[3],surface[3];
   double normal[3] = {0.0, 0.0, 1.0};
   double t = 1.0;
@@ -1033,8 +1031,6 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
 void Image::draw_cylinder(const double *x, const double *y,
                           const double *surfaceColor, double diameter, int sflag, double opacity)
 {
-  if ((diameter <= 0.0) || (opacity <= 0.0)) return;  // nothing to do
-
   double mid[3],xaxis[3],yaxis[3],zaxis[3];
   double camLDir[3], camLRight[3], camLUp[3];
   double zmin, zmax;
@@ -1056,7 +1052,6 @@ void Image::draw_cylinder(const double *x, const double *y,
   mid[2] = (y[2] + x[2]) * 0.5 - zctr;
 
   double len = MathExtra::len3(zaxis);
-  if (len == 0.0) return;       // nothing left to do
   MathExtra::scale3(1.0/len,zaxis);
   len *= 0.5;
   zmax = len;
@@ -1166,8 +1161,6 @@ void Image::draw_cylinder(const double *x, const double *y,
 void Image::draw_triangle(const double *x, const double *y, const double *z,
                           const double *surfaceColor, const double opacity)
 {
-  if (opacity <= 0.0) return;  // nothing to do
-
   double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
   double xlocal[3], ylocal[3], zlocal[3];
   double surface[3];
@@ -1183,23 +1176,20 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   zlocal[1] = z[1] - yctr;
   zlocal[2] = z[2] - zctr;
 
-  MathExtra::sub3(xlocal, ylocal, d1);
-  d1len = MathExtra::len3(d1);
-  if (d1len == 0.0) return;     // zero length of triangle side
-  MathExtra::scale3(1.0 / d1len, d1);
+  MathExtra::sub3 (xlocal, ylocal, d1);
+  d1len = MathExtra::len3 (d1);
+  MathExtra::scale3 (1.0 / d1len, d1);
+  MathExtra::sub3 (zlocal, ylocal, d2);
+  d2len = MathExtra::len3 (d2);
+  MathExtra::scale3 (1.0 / d2len, d2);
 
-  MathExtra::sub3(zlocal, ylocal, d2);
-  d2len = MathExtra::len3(d2);
-  if (d2len == 0.0) return;     // zero length of triangle side
-  MathExtra::scale3(1.0 / d2len, d2);
+  MathExtra::cross3 (d1, d2, normal);
+  MathExtra::norm3 (normal);
+  invndotd = 1.0 / MathExtra::dot3(normal, camDir);
 
-  MathExtra::cross3(d1, d2, normal);
-  MathExtra::norm3(normal);
-  invndotd = MathExtra::dot3(normal, camDir);
+  // invalid triangle (parallel)
 
-  // triangle parallel to camera and thus invisible
-  if (invndotd == 0.0) return;
-  invndotd = 1.0 / invndotd;
+  if (invndotd == 0) return;
 
   double r[3],u[3];
 
@@ -1272,29 +1262,27 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
       // using <= if test can leave single-pixel gaps between 2 triangles
       // using < if test fixes most of them
       // suggested by Nathan Fabian, Nov 2022
-      //
-      // using a < -2.0e-6 if test fixes even more cases and results in only slightly fuzzy edges.
-      // changed 2026-01-07 by Axel Kohlmeyer
-      MathExtra::sub3 (zlocal, xlocal, s1);
-      MathExtra::sub3 (ylocal, xlocal, s2);
-      MathExtra::sub3 (p, xlocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < -2.0e-6) continue;
 
-      MathExtra::sub3 (xlocal, ylocal, s1);
-      MathExtra::sub3 (zlocal, ylocal, s2);
-      MathExtra::sub3 (p, ylocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < -2.0e-6) continue;
+      MathExtra::sub3(zlocal, xlocal, s1);
+      MathExtra::sub3(ylocal, xlocal, s2);
+      MathExtra::sub3(p, xlocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
 
-      MathExtra::sub3 (ylocal, zlocal, s1);
-      MathExtra::sub3 (xlocal, zlocal, s2);
-      MathExtra::sub3 (p, zlocal, s3);
-      MathExtra::cross3 (s1, s2, c1);
-      MathExtra::cross3 (s1, s3, c2);
-      if (MathExtra::dot3 (c1, c2) < -2.0e-6) continue;
+      MathExtra::sub3(xlocal, ylocal, s1);
+      MathExtra::sub3(zlocal, ylocal, s2);
+      MathExtra::sub3(p, ylocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
+
+      MathExtra::sub3(ylocal, zlocal, s1);
+      MathExtra::sub3(xlocal, zlocal, s2);
+      MathExtra::sub3(p, zlocal, s3);
+      MathExtra::cross3(s1, s2, c1);
+      MathExtra::cross3(s1, s3, c2);
+      if (MathExtra::dot3(c1, c2) < 0.0) continue;
 
       double cNormal[3];
       cNormal[0] = MathExtra::dot3(camRight, normal);
