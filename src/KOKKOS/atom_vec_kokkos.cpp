@@ -2939,10 +2939,6 @@ int AtomVecKokkos::field2size(std::string field)
 
 void AtomVecKokkos::set_atom_masks()
 {
-  datamask_bonus = EMPTY_MASK;
-  if (atom->ellipsoid_flag)
-    datamask_bonus = ELLIPSOID_MASK|BONUS_MASK;
-
   datamask_grow = EMPTY_MASK;
   for (int i = 0; i < default_grow.size(); i++)
     datamask_grow |= field2mask(default_grow[i]);

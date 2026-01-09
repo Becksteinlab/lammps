@@ -37,6 +37,7 @@ AtomVecEllipsoidKokkos::AtomVecEllipsoidKokkos(LAMMPS *lmp) : AtomVec(lmp),
 AtomVecKokkos(lmp), AtomVecEllipsoid(lmp)
 {
   size_exchange_bonus = 8;
+  datamask_bonus = ELLIPSOID_MASK|BONUS_MASK;
 
   k_nghost_bonus = DAT::tdual_int_scalar("atomEllipKK:k_nghost_bonus");
   k_count_bonus = DAT::tdual_int_scalar("atomEllipKK:k_count_bonus");
