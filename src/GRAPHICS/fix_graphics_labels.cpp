@@ -143,7 +143,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     }
 
     // set up error handling
-    if (setjmp(png_jmpbuf(png_ptr))) {
+    if (setjmp(png_jmpbuf(png_ptr))) { // NOLINT
       png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
       delete[] pixmap;
       return nullptr;

@@ -1550,7 +1550,7 @@ void Image::write_PNG(FILE *fp)
     return;
   }
 
-  if (setjmp(png_jmpbuf(png_ptr))) {
+  if (setjmp(png_jmpbuf(png_ptr))) { // NOLINT
     png_destroy_write_struct(&png_ptr, &info_ptr);
     return;
   }
