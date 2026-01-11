@@ -79,27 +79,34 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
 
   void unconstrained_update() override;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakePreNeighbor, const int&) const;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakePostForce<NEIGHFLAG,EVFLAG>, const int&, EV_FLOAT&) const;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakePostForce<NEIGHFLAG,EVFLAG>, const int&) const;
 
   template<int PBC_FLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakePackForwardComm<PBC_FLAG>, const int&) const;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakeUnpackForwardComm, const int&) const;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void pack_exchange_item(const int&, int &, const bool &) const;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagFixShakeUnpackExchange, const int&) const;
 
@@ -167,18 +174,22 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
   void stats() override;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void shake(int, EV_FLOAT&) const;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void shake3(int, EV_FLOAT&) const;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void shake4(int, EV_FLOAT&) const;
 
   template<int NEIGHFLAG, int EVFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void shake3angle(int, EV_FLOAT&) const;
 
@@ -208,6 +219,7 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
   HAT::t_int_scalar h_nlist;
 
   template<int NEIGHFLAG>
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void v_tally(EV_FLOAT&, int, int *, KK_FLOAT, KK_FLOAT *) const;
 
@@ -248,6 +260,7 @@ class FixShakeKokkos : public FixShake, public KokkosBase {
 
   // copied from Domain
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   int closest_image(const int, int) const;
 
@@ -265,6 +278,7 @@ struct FixShakeKokkosPackExchangeFunctor {
   typedef int value_type;
   FixShakeKokkos<DeviceType> c;
   FixShakeKokkosPackExchangeFunctor(FixShakeKokkos<DeviceType>* c_ptr):c(*c_ptr) {};
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(const int &i, int &offset, const bool &final) const {
     c.pack_exchange_item(i, offset, final);

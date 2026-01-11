@@ -25,16 +25,19 @@ namespace LAMMPS_NS {
 struct RandWrap {
   class RanMars* rng;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   RandWrap() {
     rng = nullptr;
   }
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   double drand() {
     return rng->uniform();
   }
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   double normal() {
     return rng->gaussian();
