@@ -6442,7 +6442,7 @@ namespace LAMMPS_NS {
   NeighProxy(class LAMMPS *lmp) : Command(lmp), neigh_idx(-1) {};
 
   void command(int, char **) override;
-  int get_index() const { return neigh_idx; }
+  [[nodiscard]] int get_index() const { return neigh_idx; }
  protected:
   int neigh_idx;
 };

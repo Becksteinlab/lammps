@@ -50,7 +50,7 @@ namespace ReaxFF {
     std::string message;
   public:
     explicit ffield_parser_error(const std::string &mesg) { message = mesg; }
-    const char *what() const noexcept override { return message.c_str(); }
+    [[nodiscard]] const char *what() const noexcept override { return message.c_str(); }
   };
 
   void Read_Force_Field(const char *filename, reax_interaction *reax,
