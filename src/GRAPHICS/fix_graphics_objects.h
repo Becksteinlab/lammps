@@ -70,6 +70,18 @@ class FixGraphicsObjects : public Fix {
     int x1var, y1var, z1var, x2var, y2var, z2var, dvar;
   };
 
+  struct ConeItem {
+    int style;
+    int type;
+    double top[3];
+    double bot[3];
+    double topdiam;
+    double botdiam;
+    char *x1str, *y1str, *z1str, *x2str, *y2str, *z2str, *d1str, *d2str;
+    int x1var, y1var, z1var, x2var, y2var, z2var, d1var, d2var;
+    int sides;
+  };
+
   struct ProgbarItem {
     int style;
     int type1;
@@ -89,12 +101,14 @@ class FixGraphicsObjects : public Fix {
     GraphicsItem(const SphereItem &s) : sphere(s) {}
     GraphicsItem(const CylinderItem &c) : cylinder(c) {}
     GraphicsItem(const ArrowItem &a) : arrow(a) {}
+    GraphicsItem(const ConeItem &c) : cone(c) {}
     GraphicsItem(const ProgbarItem &p) : progbar(p) {}
 
     int style;
     SphereItem sphere;
     CylinderItem cylinder;
     ArrowItem arrow;
+    ConeItem cone;
     ProgbarItem progbar;
   };
 

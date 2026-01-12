@@ -14,7 +14,7 @@ Syntax
 * graphics/objects = style name of this fix command
 * Nevery = update graphics information every this many time steps
 * one or more keyword/args pairs may be appended
-* keyword = *sphere* or *cylinder* or *arrow* or *progbar*
+* keyword = *sphere* or *cylinder* or *arrow* or *cone* or *progbar*
 
   .. parsed-literal::
 
@@ -24,16 +24,23 @@ Syntax
          R = sphere radius (distance units)
          any of x, y, z, and R can be a variable (see below)
        *cylinder* args = type x1 y1 z1 x2 y2 z2 R
-         type = an atom type value to select the color of the sphere
+         type = an atom type value to select the color of the cylinder
          x1, y1, z1, x2, y2, z2 = positions of the centers at the two ends of the cylinder (distance units)
          R = cylinder radius (distance units)
          any of x1, y1, z1, x2, y2, z2, and R can be a variable (see below)
        *arrow* args = type x1 y1 z1 x2 y2 z2 R ratio
-         type = an atom type value to select the color of the sphere
+         type = an atom type value to select the color of the arrow
          x1, y1, z1, x2, y2, z2 = positions of the centers at the bottom (x1,y1,z1) and the tip (x2,y2,z2) of the arrow (distance units)
          R = cylinder radius (distance units)
          ratio = tip to body ratio (unitless)
          any of x1, y1, z1, x2, y2, z2, and R can be a variable (see below)
+       *cone* args = type x1 y1 z1 x2 y2 z2 R1 R2 sides
+         type = an atom type value to select the color of the cone
+         x1, y1, z1, x2, y2, z2 = positions of the centers at the bottom (x1,y1,z1) and the top (x2,y2,z2) of the arrow (distance units)
+         R1 = bottom radius (distance units)
+         R2 = top radius (distance units)
+         sides = bitmap value between 0 and 7 deciding whether bottom cap (1), top cap (2) or side (4) is drawn (unitless)
+         any of x1, y1, z1, x2, y2, z2, R1 and R2 can be a variable (see below)
        *progbar* args = type1 type2 dim x y z length R ratio tics
          type1 = an atom type value to select the color of the progress bar body and the tics
          type2 = an atom type value to select the color of the progress indicator
@@ -75,6 +82,7 @@ Available graphics objects are (see above for exact command line syntax):
 - *sphere* - a sphere defined by its center location and its radius
 - *cylinder* - a cylinder defined by its two center endpoints and its radius
 - *arrow* - a cylinder with a cone at one side (see note below)
+- *cone* - a truncated cone with a flat circular cap at either side (see note below)
 - *progbar* - progress bar a long a selected axis and with optional tick marks
 
 The *type* quantity determines the color of the object.  Its represents
@@ -90,35 +98,35 @@ fully opaque and can be changed globally with *dump\_modify ftrans*\ .
 The *x*\, *y*\, and *z* parameters correspond to the position of the
 center of the object (*sphere* and *progbar*). *x1*\, *y1*\, and *z1* as
 well as *x2*\, *y2*\, and *z2* are instead representing the top and
-bottom position of a graphics object (*cylinder* and *arrow*).  The *R*
-parameter determines the radius.
+bottom position of a graphics object (*cylinder*, *arrow*, and *cone*).
+The *R* parameter determines the radius.  For the *cone* object there is
+a bottom radius (*R1*) and top radius (*R2*).
+
+The *cone* object has an additional setting that selects whether the
+circular cap at the bottom (value = 1), or the circular cap at the top
+(value = 2) or the side (value = 4) is drawn. The values are added and
+thus if the cone with both caps and the side should be drawn the
+required sides setting would be 7.
 
 The *progbar* object has four additional parameters: *dim* sets the
 direction of the progress bar, "x", "y", or "z"; *length* sets the
-length of the entire object; *ratio* sets the ratio of progress and
-is expected to be between 0.0 and 1.0 (larger or smaller values will
-be reset to 1.0 or 0.0, respectively); and *tics* determines the number
-of tics shown on the progress bar, this must be a number between 0 and 20.
+length of the entire object; *ratio* sets the ratio of progress and is
+expected to be between 0.0 and 1.0 (larger or smaller values will be
+reset to 1.0 or 0.0, respectively); and *tics* determines the number of
+tics shown on the progress bar, this must be a number between 0 and 20.
 Unlike for the other graphics objects, all settings except for *ratio*
 are fixed and cannot be a variable reference.
-
-.. admonition:: Work in progress notice
-   :class: note
-
-   The *arrow* object is currently composed of two cylinders since the
-   :doc:`dump image <dump_image>` render implementation is missing a
-   primitive to render a cone.  This fix will be updated when that
-   functionality becomes available.
 
 ----------------------
 
 Many of the quantities defining a graphics object can be specified as an
 equal-style :doc:`variable <variable>`, namely *x*, *y*, *z*, or *R* for
-a *sphere* or namely *x1*, *y1*, *z1*, *x2*, *y2*, *z2*, or *R* for a
-*cylinder*.  If any of these values is a variable, it should be
-specified as `v_name`, where `name` is the variable name.  In this case,
-the variable will be evaluated each *Nevery* timestep, and its value
-used to define the indenter geometry.
+a *sphere* or *x1*, *y1*, *z1*, *x2*, *y2*, *z2*, or *R* for a
+*cylinder* or *x1*, *y1*, *z1*, *x2*, *y2*, *z2*, *R1*, or *R2* for a
+*cone*.  If any of these values is a variable, it should be specified as
+`v_name`, where `name` is the variable name.  In this case, the variable
+will be evaluated each *Nevery* timestep, and its value used to define
+the graphics object location, orientation, or size.
 
 Note that equal-style variables can specify formulas with various
 mathematical functions, and include :doc:`thermo_style <thermo_style>`
@@ -173,14 +181,15 @@ capped.  This applies to the *cylinder* object and the elements of the
 *progbar* object.
 
 The *fflag2* setting allows you to adjust the radius of the rendered
-sphere and cylinder items comprising the objects.  Since the radius of
-these objects is an input parameter for this fix, it is recommended to
-set this flag to 0.0.
+sphere, cylinder or cone items comprising the objects.  Since the radius
+of these objects is an input parameter for this fix, it is recommended
+to set this flag to 0.0.
 
 .. figure:: JPG/fix-graphics-example.png
    :figclass: align-center
 
-   Example of graphics objects rendered with *fix graphics/objects* with *fflag1* setting of 0 (left) and 3 (right)
+   Example of graphics objects rendered with *fix graphics/objects* with
+   *fflag1* setting of 0 (left) and 3 (right)
 
 These images were created with the following input file:
 
@@ -222,7 +231,6 @@ Restrictions
 This fix is part of the GRAPHICS package.  It is only enabled if LAMMPS
 was built with that package.  See the :doc:`Build package
 <Build_package>` page for more info.
-
 
 Related commands
 """"""""""""""""

@@ -31,7 +31,7 @@
 using namespace LAMMPS_NS;
 using namespace FixConst;
 
-enum { SPHERE, CYLINDER, ARROW, PROGBAR };
+enum { SPHERE, CYLINDER, ARROW, CONE, PROGBAR };
 enum { X = 0, Y, Z };
 
 /* ---------------------------------------------------------------------- */
@@ -116,6 +116,30 @@ FixGraphicsObjects::FixGraphicsObjects(LAMMPS *lmp, int narg, char **arg) :
       items.emplace_back(arrow);
       numobjs += 2;
       iarg += 10;
+    } else if (strcmp(arg[iarg], "cone") == 0) {
+      if (iarg + 11 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects cone", error);
+      // clang-format off
+      ConeItem cone{CONE, 1, {0.0, 0.0, 0.0}, {0.0, 0.0, 0.0}, 0.0, 0.0,
+                    nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr,
+                    -1, -1, -1, -1, -1, -1, -1, -1, Graphics::CONE_ALL};
+      // clang-format on
+      cone.type = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+      PARSE_VARIABLE(cone.bot[X], cone.x1str, iarg + 2);
+      PARSE_VARIABLE(cone.bot[Y], cone.y1str, iarg + 3);
+      PARSE_VARIABLE(cone.bot[Z], cone.z1str, iarg + 4);
+      PARSE_VARIABLE(cone.top[X], cone.x2str, iarg + 5);
+      PARSE_VARIABLE(cone.top[Y], cone.y2str, iarg + 6);
+      PARSE_VARIABLE(cone.top[Z], cone.z2str, iarg + 7);
+      PARSE_VARIABLE(cone.botdiam, cone.d1str, iarg + 8);
+      PARSE_VARIABLE(cone.topdiam, cone.d2str, iarg + 9);
+      cone.botdiam *= 2.0;
+      cone.topdiam *= 2.0;
+      cone.sides = utils::inumeric(FLERR, arg[iarg + 10], false, lmp);
+      if ((cone.sides < 0) || (cone.sides > 7))
+        error->all(FLERR, iarg + 10, "Cone sides value must be between 0 and 7");
+      items.emplace_back(cone);
+      ++numobjs;
+      iarg += 11;
     } else if (strcmp(arg[iarg], "progbar") == 0) {
       if (iarg + 11 > narg) utils::missing_cmd_args(FLERR, "fix graphics/objects progbar", error);
       // clang-format off
@@ -184,6 +208,16 @@ FixGraphicsObjects::~FixGraphicsObjects()
         delete[] gi.arrow.z2str;
         delete[] gi.arrow.dstr;
         break;
+      case CONE:
+        delete[] gi.cone.x1str;
+        delete[] gi.cone.y1str;
+        delete[] gi.cone.z1str;
+        delete[] gi.cone.x2str;
+        delete[] gi.cone.y2str;
+        delete[] gi.cone.z2str;
+        delete[] gi.cone.d1str;
+        delete[] gi.cone.d2str;
+        break;
       case PROGBAR:
         delete[] gi.progbar.pstr;
         break;
@@ -251,6 +285,18 @@ void FixGraphicsObjects::init()
       CHECK_VARIABLE(gi.arrow.z2var, gi.arrow.z1str);
       CHECK_VARIABLE(gi.arrow.dvar, gi.arrow.dstr);
       imgparms[n][9] = gi.arrow.ratio;
+      ++n;
+    } else if (gi.style == CONE) {
+      imgobjs[n] = Graphics::CONE;
+      imgparms[n][0] = gi.cone.type;
+      CHECK_VARIABLE(gi.cone.x1var, gi.cone.x1str);
+      CHECK_VARIABLE(gi.cone.y1var, gi.cone.y1str);
+      CHECK_VARIABLE(gi.cone.z1var, gi.cone.z1str);
+      CHECK_VARIABLE(gi.cone.x2var, gi.cone.x1str);
+      CHECK_VARIABLE(gi.cone.y2var, gi.cone.y1str);
+      CHECK_VARIABLE(gi.cone.z2var, gi.cone.z1str);
+      CHECK_VARIABLE(gi.cone.d1var, gi.cone.d1str);
+      CHECK_VARIABLE(gi.cone.d2var, gi.cone.d2str);
       ++n;
     } else if (gi.style == PROGBAR) {
       imgobjs[n] = Graphics::CYLINDER;
@@ -410,6 +456,26 @@ void FixGraphicsObjects::end_of_step()
       imgparms[n][5] = vec[Y];
       imgparms[n][6] = vec[Z];
       imgparms[n][8] = gi.arrow.diameter;
+      ++n;
+    } else if (gi.style == CONE) {
+      if (gi.cone.x1str) gi.cone.bot[X] = input->variable->compute_equal(gi.cone.x1var);
+      if (gi.cone.y1str) gi.cone.bot[Y] = input->variable->compute_equal(gi.cone.y1var);
+      if (gi.cone.z1str) gi.cone.bot[Z] = input->variable->compute_equal(gi.cone.z1var);
+      if (gi.cone.x2str) gi.cone.top[X] = input->variable->compute_equal(gi.cone.x2var);
+      if (gi.cone.y2str) gi.cone.top[Y] = input->variable->compute_equal(gi.cone.y2var);
+      if (gi.cone.z2str) gi.cone.top[Z] = input->variable->compute_equal(gi.cone.z2var);
+      if (gi.cone.d1str) gi.cone.botdiam = 2.0 * input->variable->compute_equal(gi.cone.d1var);
+      if (gi.cone.d2str) gi.cone.topdiam = 2.0 * input->variable->compute_equal(gi.cone.d2var);
+
+      imgparms[n][1] = gi.cone.bot[X];
+      imgparms[n][2] = gi.cone.bot[Y];
+      imgparms[n][3] = gi.cone.bot[Z];
+      imgparms[n][4] = gi.cone.top[X];
+      imgparms[n][5] = gi.cone.top[Y];
+      imgparms[n][6] = gi.cone.top[Z];
+      imgparms[n][7] = gi.cone.botdiam;
+      imgparms[n][8] = gi.cone.topdiam;
+      imgparms[n][9] = gi.cone.sides;
       ++n;
     } else if (gi.style == PROGBAR) {
       ++n;
