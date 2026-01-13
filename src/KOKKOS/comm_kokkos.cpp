@@ -925,11 +925,11 @@ void CommKokkos::exchange_device()
           MemKK::realloc_kokkos(k_exchange_copylist,"comm:k_exchange_copylist",count*1.1);
           k_count.view_host()(0) = k_exchange_sendlist.view_host().extent(0);
         }
-        if (count_bonus >= (int)k_exchange_sendlist_bonus.view_host().extent(0)) {
+        if (count >= (int)k_exchange_sendlist_bonus.view_host().extent(0)) {
           MemKK::realloc_kokkos(k_exchange_sendlist_bonus,"comm:k_exchange_sendlist_bonus",\
-                                count_bonus*1.1);
+                                count*1.1);
           MemKK::realloc_kokkos(k_exchange_copylist_bonus,"comm:k_exchange_copylist_bonus",\
-                                count_bonus*1.1);
+                                count*1.1);
           k_count.view_host()(1) = k_exchange_sendlist_bonus.view_host().extent(0);
         }
       }
@@ -975,6 +975,7 @@ void CommKokkos::exchange_device()
         auto d_exchange_sendlist_bonus_sorted = Kokkos::subview(k_exchange_sendlist_bonus.view<DeviceType>(),std::make_pair(0,count_bonus));
         Kokkos::sort(DeviceType(), d_exchange_sendlist_bonus_sorted);
         auto h_exchange_sendlist_bonus_sorted = Kokkos::create_mirror_view_and_copy(LMPHostType(),d_exchange_sendlist_bonus_sorted);
+        k_exchange_sendlist_bonus.clear_sync_state();
 
         // when atom is deleted, fill it in with last atom
 
@@ -994,7 +995,7 @@ void CommKokkos::exchange_device()
             if (icopy == h_exchange_sendlist_bonus_sorted(sendpos)) icopy--;
             while (sendpos > 0 && icopy <= h_exchange_sendlist_bonus_sorted(sendpos-1)) {
               sendpos--;
-              icopy = k_exchange_sendlist_bonus.view_host()(sendpos) - 1;
+              icopy = h_exchange_sendlist_bonus_sorted(sendpos) - 1;
             }
             k_exchange_copylist_bonus.view_host()(recvpos_all) = icopy;
             k_exchange_sendlist_bonus.view_host()(recvpos_all) = irecv;
@@ -1010,6 +1011,9 @@ void CommKokkos::exchange_device()
 
       k_exchange_copylist_bonus.modify_host();
       k_exchange_copylist_bonus.sync<DeviceType>();
+
+      k_exchange_sendlist_bonus.modify_host();
+      k_exchange_sendlist_bonus.sync<DeviceType>();
 
       if (nsend > maxsend) grow_send_kokkos(nsend,0);
       nsend =
