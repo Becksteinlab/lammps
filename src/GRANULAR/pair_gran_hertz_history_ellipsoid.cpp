@@ -253,7 +253,7 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
         MathExtra::scaleadd3(overlap1, nij, X0, surf_point_i);
         MathExtra::scaleadd3(overlap2, nji, X0, surf_point_j);
 
-        if (curvature_model == CURV_MEAN) {
+        if (curvature_model == MathExtraSuperellipsoids::CURV_MEAN) {
             curvature_i = MathExtraSuperellipsoids::mean_curvature_superellipsoid(
                             shapei, blocki, flagi, Ri, surf_point_i, x[i]);
             curvature_j = MathExtraSuperellipsoids::mean_curvature_superellipsoid(
@@ -444,7 +444,7 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
 
 void PairGranHertzHistoryEllipsoid::settings(int narg, char **arg)
 {
-  if (narg != 6 && narg != 7 && narg != 8) error->all(FLERR, "Illegal pair_style command");
+  if (narg <6) error->all(FLERR, "Illegal pair_style command");
 
   kn = utils::numeric(FLERR, arg[0], false, lmp);
   if (strcmp(arg[1], "NULL") == 0)
@@ -464,15 +464,17 @@ void PairGranHertzHistoryEllipsoid::settings(int narg, char **arg)
 
   limit_damping = 0;
   bounding_box = 0;
-  curvature_model = CURV_MEAN; // Default to Mean curvature
+  curvature_model = MathExtraSuperellipsoids::CURV_MEAN; // Default to Mean curvature
 
   for (int iarg = 6 ; iarg < narg ; iarg++) {
     if (strcmp(arg[iarg], "limit_damping") == 0)
       limit_damping = 1;
     else if (strcmp(arg[iarg], "bounding_box") == 0)
       bounding_box = 1;
+    else if (strcmp(arg[iarg], "geometric") == 0)
+      contact_formulation = MathExtraSuperellipsoids::FORMULATION_GEOMETRIC;
     else if (strcmp(arg[iarg], "curvature_gaussian") == 0)
-      curvature_model = CURV_GAUSSIAN;
+      curvature_model = MathExtraSuperellipsoids::CURV_GAUSSIAN;
     else
       error->all(FLERR, "Illegal pair_style command");
   }
@@ -608,7 +610,7 @@ double PairGranHertzHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
   MathExtra::scaleadd3(overlap1, nij, X0, surf_point_i);
   MathExtra::scaleadd3(overlap2, nji, X0, surf_point_j);
 
-  if (curvature_model == CURV_MEAN) {
+  if (curvature_model == MathExtraSuperellipsoids::CURV_MEAN) {
     curvature_i = MathExtraSuperellipsoids::mean_curvature_superellipsoid(
                     shapei, blocki, flagi, Ri, surf_point_i, x[i]);
     curvature_j = MathExtraSuperellipsoids::mean_curvature_superellipsoid(

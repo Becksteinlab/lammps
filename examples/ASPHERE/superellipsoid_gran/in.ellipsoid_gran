@@ -21,7 +21,7 @@ set             type 1 shape 2.0 1.0 1.0
 # TODO: Line below currently fails in contact detection with status 1
 # set             type 1 block 4.0 4.0
 
-pair_style      gran/hooke/history/ellipsoid 1e3 0.0 0.0 0.0 0.5 0
+pair_style      gran/hooke/history/ellipsoid 1e3 0.0 0.0 0.0 0.5 0 geometric bounding_box
 # pair_style      gran/hertz/history/ellipsoid 1e3 0.0 0.0 0.0 0.5 0
 pair_coeff      * *
 

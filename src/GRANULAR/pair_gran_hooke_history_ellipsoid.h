@@ -67,6 +67,8 @@ class PairGranHookeHistoryEllipsoid : public Pair {
   double *mass_rigid;      // rigid mass for owned+ghost atoms
   int nmax;                // allocated size of mass_rigid
 
+  int contact_formulation;
+  
   void allocate();
 
  private:

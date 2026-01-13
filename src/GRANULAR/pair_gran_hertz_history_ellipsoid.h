@@ -33,7 +33,6 @@ class PairGranHertzHistoryEllipsoid : public PairGranHookeHistoryEllipsoid {
 
  protected:
   int curvature_model; 
-  enum { CURV_MEAN, CURV_GAUSSIAN };
 };
 
 }    // namespace LAMMPS_NS

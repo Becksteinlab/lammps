@@ -25,6 +25,16 @@
 namespace MathExtraSuperellipsoids {
   inline constexpr double TIKHONOV_SCALE = 1e-14; // TODO: inline constexpr are C++17, which is Okay as of 10Sep2025 version of LAMMPS!
 
+  enum ContactFormulation {
+    FORMULATION_ALGEBRAIC = 0,
+    FORMULATION_GEOMETRIC = 1
+    };
+
+  enum CurvatureModel {
+    CURV_MEAN = 0,
+    CURV_GAUSSIAN = 1
+    };
+
   // needed for shape functions grad and matrix 
   void global2local_vector(const double v[3], const double *quat, double local_v[3]); // TODO: TBD if still useful once we implement Hertz. There might be a cheaper way with the rotation matrix that we need for contact detection anyway
 
@@ -63,12 +73,12 @@ namespace MathExtraSuperellipsoids {
   void compute_jacobian(const double* gradi_global, const double hessi_global[3][3], const double* gradj_global, const double hessj_global[3][3], const double mu2, double* jacobian);
   double compute_residual_and_jacobian(const double* xci, const double Ri[3][3], const double* shapei, const double* blocki, const int flagi,
                                        const double* xcj, const double Rj[3][3], const double* shapej, const double* blockj, const int flagj,
-                                       const double* X, double* shapefunc, double* residual, double* jacobian);
+                                       const double* X, double* shapefunc, double* residual, double* jacobian, const int formulation, const double avg_radius_i, const double avg_radius_j);
   int determine_contact_point(const double* xci, const double Ri[3][3], const double* shapei, const double* blocki, const int flagi,
                               const double* xcj, const double Rj[3][3], const double* shapej, const double* blockj, const int flagj,
-                              double* X0, double* nij);
+                              double* X0, double* nij, int formulation = FORMULATION_ALGEBRAIC);
 
-  void apply_regularization_shape_function(double n1, double *value, double *grad, double hess[3][3]);
+  void apply_regularization_shape_function(double n1, const double avg_radius, double *value, double *grad, double hess[3][3]); 
   // functions to compute shape function and gradient only when called for surface point calculation given contact point
   double shape_and_gradient_local_superquad_surfacesearch(const double* xlocal, const double* shape, const double* block, double* grad);
   double shape_and_gradient_local_n1equaln2_surfacesearch(const double* xlocal, const double* shape, const double n, double* grad);

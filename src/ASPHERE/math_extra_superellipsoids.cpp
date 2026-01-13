@@ -120,43 +120,47 @@ void global2local_vector(const double *v, const double *quat, double *local_v){
 };
 
 /* ----------------------------------------------------------------------
-   Possible regularization for the shape functions (WIP)
-   Instead of F(x,y,z) - 1 = 0 we use (F(x,y,z))^(1/n1) -1 = G(x,y,z) = 0
-   The gradient is simply nabla G = (1/n1) * (F)^(1/n1 - 1) * nabla F
-   The hessian is H(G) = (1/n1) * (F)^(1/n1 - 1) * H(F) + (1/n1) * (1/n1 - 1) * (F)^(1/n1 - 2) * nabla F (nabla F)^T
+   Possible regularization for the shape functions 
+   Instead of F(x,y,z) = 0 we use (F(x,y,z)+1)^(1/n1) -1 = G(x,y,z) = 0
+   We also scale G by the average radius to have better "midway" points
 ------------------------------------------------------------------------- */
-void apply_regularization_shape_function(double n1, double *value, double *grad, double hess[3][3]){
+void apply_regularization_shape_function(double n1, const double avg_radius, double *value, double *grad, double hess[3][3]){
   // value is F - 1
-  double F = *value + 1.0; // should be fine as long as one does not start from the center (otherwise we could guard against it)
-  double inv_n1 = 1.0 / n1;
-  double F_pow_1_n1_m1 = pow(F, inv_n1 - 1.0);
+  double base = *value + 1.0; // should be fine as long as one does not start from the center (otherwise we could guard against it)
+  const double inv_F = 1.0 / base;
+  const double inv_n1 = 1.0 / n1;
+  
+  // P = base^(1/n)
+  const double F_pow_inv_n1 = std::pow(base, inv_n1);
 
-  // scale factor for grainet and first term in the hessian
-  double scale_grad_hess1 = inv_n1 * F_pow_1_n1_m1;
+  // Scale for Gradient: S1 = R * (1/n) * base^(1/n - 1)
+  const double scale_grad = avg_radius * inv_n1 * F_pow_inv_n1 * inv_F;
 
-  // B = (1/n) * (1/n - 1) * F^(1/n - 2) simplifies to scale_grad * (inv_n1 - 1.0) / F
-  double scale_hess_add = scale_grad_hess1 * (inv_n1 - 1.0) / F;
+  // Scale for Hessian addition: S2 = S1 * (1/n - 1) * base^-1
+  const double scale_hess_add = scale_grad * (inv_n1 - 1.0) * inv_F;
 
-  *value = (F * F_pow_1_n1_m1) - 1.0; // avoid computing pow twice
-
-  // hessian update
+  // H_new = scale_grad * H_old + scale_hess_add * (grad_old x grad_old^T)
   for (int i = 0; i < 3; i++) {
-    for (int j = 0; j < 3; j++) {
-      double grad_gratT = grad[i] * grad[j];
-      hess[i][j] = (hess[i][j] * scale_grad_hess1) + (scale_hess_add * grad_gratT);
-    }
+      for (int j = 0; j < 3; j++) {
+          double grad_outer_prod = grad[i] * grad[j];
+          hess[i][j] = (hess[i][j] * scale_grad) + (scale_hess_add * grad_outer_prod);
+      }
   }
 
+  // grad_new = scale_grad * grad_old
   for (int i = 0; i < 3; i++) {
-    grad[i] *= scale_grad_hess1;
+      grad[i] *= scale_grad;
   }
+
+  // G = R * (base^(1/n) - 1)
+  *value = avg_radius * (F_pow_inv_n1 - 1.0);
 };
 
 
 /* ----------------------------------------------------------------------
    shape function computations for superellipsoids
 ------------------------------------------------------------------------- */
-double shape_and_derivatives_local(const double* xlocal, const double* shape, const double* block, const int flag, double* grad, double hess[3][3]) {
+double shape_and_derivatives_local(const double* xlocal, const double* shape, const double* block, const int flag, double* grad, double hess[3][3]){
   double shapefunc;
   // TODO: Not sure how to make flag values more clear
   // Cannot forward declare the enum AtomVecEllipsoid::BlockType
@@ -181,6 +185,7 @@ double shape_and_derivatives_local(const double* xlocal, const double* shape, co
       break;
     }
   }
+
   return shapefunc;
 }
 
@@ -281,26 +286,23 @@ double shape_and_derivatives_local_ellipsoid(const double* xlocal, const double*
   return 0.5 * (grad[0]*xlocal[0] + grad[1]*xlocal[1] + grad[2]*xlocal[2]) - 1.0;
 }
 
-double regularized_shape_and_derivatives_global(const double* xc, const double R[3][3], const double* shape, const double* block, const int flag, const double* X0, double* grad, double hess[3][3]) {
-  double shapefunc, xlocal[3], tmp_v[3], tmp_m[3][3];
-  MathExtra::sub3(X0, xc, tmp_v);
-  MathExtra::transpose_matvec(R, tmp_v, xlocal);
-  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess);
-  apply_regularization_shape_function(block[0], &shapefunc, tmp_v, hess);
-  MathExtra::matvec(R, tmp_v, grad);
-  MathExtra::times3_transpose(hess, R, tmp_m);
-  MathExtra::times3(R, tmp_m, hess);
-  return shapefunc;
-}
 
-double shape_and_derivatives_global(const double* xc, const double R[3][3], const double* shape, const double* block, const int flag, const double* X0, double* grad, double hess[3][3]) {
-  double shapefunc, xlocal[3], tmp_v[3], tmp_m[3][3];
-  MathExtra::sub3(X0, xc, tmp_v); // here temp_v is X0 - xc
+double shape_and_derivatives_global(const double* xc, const double R[3][3], 
+    const double* shape, const double* block, const int flag, 
+    const double* X0, double* grad, double hess[3][3],
+    int formulation, double avg_radius) 
+{
+  double xlocal[3], tmp_v[3], tmp_m[3][3];
+  MathExtra::sub3(X0, xc, tmp_v); 
   MathExtra::transpose_matvec(R, tmp_v, xlocal);
-  shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess); // here temp_v is grad in local
+  double shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess);
+  if (formulation == FORMULATION_GEOMETRIC) {
+      apply_regularization_shape_function(block[0], avg_radius, &shapefunc, tmp_v, hess);
+  }
   MathExtra::matvec(R, tmp_v, grad);
   MathExtra::times3_transpose(hess, R, tmp_m);
   MathExtra::times3(R, tmp_m, hess);
+
   return shapefunc;
 }
 
@@ -335,10 +337,11 @@ void compute_jacobian(const double* gradi_global, const double hessi_global[3][3
 
 double compute_residual_and_jacobian(const double* xci, const double Ri[3][3], const double* shapei, const double* blocki, const int flagi,
                                      const double* xcj, const double Rj[3][3], const double* shapej, const double* blockj, const int flagj,
-                                     const double* X, double* shapefunc, double* residual, double* jacobian) {
+                                     const double* X, double* shapefunc, double* residual, double* jacobian, 
+                                     const int formulation, const double avg_radius_i, const double avg_radius_j) {
   double gradi[3], hessi[3][3], gradj[3], hessj[3][3];
-  shapefunc[0] = shape_and_derivatives_global(xci, Ri, shapei, blocki, flagi, X, gradi, hessi);
-  shapefunc[1] = shape_and_derivatives_global(xcj, Rj, shapej, blockj, flagj, X, gradj, hessj);
+  shapefunc[0] = shape_and_derivatives_global(xci, Ri, shapei, blocki, flagi, X, gradi, hessi, formulation, avg_radius_i);
+  shapefunc[1] = shape_and_derivatives_global(xcj, Rj, shapej, blockj, flagj, X, gradj, hessj, formulation, avg_radius_j);
   compute_jacobian(gradi, hessi, gradj, hessj, X[3], jacobian);
   return compute_residual(shapefunc[0], gradi, shapefunc[1], gradj, X[3], residual);
 }
@@ -346,7 +349,7 @@ double compute_residual_and_jacobian(const double* xci, const double Ri[3][3], c
 
 int determine_contact_point(const double* xci, const double Ri[3][3], const double* shapei, const double* blocki, const int flagi,
                             const double* xcj, const double Rj[3][3], const double* shapej, const double* blockj, const int flagj,
-                            double* X0, double* nij) {
+                            double* X0, double* nij, int formulation) {
   double norm, norm_old, shapefunc[2], residual[4], jacobian[16];
   double lsq = MathExtra::distsq3(xci, xcj);
   bool converged(false);
@@ -361,7 +364,17 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
   double rhs_old[3];
   double blockmax = std::fmax(std::fmax(blocki[0],blocki[1]), std::fmax(blockj[0], blockj[1]));
 
-  norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian);
+  // avg radii for regularization if GEOMETRIC formulation
+  double avg_radius_i = 1;
+  double avg_radius_j = 1;
+  double max_step;
+  if (formulation == FORMULATION_GEOMETRIC) {
+    avg_radius_i = (shapei[0] + shapei[1] + shapei[2]) / 3.0;
+    avg_radius_j = (shapej[0] + shapej[1] + shapej[2]) / 3.0;
+    max_step = std::sqrt(lsq) / 3.0;
+  }
+
+  norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian, formulation, avg_radius_i, avg_radius_j);
   // testing for convergence before attempting Newton's method.
   // the initial guess is the old X0, so with temporal coherence, it might still pass tolerance if deformation is slow!
   if (norm < TOL_NR_RES) {
@@ -374,6 +387,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
     MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
 
     // Compute local gradient (we could ignore the Hessian here)
+    // Algebraic gradient is fine for direction even if we used Geometric for solving
     shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hess_dummy);
 
     // Rotate gradient back to global frame to get normal
@@ -459,6 +473,19 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       X_line[2] = X0[2] + a * rhs[2];
       X_line[3] = X0[3] + a * rhs[3];
 
+      if (formulation == FORMULATION_GEOMETRIC) {
+          // Limit the max step size to avoid jumping too far
+          // normalize residual vector if step was limited
+          double spatial_residual_norm = std::sqrt(residual[0]*residual[0] + residual[1]*residual[1] + residual[2]*residual[2]);
+          a = 1; // reset a to 1 for proper step size in geometric formulation
+          if (spatial_residual_norm > max_step) {
+              double scale = max_step / spatial_residual_norm;
+              residual[0] *= scale;
+              residual[1] *= scale;
+              residual[2] *= scale;
+          }
+      }
+
       // Line search iterates not selected for the next Newton iteration
       // do not need to compute the expensive Jacobian, only the residual.
       // We want to avoid calling `compute_residual_and_jacobian()` for each
@@ -492,12 +519,20 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       MathExtra::sub3(X_line, xci, tmp_v); 
       MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
       shapefunc[0] = shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hessi);
+      if (formulation == FORMULATION_GEOMETRIC) {
+          apply_regularization_shape_function(blocki[0], avg_radius_i, &shapefunc[0], tmp_v, hessi);
+      } 
       MathExtra::matvec(Ri, tmp_v, gradi);
 
       MathExtra::sub3(X_line, xcj, tmp_v);
       MathExtra::transpose_matvec(Rj, tmp_v, xjlocal);
       shapefunc[1] = shape_and_derivatives_local(xjlocal, shapej, blockj, flagj, tmp_v, hessj);
+      if (formulation == FORMULATION_GEOMETRIC) {
+          apply_regularization_shape_function(blockj[0], avg_radius_j, &shapefunc[1], tmp_v, hessj);
+      }
       MathExtra::matvec(Rj, tmp_v, gradj);
+
+
 
       norm = compute_residual(shapefunc[0], gradi, shapefunc[1], gradj, X_line[3], residual);
 
@@ -533,7 +568,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       X0[1] += rhs[1];
       X0[2] += rhs[2];
       X0[3] += rhs[3];
-      norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian);
+      norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian, formulation, avg_radius_i, avg_radius_j);
     } else {
       X0[0] = X_line[0];
       X0[1] = X_line[1];

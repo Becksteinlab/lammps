@@ -71,6 +71,9 @@ PairGranHookeHistoryEllipsoid::PairGranHookeHistoryEllipsoid(LAMMPS *lmp) : Pair
   fix_history = nullptr;
   fix_dummy = dynamic_cast<FixDummy *>(
       modify->add_fix("NEIGH_HISTORY_HH_ELL_DUMMY" + std::to_string(instance_me) + " all DUMMY"));
+
+  contact_formulation = MathExtraSuperellipsoids::FORMULATION_ALGEBRAIC;
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -495,7 +498,7 @@ void PairGranHookeHistoryEllipsoid::allocate()
 
 void PairGranHookeHistoryEllipsoid::settings(int narg, char **arg)
 {
-  if (narg != 6 && narg != 7 && narg != 8) error->all(FLERR, "Illegal pair_style command");
+  if (narg < 6) error->all(FLERR, "Illegal pair_style command");
 
   kn = utils::numeric(FLERR, arg[0], false, lmp);
   if (strcmp(arg[1], "NULL") == 0)
@@ -520,6 +523,8 @@ void PairGranHookeHistoryEllipsoid::settings(int narg, char **arg)
       limit_damping = 1;
     else if (strcmp(arg[iarg], "bounding_box") == 0)
       bounding_box = 1;
+    else if (strcmp(arg[iarg], "geometric") == 0)
+      contact_formulation = MathExtraSuperellipsoids::FORMULATION_GEOMETRIC;
     else
       error->all(FLERR, "Illegal pair_style command");
   }

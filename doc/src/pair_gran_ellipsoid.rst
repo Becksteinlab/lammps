@@ -119,6 +119,7 @@ Newton's method is used to solve this equation for the scalars
 
 .. note::
     TODO: Jacopo: a modified representation of the particle surface is defined
+    :math:`G(\mathbf{X}) = (F(\mathbf{X}))^{1/n_1}-1`
     to make the function more linear and accelerate convergence.
 
 A hierarchical approach is used to limit the cost of contact detection.
