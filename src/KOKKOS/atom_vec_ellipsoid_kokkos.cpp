@@ -523,11 +523,7 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
     int j = _copylist(mysend);
     int j_bonus = _copylist_bonus(mysend);
 
-    if (j > -1 && j_bonus < 0)
-      j_bonus = _ellipsoid[i]; // self-copy
-
     if (j_bonus > -1) {
-      if (j < 0) j = i; // self-copy
 
       // if I has bonus data, then delete it
 
@@ -543,8 +539,9 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
       // if atom J has bonus data, reset J’s bonus.ilocal to loc I
       // do NOT do this if self-copy (I=J) since J’s bonus data is already deleted
 
-      if (_ellipsoid[j] >= 0 && i != j) _bonusw[_ellipsoid[j]].ilocal = i;
-      _ellipsoidw[i] = _ellipsoid[j];
+      if (j > -1)
+        if (_ellipsoid[j] >= 0) _bonusw[_ellipsoid[j]].ilocal = i;
+        _ellipsoidw[i] = _ellipsoid[j];
     }
   }
 };

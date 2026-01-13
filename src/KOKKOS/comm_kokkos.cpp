@@ -966,6 +966,8 @@ void CommKokkos::exchange_device()
 
       if (bonus_flag) {
 
+        atomKK->sync(Host,ELLIPSOID_MASK);
+
         int count_bonus = k_count.view_host()(1);
 
         // sort exchange_sendlist_bonus
@@ -981,7 +983,8 @@ void CommKokkos::exchange_device()
         nlocal_bonus -= count_bonus;
         int recvpos = 0;
         for (int recvpos_all = 0; recvpos_all < count; recvpos_all++) {
-          if (k_bonus_flags.view_host()(recvpos_all) < 0) {
+          int irecv_all = k_exchange_sendlist.view_host()(recvpos_all);
+          if (k_bonus_flags.view_host()(irecv_all) < 0) {
             k_exchange_copylist_bonus.view_host()(recvpos_all) = -1;
             continue;
           }
