@@ -22,7 +22,7 @@ Syntax
 * xmu = static yield criterion (unitless value between 0.0 and 1.0e4)
 * dampflag = 0 or 1 if tangential damping force is excluded or included
 
-* keyword = *limit_damping*, *bounding_box*
+* keyword = *limit_damping*, *bounding_box*, *geometric*, *curvature_gaussian*
 
   .. parsed-literal::
 
@@ -30,6 +30,10 @@ Syntax
          limit damping to prevent attractive interaction
       *bounding_box* value = none
          use oriented bounding box in contact detection
+      *geometric* value = none
+         use geometric radial distance formulation for the contact formulation
+      *curvature_gaussian* value = none
+         use Gaussian curvature formulation for the contact detection (Hertz only)
 
 .. note::
 
@@ -48,9 +52,8 @@ Examples
 .. code-block:: LAMMPS
 
    pair_style gran/hooke/history/ellipsoid 200000.0 NULL 50.0 NULL 0.5 1 bounding_box
-   pair_style gran/hooke/history/ellipsoid 200000.0 70000.0 50.0 30.0 0.5 0
    pair_style gran/hooke/history/ellipsoid 200000.0 70000.0 50.0 30.0 0.5 0 limit_damping
-
+   pair_style gran/hertz/history/ellipsoid 200000.0 70000.0 50.0 30.0 0.5 0 geometric curvature_gaussian
 
 Description
 """""""""""
@@ -74,8 +77,8 @@ more details.
 
 Contact detection for these aspherical particles uses the so-called ''midway''
 minimization approach from :ref:`(Houlsby) <Houlsby>`. Considering two
-particles with shape functions :math:`F_i` and :math:`F_j`,
-the contact point :math:`\mathbf{X}_0` is obtained as:
+particles with shape functions,  :math:`F_i` and :math:`F_j`,
+the contact point :math:`\mathbf{X}_0` in the global frame is obtained as:
 
 .. math::
 
@@ -87,7 +90,7 @@ where the shape function is given by
 :math:`F_i(\mathbf{X}) = f(\mathbf{R}_i^T (\mathbf{X} - \mathbf{X}_i))`
 and where :math:`\mathbf{X}_i` and :math:`\mathbf{R}_i` are the center of mass
 and rotation matrix of the particle, respectively.
-The constrained minimization problem is solved using Lagrang multipliers and
+The constrained minimization problem is solved using Lagrange multipliers and
 Newton's method with a line search as described by :ref:`(Podlozhnyuk) <Podlozhnyuk>`.
 
 .. note::
@@ -118,9 +121,14 @@ Newton's method is used to solve this equation for the scalars
 :math:`\mathbf{X}_i^{\mathrm{surf}}` and :math:`\mathbf{X}_j^{\mathrm{surf}}`.
 
 .. note::
-    TODO: Jacopo: a modified representation of the particle surface is defined
-    :math:`G(\mathbf{X}) = (F(\mathbf{X}))^{1/n_1}-1`
-    to make the function more linear and accelerate convergence.
+    A modified representation of the particle surface is defined as
+    :math:`G(\mathbf{X}) = (F(\mathbf{X})+1)^{1/n_1}-1` which is a radial distance function formulation.
+    This formulation is used to compute the surface points once the midway contact point is found.
+    This formulation is also used when the *geometric* keyword is specified in the pair_style command and the following optimization problem is solved instead for the contact point:
+    :math:`\mathbf{X}_0 = \underset{\mathbf{X}}{\text{argmin}} r_i \ G_i(\mathbf{X}) + r_j G_j(\mathbf{X})  \text{, subject to } r_i G_i(\mathbf{X}) = r_j G_j(\mathbf{X})`, 
+    where :math:`r_i` and :math:`r_j` are the average radii of the two particles.
+    The geometric formulation thus yields a better approximation of the contact point
+    for particles with different sizes, and it can be slightly more robust for particles with high *block* exponents.    
 
 A hierarchical approach is used to limit the cost of contact detection.
 First, intersection of the bounding spheres of the two particles of bounding
@@ -157,8 +165,14 @@ The Hookean style use this formula:
 
 The Hertzian style uses this formula:
 
-.. note::
-    TODO: Jacopo, Hertz force calculation using the mean curvature
+.. math::
+
+   F_{hz} = \sqrt{\delta} \sqrt{\frac{R_i R_j}{R_i + R_j}} F_{hk} =
+     \sqrt{\delta} \sqrt{\frac{R_i R_j}{R_i + R_j}}
+     \Big[ (k_n \delta \mathbf{n}_{ij} -
+       m_{eff} \: \gamma_n \mathbf{ v}_n) -
+       (k_t \boldsymbol{\Delta} \mathbf{s}_t +
+       m_{eff} \: \gamma_t \mathbf{v}_t) \Big]
 
 In both equations the first parenthesized term is the normal force
 between the two particles and the second parenthesized term is the
@@ -182,6 +196,7 @@ The other quantities in the equations are as follows:
 * :math:`n_{ij} =` unit vector along the line connecting the centers of the 2 particles
 * :math:`V_n =` normal component of the relative velocity of the 2 particles
 * :math:`V_t =` tangential component of the relative velocity of the 2 particles
+* :math:`R_i, R_j =` approximated radii of the curvature of the two particles at the contact point
 
 The :math:`K_n`, :math:`K_t`, :math:`\gamma_n`, and :math:`\gamma_t`
 coefficients are specified as parameters to the pair_style command.  If
@@ -202,12 +217,14 @@ in the force equation so that the specified :math:`\gamma_n` is in units
 of (1/time), :math:`K_t` is in units of (force/distance), and
 :math:`\gamma_t` is in units of (1/time).
 
-.. note::
-    TODO: Jacopo, modify below.
-
 The Hertzian model is one where the normal push-back force for two
 overlapping particles is proportional to the area of overlap of the
 two particles, and is thus a non-linear function of overlap distance.
+At each point on the surface of superellipsoids there are two
+principal radii of curvature. For simplicity, the Hertzian model
+approximates the contact radius of each particle, :math:`R`, as either 
+the inverse of the mean curvature or as the gaussian curvature coefficient
+if the *curvature_gaussian* keyword is used.
 Thus Kn has units of force per area and is thus specified in units of
 (pressure).  The effects of absolute particle size (monodispersity)
 and relative size (polydispersity) are captured in the radii-dependent
