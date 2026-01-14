@@ -185,33 +185,6 @@ namespace {
   const ssfn_font_t *const ssfn_sans_font = (ssfn_font_t *) VeraR_sfn;
 
   /*** Private functions ***/
-  /**
-   * Decode a UTF-8 multibyte, advance string pointer and return UNICODE. Watch out, no input checks
-   *
-   * @param **s pointer to an UTF-8 string pointer
-   * @return unicode, and *s moved to next multibyte sequence
-   */
-  uint32_t _ssfn_utf8(char **s)
-  {
-    uint32_t c = **s;
-
-    if ((**s & 128) != 0) {
-      if (!(**s & 32)) {
-        c = ((**s & 0x1F) << 6) | (*(*s + 1) & 0x3F);
-        *s += 1;
-      } else if (!(**s & 16)) {
-        c = ((**s & 0xF) << 12) | ((*(*s + 1) & 0x3F) << 6) | (*(*s + 2) & 0x3F);
-        *s += 2;
-      } else if (!(**s & 8)) {
-        c = ((**s & 0x7) << 18) | ((*(*s + 1) & 0x3F) << 12) | ((*(*s + 2) & 0x3F) << 6) |
-            (*(*s + 3) & 0x3F);
-        *s += 3;
-      } else
-        c = 0;
-    }
-    *s += 1;
-    return c;
-  }
 
 /* f = file scale, g = grid 4095.15, o = screen point 255.255, i = screen pixel 255, c = ceil */
 #define _ssfn_i2g(x) ((x) ? (((x) << 16) - (1 << 15)) / ctx->m : 0)
