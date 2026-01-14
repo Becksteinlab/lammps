@@ -925,11 +925,11 @@ void CommKokkos::exchange_device()
           MemKK::realloc_kokkos(k_exchange_copylist,"comm:k_exchange_copylist",count*1.1);
           k_count.view_host()(0) = k_exchange_sendlist.view_host().extent(0);
         }
-        if (count_bonus >= (int)k_exchange_sendlist_bonus.view_host().extent(0)) {
+        if (count >= (int)k_exchange_sendlist_bonus.view_host().extent(0)) {
           MemKK::realloc_kokkos(k_exchange_sendlist_bonus,"comm:k_exchange_sendlist_bonus",\
-                                count_bonus*1.1);
+                                count*1.1);
           MemKK::realloc_kokkos(k_exchange_copylist_bonus,"comm:k_exchange_copylist_bonus",\
-                                count_bonus*1.1);
+                                count*1.1);
           k_count.view_host()(1) = k_exchange_sendlist_bonus.view_host().extent(0);
         }
       }
@@ -966,13 +966,16 @@ void CommKokkos::exchange_device()
 
       if (bonus_flag) {
 
+        atomKK->sync(Host,ELLIPSOID_MASK);
+
         int count_bonus = k_count.view_host()(1);
 
         // sort exchange_sendlist_bonus
 
-        auto d_exchange_sendlist_bonus = Kokkos::subview(k_exchange_sendlist_bonus.view<DeviceType>(),std::make_pair(0,count_bonus));
-        Kokkos::sort(DeviceType(), d_exchange_sendlist_bonus);
-        k_exchange_sendlist_bonus.sync_host();
+        auto d_exchange_sendlist_bonus_sorted = Kokkos::subview(k_exchange_sendlist_bonus.view<DeviceType>(),std::make_pair(0,count_bonus));
+        Kokkos::sort(DeviceType(), d_exchange_sendlist_bonus_sorted);
+        auto h_exchange_sendlist_bonus_sorted = Kokkos::create_mirror_view_and_copy(LMPHostType(),d_exchange_sendlist_bonus_sorted);
+        k_exchange_sendlist_bonus.clear_sync_state();
 
         // when atom is deleted, fill it in with last atom
 
@@ -981,21 +984,26 @@ void CommKokkos::exchange_device()
         nlocal_bonus -= count_bonus;
         int recvpos = 0;
         for (int recvpos_all = 0; recvpos_all < count; recvpos_all++) {
-          if (k_bonus_flags.view_host()(recvpos_all) < 0) {
+          int irecv_all = k_exchange_sendlist.view_host()(recvpos_all);
+          if (k_bonus_flags.view_host()(irecv_all) < 0) {
             k_exchange_copylist_bonus.view_host()(recvpos_all) = -1;
+            k_exchange_sendlist_bonus.view_host()(recvpos_all) = -1;
             continue;
           }
-          int irecv = k_exchange_sendlist_bonus.view_host()(recvpos);
+          int irecv = h_exchange_sendlist_bonus_sorted(recvpos);
           if (irecv < nlocal_bonus) {
-            if (icopy == k_exchange_sendlist_bonus.view_host()(sendpos)) icopy--;
-            while (sendpos > 0 && icopy <= k_exchange_sendlist_bonus.view_host()(sendpos-1)) {
+            if (icopy == h_exchange_sendlist_bonus_sorted(sendpos)) icopy--;
+            while (sendpos > 0 && icopy <= h_exchange_sendlist_bonus_sorted(sendpos-1)) {
               sendpos--;
-              icopy = k_exchange_sendlist_bonus.view_host()(sendpos) - 1;
+              icopy = h_exchange_sendlist_bonus_sorted(sendpos) - 1;
             }
             k_exchange_copylist_bonus.view_host()(recvpos_all) = icopy;
+            k_exchange_sendlist_bonus.view_host()(recvpos_all) = irecv;
             icopy--;
-          } else
+          } else {
             k_exchange_copylist_bonus.view_host()(recvpos_all) = -1;
+            k_exchange_sendlist_bonus.view_host()(recvpos_all) = -1;
+          }
 
           recvpos++;
         }
@@ -1004,11 +1012,14 @@ void CommKokkos::exchange_device()
       k_exchange_copylist_bonus.modify_host();
       k_exchange_copylist_bonus.sync<DeviceType>();
 
+      k_exchange_sendlist_bonus.modify_host();
+      k_exchange_sendlist_bonus.sync<DeviceType>();
+
       if (nsend > maxsend) grow_send_kokkos(nsend,0);
       nsend =
         atomKK->avecKK->pack_exchange_kokkos(count,k_buf_send,
                                    k_exchange_sendlist,k_exchange_copylist,
-                                   k_exchange_copylist_bonus,
+                                   k_exchange_sendlist_bonus,k_exchange_copylist_bonus,
                                    ExecutionSpaceFromDevice<DeviceType>::space);
       atom->nlocal = nlocal;
 
@@ -1056,7 +1067,7 @@ void CommKokkos::exchange_device()
         DeviceType().fence();
 
         if (nrecv) {
-          if (atom->nextra_grow) {
+          if (atom->nextra_grow || atomKK->avecKK->size_exchange_bonus) {
             if ((int) k_indices.extent(0) < nrecv/data_size)
               MemoryKokkos::realloc_kokkos(k_indices,"comm:indices",nrecv/data_size);
           } else if (k_indices.view_host().data())

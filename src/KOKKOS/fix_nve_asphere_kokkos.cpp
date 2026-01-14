@@ -60,9 +60,9 @@ void FixNVEAsphereKokkos<DeviceType>::init()
 template<class DeviceType>
 void FixNVEAsphereKokkos<DeviceType>::initial_integrate(int /*vflag*/)
 {
-  atomKK->sync(execution_space, X_MASK | V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK | 
+  atomKK->sync(execution_space, X_MASK | V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK |
                                 RMASS_MASK | ELLIPSOID_MASK | BONUS_MASK | MASK_MASK);
-  
+
   bonus = avecEllipKK->k_bonus.view<DeviceType>();
   ellipsoid = atomKK->k_ellipsoid.view<DeviceType>();
 
@@ -80,7 +80,7 @@ void FixNVEAsphereKokkos<DeviceType>::initial_integrate(int /*vflag*/)
   FixNVEAsphereKokkosInitialIntegrateFunctor<DeviceType> f(this);
   Kokkos::parallel_for(nlocal,f);
 
-  atomKK->modified(execution_space, X_MASK | V_MASK | ANGMOM_MASK | 
+  atomKK->modified(execution_space, X_MASK | V_MASK | ANGMOM_MASK |
                                     ELLIPSOID_MASK | BONUS_MASK);
 }
 
@@ -140,7 +140,7 @@ void FixNVEAsphereKokkos<DeviceType>::initial_integrate_item(const int i) const
 template<class DeviceType>
 void FixNVEAsphereKokkos<DeviceType>::final_integrate()
 {
-  atomKK->sync(execution_space, V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK | 
+  atomKK->sync(execution_space, V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK |
                                 RMASS_MASK | MASK_MASK);
 
   v = atomKK->k_v.view<DeviceType>();
@@ -182,7 +182,7 @@ void FixNVEAsphereKokkos<DeviceType>::final_integrate_item(const int i) const
 template<class DeviceType>
 void FixNVEAsphereKokkos<DeviceType>::fused_integrate(int /*vflag*/)
 {
-  atomKK->sync(execution_space, X_MASK | V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK | 
+  atomKK->sync(execution_space, X_MASK | V_MASK | F_MASK | ANGMOM_MASK | TORQUE_MASK |
                                 RMASS_MASK | ELLIPSOID_MASK | BONUS_MASK | MASK_MASK);
 
   bonus = avecEllipKK->k_bonus.view<DeviceType>();
@@ -202,7 +202,7 @@ void FixNVEAsphereKokkos<DeviceType>::fused_integrate(int /*vflag*/)
   FixNVEAsphereKokkosFusedIntegrateFunctor<DeviceType> f(this);
   Kokkos::parallel_for(nlocal,f);
 
-  atomKK->modified(execution_space, X_MASK | V_MASK | ANGMOM_MASK | 
+  atomKK->modified(execution_space, X_MASK | V_MASK | ANGMOM_MASK |
                                     ELLIPSOID_MASK | BONUS_MASK);
 }
 
@@ -235,7 +235,7 @@ void FixNVEAsphereKokkos<DeviceType>::fused_integrate_item(const int i) const
     angm[2] = angmom(i,2) + dtf * torque(i,2);
 
     // principal moments of inertia
-    
+
     quat = bonus(ellipsoid(i)).quat;
     shape = bonus(ellipsoid(i)).shape;
 

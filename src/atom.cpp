@@ -812,8 +812,8 @@ std::string Atom::get_style()
    return ptr to AtomVec class if matches style or to matching hybrid sub-class.
    return nullptr if no match.
    alt_atom_style and kk_position is used for atom styles with kk suffix
-   and which contain bonus data - allows ptrs to these atom styles to 
-   ignore the /kk suffix upon dynamic_cast to parent of KOKKOS atom_style 
+   and which contain bonus data - allows ptrs to these atom styles to
+   ignore the /kk suffix upon dynamic_cast to parent of KOKKOS atom_style
    ("read_data.cpp"). Similar idea with the styleKK strcmp.
 ------------------------------------------------------------------------- */
 
@@ -826,12 +826,12 @@ AtomVec *Atom::style_match(const char *style)
     *kk_position = '\0';
   }
 
-  if (strcmp(alt_atom_style,style) == 0) return avec; 
+  if (strcmp(alt_atom_style,style) == 0) return avec;
   else if (strcmp(alt_atom_style,"hybrid") == 0) {
     auto *avec_hybrid = dynamic_cast<AtomVecHybrid *>(avec);
     std::string styleKK = std::string(style) + "/kk";
     for (int i = 0; i < avec_hybrid->nstyles; i++) {
-      if (strcmp(avec_hybrid->keywords[i],style) == 0 || 
+      if (strcmp(avec_hybrid->keywords[i],style) == 0 ||
         strcmp(avec_hybrid->keywords[i], styleKK.c_str()) == 0)
         return avec_hybrid->styles[i];
     }

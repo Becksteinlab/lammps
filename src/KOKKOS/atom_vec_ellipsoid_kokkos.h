@@ -89,12 +89,12 @@ class AtomVecEllipsoidKokkos : public AtomVecKokkos, public AtomVecEllipsoid {
   void pack_exchange_bonus_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
                                   DAT::tdual_int_1d k_sendlist,
                                   DAT::tdual_int_1d k_copylist,
+                                  DAT::tdual_int_1d k_sendlist_bonus,
                                   DAT::tdual_int_1d k_copylist_bonus,
                                   ExecutionSpace space) override;
 
   void unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_lr &k_buf,
-                                    int nrecv, int nlocal, int dim,
-                                    double lo, double hi,
+                                    int nrecv,
                                     ExecutionSpace space,
                                     DAT::tdual_int_1d &k_indices) override;
 
@@ -103,28 +103,28 @@ class AtomVecEllipsoidKokkos : public AtomVecKokkos, public AtomVecEllipsoid {
 
   // Bonus struct
 
-  void grow_bonus() override; 
+  void grow_bonus() override;
 
-  DEllipsoidBonusAT::tdual_bonus_1d k_bonus; 
-  DEllipsoidBonusAT::t_bonus_1d d_bonus; 
+  DEllipsoidBonusAT::tdual_bonus_1d k_bonus;
+  DEllipsoidBonusAT::t_bonus_1d d_bonus;
   HEllipsoidBonusAT::t_bonus_1d h_bonus;
 
   void set_size_exchange() override;
-    
+
  private:
   double **torque;
-    
+
   DAT::t_tagint_1d d_tag;
   HAT::t_tagint_1d h_tag;
   DAT::t_imageint_1d d_image;
   HAT::t_imageint_1d h_image;
   DAT::t_int_1d d_type, d_mask;
   HAT::t_int_1d h_type, h_mask;
-    
+
   DAT::t_kkfloat_1d_3_lr d_x;
   DAT::t_kkfloat_1d_3 d_v;
   DAT::t_kkfloat_1d_3 d_f;
-    
+
   DAT::t_kkfloat_1d d_rmass;
   HAT::t_kkfloat_1d h_rmass;
   DAT::t_kkfloat_1d_3 d_angmom;
@@ -135,8 +135,7 @@ class AtomVecEllipsoidKokkos : public AtomVecKokkos, public AtomVecEllipsoid {
   HAT::t_int_1d h_ellipsoid;
 
   DAT::tdual_int_scalar k_nghost_bonus;
-  DAT::tdual_int_scalar k_count_bonus; // as in, k_nlocal_bonus
-
+  DAT::tdual_int_scalar k_nlocal_bonus;
 };
 
 }    // namespace LAMMPS_NS

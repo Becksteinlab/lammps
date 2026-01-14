@@ -36,7 +36,8 @@ AtomVecKokkos::AtomVecKokkos(LAMMPS *lmp) : AtomVec(lmp)
   size_exchange = 0;
 
   datamask_grow = datamask_comm = datamask_comm_vel = datamask_reverse =
-    datamask_border = datamask_border_vel = datamask_exchange = EMPTY_MASK;
+    datamask_border = datamask_border_vel = datamask_exchange =
+    datamask_bonus = EMPTY_MASK;
 
   k_count = DAT::tdual_int_1d("atom:k_count",1);
   atomKK = (AtomKokkos *) atom;
@@ -2473,6 +2474,7 @@ struct AtomVecKokkos_PackExchangeFunctor {
 int AtomVecKokkos::pack_exchange_kokkos(const int &nsend,DAT::tdual_double_2d_lr &k_buf,
                                                  DAT::tdual_int_1d k_sendlist,
                                                  DAT::tdual_int_1d k_copylist,
+                                                 DAT::tdual_int_1d k_sendlist_bonus,
                                                  DAT::tdual_int_1d k_copylist_bonus,
                                                  ExecutionSpace space)
 {
@@ -2511,8 +2513,9 @@ int AtomVecKokkos::pack_exchange_kokkos(const int &nsend,DAT::tdual_double_2d_lr
   }
 
   if (bonus_flag) pack_exchange_bonus_kokkos(nsend,k_buf,
-                                              k_sendlist, k_copylist,
-                                              k_copylist_bonus,space);
+                                             k_sendlist, k_copylist,
+                                             k_sendlist_bonus, k_copylist_bonus,
+                                             space);
 
   atomKK->modified(space,datamask_exchange);
 
@@ -2813,7 +2816,7 @@ int AtomVecKokkos::unpack_exchange_kokkos(DAT::tdual_double_2d_lr &k_buf, int nr
   }
 
   if (bonus_flag)
-    unpack_exchange_bonus_kokkos(k_buf,nrecv,nlocal,dim,lo,hi,space,k_indices);
+    unpack_exchange_bonus_kokkos(k_buf,nrecv,space,k_indices);
 
   atomKK->modified(space,datamask_exchange);
 
@@ -2944,13 +2947,13 @@ void AtomVecKokkos::set_atom_masks()
   for (int i = 0; i < ngrow; i++)
     datamask_grow |= field2mask(fields_grow[i]);
 
-  datamask_comm = EMPTY_MASK;
+  datamask_comm = datamask_bonus;
   for (int i = 0; i < default_comm.size(); i++)
     datamask_comm |= field2mask(default_comm[i]);
   for (int i = 0; i < ncomm; i++)
     datamask_comm |= field2mask(fields_comm[i]);
 
-  datamask_comm_vel = EMPTY_MASK;
+  datamask_comm_vel = datamask_bonus;
   for (int i = 0; i < default_comm_vel.size(); i++)
     datamask_comm_vel |= field2mask(default_comm_vel[i]);
   for (int i = 0; i < ncomm_vel; i++)
@@ -2962,19 +2965,19 @@ void AtomVecKokkos::set_atom_masks()
   for (int i = 0; i < nreverse; i++)
     datamask_reverse |= field2mask(fields_reverse[i]);
 
-  datamask_border = EMPTY_MASK;
+  datamask_border = datamask_bonus;
   for (int i = 0; i < default_border.size(); i++)
     datamask_border |= field2mask(default_border[i]);
   for (int i = 0; i < nborder; i++)
     datamask_border |= field2mask(fields_border[i]);
 
-  datamask_border_vel = EMPTY_MASK;
+  datamask_border_vel = datamask_bonus;
   for (int i = 0; i < default_border_vel.size(); i++)
     datamask_border_vel |= field2mask(default_border_vel[i]);
   for (int i = 0; i < nborder_vel; i++)
     datamask_border_vel |= field2mask(fields_border_vel[i]);
 
-  datamask_exchange = EMPTY_MASK;
+  datamask_exchange = datamask_bonus;
   for (int i = 0; i < default_exchange.size(); i++)
     datamask_exchange |= field2mask(default_exchange[i]);
   for (int i = 0; i < nexchange; i++)
