@@ -47,29 +47,35 @@ using namespace FixConst;
 
 namespace {
 
-void get_color(const std::string &color, double *rgb)
+void get_color(const std::string &color, unsigned char *rgb)
 {
   if (color == "white") {
-    rgb[0] = 255.0;
-    rgb[1] = 255.0;
-    rgb[2] = 255.0;
+    rgb[0] = 255;
+    rgb[1] = 255;
+    rgb[2] = 255;
   } else if (color == "black") {
-    rgb[0] = 0.0;
-    rgb[1] = 0.0;
-    rgb[2] = 0.0;
+    rgb[0] = 0;
+    rgb[1] = 0;
+    rgb[2] = 0;
   } else if (color == "silver") {
-    rgb[0] = 192.0;
-    rgb[1] = 192.0;
-    rgb[2] = 192.0;
+    rgb[0] = 192;
+    rgb[1] = 192;
+    rgb[2] = 192;
   } else if (color == "darkgray") {
-    rgb[0] = 64.0;
-    rgb[1] = 64.0;
-    rgb[2] = 64.0;
+    rgb[0] = 64;
+    rgb[1] = 64;
+    rgb[2] = 64;
   } else {
     auto val = ValueTokenizer(color, "/");
-    rgb[0] = val.next_int();
-    rgb[1] = val.next_int();
-    rgb[2] = val.next_int();
+    auto tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[0] = (unsigned char) tmp;
+    tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[1] = (unsigned char) tmp;
+    tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[2] = (unsigned char) tmp;
     if (val.has_next()) throw TokenizerException("Extra token", val.next_string());
   }
 }
@@ -357,13 +363,13 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
             pix.transcolor[0] = -255.0;
             pix.transcolor[1] = -255.0;
             pix.transcolor[2] = -255.0;
-          } else {
-            auto rgb = ValueTokenizer(arg[iarg + 1], "/");
+          } else {            
             try {
-              pix.transcolor[0] = rgb.next_int();
-              pix.transcolor[1] = rgb.next_int();
-              pix.transcolor[2] = rgb.next_int();
-              if (rgb.has_next()) throw TokenizerException("Extra token", rgb.next_string());
+              unsigned char rgb[3];
+              get_color(arg[iarg + 1], rgb);
+              pix.transcolor[0] = rgb[0];
+              pix.transcolor[1] = rgb[1];
+              pix.transcolor[2] = rgb[2];
             } catch (TokenizerException &e) {
               error->all(FLERR, iarg + 1, "Error parsing RGB color value {}: {}", arg[iarg + 1],
                          e.what());
@@ -380,9 +386,9 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels text", error);
 
       // clang-format off
-      TextInfo txt{"", {0.0, 0.0, 0.0}, 0, 0, nullptr, {255.0, 255.0, 255.0},
-                   {192.0, 192.0, 192.0}, {192.0, 192.0, 192.0}, {192.0, 192.0, 192.0},
-                   48.0, 0.5, -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
+      TextInfo txt{"", {0.0, 0.0, 0.0}, 0, 0, nullptr, {255, 255, 255}, {192, 192, 192},
+                   {192, 192, 192}, {192, 192, 192}, false, 48.0, 0.5,
+                   -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
       // clang-format on
 
       txt.text = arg[iarg + 1];
@@ -449,9 +455,7 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels text transcolor", error);
           if (strcmp(arg[iarg + 1], "none") == 0) {
-            txt.transcolor[0] = -255.0;
-            txt.transcolor[1] = -255.0;
-            txt.transcolor[2] = -255.0;
+            txt.notrans = true;
           } else {
             try {
               get_color(arg[iarg + 1], txt.transcolor);
@@ -662,14 +666,13 @@ void FixGraphicsLabels::end_of_step()
   // initialize font renderer and load in-memory font
 
   try {
-    SSFN::ssfn_t ctx;
-    SSFN::ssfn_glyph_t *g;
-    memset(&ctx, 0, sizeof(SSFN::ssfn_t));
-    SSFN::ssfn_load(&ctx, SSFN::ssfn_sans_font);
+    SSFN::ScalableFont renderfont;
+
     for (auto &txt : texts) {
       if (txt.xstr) txt.pos[0] = input->variable->compute_equal(txt.xvar);
       if (txt.ystr) txt.pos[1] = input->variable->compute_equal(txt.yvar);
       if (txt.zstr) txt.pos[2] = input->variable->compute_equal(txt.zvar);
+
       // text is rasterized at twice the size for some anti-aliasing. clamp to avoid crashes.
       if (txt.sstr) {
         txt.size = 2.0 * input->variable->compute_equal(txt.svar);
@@ -682,7 +685,7 @@ void FixGraphicsLabels::end_of_step()
         }
       }
 
-      SSFN::ssfn_select(&ctx, SSFN_FAMILY_SANS, SSFN_STYLE_REGULAR, (int) txt.size);
+      renderfont.select_font(SSFN::FAMILY_SANS, SSFN::STYLE_REGULAR, (int) txt.size);
 
       // need to render the pixmap if NULL, the size is a variable, or we need to substitute the text
       if (txt.sstr || !txt.pixmap || (txt.text.find('$') != std::string::npos)) {
@@ -701,83 +704,9 @@ void FixGraphicsLabels::end_of_step()
           memory->sfree(work);
         }
 
-        // get a font size specific spacing for a border
-        g = SSFN::ssfn_render(&ctx, ' ');
-        int xspace = g->adv_x;
-        free(g);
-
-        // dry run to determine size of pixmap
-        int width = 0;
-        int miny = 1073741824;
-        int maxy = 0;
-        for (auto c : expanded + "gll") {    // append these characters for consistent spacing
-          if (c == '_') c = ' ';             // ugly hack to work around font issue
-
-          g = SSFN::ssfn_render(&ctx, c);
-          width += g->adv_x;
-          // loop over bitmap to find minimum and maximum y position
-          for (int y = 0; y < g->h; ++y) {
-            const int ypos = g->h - 1 - y + g->baseline;
-            for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
-              if (m > 0x80) {
-                m = 1;
-                ++i;
-              }
-              if (g->data[y * g->pitch + i] & m) {
-                miny = MIN(miny, ypos);
-                maxy = MAX(maxy, ypos);
-              }
-            }
-          }
-          free(g);
-        }
-
-        int xhalf = xspace / 2;
-        txt.width = width;
-        int height = txt.height = maxy - miny + 1 + 3 * xspace;
         delete[] txt.pixmap;
-        txt.pixmap = new unsigned char[height * width * 3];
-
-        // fill entire pixmap with background and frame color
-        for (int y = 0; y < height; ++y) {
-          int yoffs = 3 * y * width;
-          for (int x = 0; x < width; ++x) {
-            if ((y < xhalf) || (y >= height - xhalf) || (x < xhalf) || (x >= width - xhalf)) {
-              txt.pixmap[yoffs + 3 * x] = (int) txt.framecolor[0];
-              txt.pixmap[yoffs + 3 * x + 1] = (int) txt.framecolor[1];
-              txt.pixmap[yoffs + 3 * x + 2] = (int) txt.framecolor[2];
-            } else {
-              txt.pixmap[yoffs + 3 * x] = (int) txt.backcolor[0];
-              txt.pixmap[yoffs + 3 * x + 1] = (int) txt.backcolor[1];
-              txt.pixmap[yoffs + 3 * x + 2] = (int) txt.backcolor[2];
-            }
-          }
-        }
-
-        // now render each character again and change the pixels in the pixmap accordingly
-        int penx = 2 * xspace;
-        for (auto c : expanded) {
-          if (c == '_') c = ' ';    // ugly hack to work around font issue
-
-          g = SSFN::ssfn_render(&ctx, c);
-          for (int y = 0; y < g->h; ++y) {
-            const int yoffs = (g->h - 1 - y + g->baseline - miny + xspace + xhalf / 2) * width * 3;
-            for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
-              if (m > 0x80) {
-                m = 1;
-                ++i;
-              }
-              const int xoffs = (penx + x) * 3;
-              if (g->data[y * g->pitch + i] & m) {
-                txt.pixmap[yoffs + xoffs] = (int) txt.fontcolor[0];
-                txt.pixmap[yoffs + xoffs + 1] = (int) txt.fontcolor[1];
-                txt.pixmap[yoffs + xoffs + 2] = (int) txt.fontcolor[2];
-              }
-            }
-          }
-          penx += g->adv_x;
-          free(g);
-        }
+        txt.pixmap = renderfont.create_pixmap(expanded, txt.width, txt.height, txt.fontcolor,
+                                              txt.framecolor, txt.backcolor);
       }
       imgobjs[n] = Graphics::PIXMAP;
       imgparms[n][0] = 1;
@@ -787,13 +716,17 @@ void FixGraphicsLabels::end_of_step()
       imgparms[n][4] = txt.width;
       imgparms[n][5] = txt.height;
       imgparms[n][6] = ubuf((int64_t) txt.pixmap).d;
-      imgparms[n][7] = txt.transcolor[0] / 255.0;
-      imgparms[n][8] = txt.transcolor[1] / 255.0;
-      imgparms[n][9] = txt.transcolor[2] / 255.0;
+      if (txt.notrans) {
+        imgparms[n][7] = imgparms[n][8] = imgparms[n][9] = -1.0;
+      } else {
+        imgparms[n][7] = (double)txt.transcolor[0] / 255.0;
+        imgparms[n][8] = (double)txt.transcolor[1] / 255.0;
+        imgparms[n][9] = (double)txt.transcolor[2] / 255.0;
+      }
+      
       imgparms[n][10] = txt.scale;
       ++n;
     }
-    ssfn_free(&ctx);
   } catch (const SSFN::SSFNException &e) {
     error->all(FLERR, Error::NOLASTLINE, "Error during font rendering: {}", e.what());
   }

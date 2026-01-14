@@ -38,6 +38,7 @@
 
 // Scalable Screen Font renderer in a single ANSI C/C++ file
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdlib>
@@ -46,7 +47,65 @@
 #include "fmt/format.h"
 #include "scalable_font.h"
 
+static constexpr int SSFN_DATA_MAX = 65536;
+
 namespace SSFN {
+
+using ssfn_font_t = struct _ssfn_font_t {
+  uint8_t magic[4];  /* SSFN magic bytes */
+  uint32_t size;     /* total size in bytes */
+  uint8_t family;    /* font family group */
+  uint8_t style;     /* font style, zero or OR'd SSFN_STYLE_BOLD and SSFN_STYLE_ITALIC */
+  uint8_t quality;   /* quality, defines grid size, 0 - 8 */
+  uint8_t features;  /* feature flags, OR'd SSFN_FEAT_* */
+  uint8_t revision;  /* format revision, must be zero */
+  uint8_t reserved0; /* must be zero */
+  uint16_t reserved1;
+  uint16_t baseline;  /* horizontal baseline in grid pixels */
+  uint16_t underline; /* position of under line in grid pixels */
+  uint16_t bbox_left; /* overall bounding box for all glyphs in grid pixels */
+  uint16_t bbox_top;
+  uint16_t bbox_right;
+  uint16_t bbox_bottom;
+  uint32_t fragments_offs;  /* offset of fragments table relative to magic */
+  uint32_t characters_offs; /* offset of characters tables relative to magic */
+  uint32_t kerning_offs;    /* kerning table offset relative to magic */
+};
+
+/* returned bitmap struct */
+using ssfn_glyph_t = struct _ssfn_glyph_t {
+  uint8_t mode;                /* returned glyph's data format */
+  uint8_t baseline;            /* baseline of glyph, scaled to size */
+  uint8_t w;                   /* width */
+  uint8_t h;                   /* height */
+  uint8_t adv_x;               /* advance x */
+  uint8_t adv_y;               /* advance y */
+  uint16_t pitch;              /* data buffer bytes per line */
+  uint32_t *cmap;              /* pointer to color map */
+  uint8_t data[SSFN_DATA_MAX]; /* data buffer */
+};
+
+/* renderer context */
+
+using ssfn_t = struct _ssfn_t {
+  const ssfn_font_t **fnt[5];             /* font registry */
+  const ssfn_font_t *s;                   /* explicitly selected font */
+  const ssfn_font_t *f;                   /* font selected by best match */
+  ssfn_glyph_t *ret;                      /* glyph to return */
+  uint16_t *p;                            /* outline points */
+  uint16_t *r[256];                       /* raster for scanlines */
+  uint16_t *h;                            /* auto hinting grid */
+  int len[5];                             /* number of fonts in registry */
+  int mp;                                 /* memory allocated for points */
+  int np;                                 /* how many points actually are there */
+  int nr[256];                            /* number of coordinates in each raster line */
+  int family;                             /* required family */
+  int style;                              /* required style */
+  int size;                               /* required size */
+  int mode;                               /* required mode */
+  int g;                                  /* shift value for grid size */
+  int m, ix, u, uix, uax, lx, ly, mx, my; /* helper variables */
+};
 
 /***** file format *****/
 
@@ -120,6 +179,10 @@ namespace {
                                "Invalid size",
                                "Invalid mode",
                                "Glyph not found"};
+
+// include font data as constant in memory byte sequence
+#include "scalable_sans_font.h"
+  const ssfn_font_t *const ssfn_sans_font = (ssfn_font_t *) VeraR_sfn;
 
   /*** Private functions ***/
   /**
@@ -292,7 +355,7 @@ namespace {
         for (i = 0; i < n - 1; i += 2) {
           if (ctx->style & 0x100) {
             l = (r[i] + r[i + 1]) >> 9;
-            if (pix[k + (l >> 3)] & (1 << (l & 7)) ? 1 : 0) {
+            if (pix[k + (l >> 3)] & (1 << (l & 7)) ? true : false) {
               if (r[i] + 256 > r[i + 1])
                 r[i] = r[i + 1] - 128;
               else
@@ -366,7 +429,7 @@ namespace {
             y = raw[1] + 1;
             raw += 2;
           bitmap:
-            if (ctx->mode == SSFN_MODE_OUTLINE) {
+            if (ctx->mode == MODE_OUTLINE) {
               x <<= 3;
             outline:
               ctx->lx = ctx->ly = -1;
@@ -428,7 +491,7 @@ namespace {
             y = (((raw[0] & 3) << 8) | raw[2]) + 1;
             n = ((raw[4] << 8) | raw[3]) + 1;
             raw += 5;
-            if (ctx->mode == SSFN_MODE_OUTLINE) goto outline;
+            if (ctx->mode == MODE_OUTLINE) goto outline;
             if (raw[-5] & 0x10) { /* todo: direct ARGB values in pixmap fragment */
             }
             a = x * y;
@@ -700,9 +763,291 @@ namespace {
     }
   }
 
+  /**
+ * Load a font or font collection into renderer context
+ *
+ * @param ctx rendering context
+ * @param font SSFN font or font collection in memory
+ */
+  void _ssfn_load(ssfn_t *ctx, const ssfn_font_t *font)
+  {
+    ssfn_font_t *ptr, *end;
+
+    if (!ctx || !font) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_INVINP);
+
+    if (!memcmp(font->magic, SSFN_COLLECTION, 4)) {
+      end = (ssfn_font_t *) ((uint8_t *) font + font->size);
+      for (ptr = (ssfn_font_t *) ((uint8_t *) font + 8); ptr < end;
+           ptr = (ssfn_font_t *) ((uint8_t *) ptr + ptr->size))
+        _ssfn_load(ctx, ptr);
+    } else {
+      if (memcmp(font->magic, SSFN_MAGIC, 4) ||
+          memcmp((uint8_t *) font + font->size - 4, SSFN_ENDMAGIC, 4) ||
+          font->family > FAMILY_HAND || font->fragments_offs > font->size ||
+          font->characters_offs > font->size || font->kerning_offs > font->size ||
+          font->fragments_offs >= font->characters_offs || font->quality > 8) {
+        throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADFILE);
+      } else {
+        ctx->len[font->family]++;
+        ctx->fnt[font->family] = (const ssfn_font_t **) realloc(
+            ctx->fnt[font->family], ctx->len[font->family] * sizeof(void *));
+        if (!ctx->fnt[font->family])
+          throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
+        else
+          ctx->fnt[font->family][ctx->len[font->family] - 1] = font;
+      }
+    }
+  }
+
+  /**
+ * Set up rendering parameters
+ *
+ * @param ctx rendering context
+ * @param family one of SSFN_FAMILY_*
+ * @param name NULL or UTF-8 string if family is SSFN_FAMILY_BYNAME
+ * @param style OR'd values of SSFN_STYLE_*
+ * @param size how big glyph it should render, 8 - 255
+ */
+  void _ssfn_select(ssfn_t *ctx, int family, int style, int size)
+  {
+    if (!ctx) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_INVINP);
+    if ((style & ~0xCF)) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADSTYLE);
+    if (size < 8 || size > 255) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADSIZE);
+
+    ctx->np = ctx->mp = 0;
+    if (ctx->p) {
+      free(ctx->p);
+      ctx->p = nullptr;
+    }
+    ctx->f = nullptr;
+    ctx->family = family;
+    ctx->style = style;
+    ctx->size = size;
+    ctx->mode = MODE_BITMAP;
+  }
+
+  /**
+ * Glyph renderer
+ *
+ * @param ctx rendering context
+ * @param unicode character to render
+ * @return newly allocated rasterized glyph
+ */
+  ssfn_glyph_t *_ssfn_render(ssfn_t *ctx, uint32_t unicode)
+  {
+    ssfn_font_t **fl;
+    int i, j, s, h, p, m, n, bt, bl;
+    int l, x, y;
+    uint8_t *rg = nullptr, c, d;
+
+    if (!ctx) return nullptr;
+    if (ctx->size < 8) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_NOFACE);
+
+    if (ctx->s) {
+      ctx->f = (ssfn_font_t *) ctx->s;
+      rg = _ssfn_c(ctx->f, unicode);
+      if (!rg) rg = _ssfn_c(ctx->f, unicode);
+    } else {
+      p = ctx->family;
+    again:
+      if (p == SSFN_FAMILY_ANY) {
+        n = 0;
+        m = 4;
+      } else
+        n = m = p;
+      for (; n <= m; n++) {
+        fl = (ssfn_font_t **) ctx->fnt[n];
+        if (ctx->style & 3) {
+          /* check if we have a specific ctx->f for the requested style */
+          for (i = 0; i < ctx->len[n]; i++)
+            if ((fl[i]->style & 3) == (ctx->style & 3) && (rg = _ssfn_c(fl[i], unicode))) {
+              ctx->f = fl[i];
+              break;
+            }
+          /* if bold italic was requested, check if we have at least bold or italic */
+          if (!rg && (ctx->style & 3) == 3)
+            for (i = 0; i < ctx->len[n]; i++)
+              if ((fl[i]->style & 3) && (rg = _ssfn_c(fl[i], unicode))) {
+                ctx->f = fl[i];
+                break;
+              }
+        }
+        /* last resort, get the first ctx->f which has a glyph for this unicode, no matter style */
+        if (!rg) {
+          for (i = 0; i < ctx->len[n]; i++)
+            if ((rg = _ssfn_c(fl[i], unicode))) {
+              ctx->f = fl[i];
+              break;
+            }
+        }
+      }
+      /* if glyph still not found, try any family group */
+      if (!rg) {
+        if (p != SSFN_FAMILY_ANY) {
+          p = SSFN_FAMILY_ANY;
+          goto again;
+        }
+      }
+    }
+    if (!rg) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_NOGLYPH);
+
+    ctx->style &= 0xFF;
+    if ((ctx->style & 1) && !(ctx->f->style & 1)) ctx->style |= 0x100;
+    if ((ctx->style & 2) && !(ctx->f->style & 2)) ctx->style |= 0x200;
+    if (ctx->f->family == FAMILY_MONOSPACE) ctx->style |= SSFN_STYLE_ABS_SIZE;
+
+    ctx->g = 4 + ctx->f->quality;
+    ctx->np = 0;
+
+    s = 16 - ctx->g;
+    if (ctx->mode == MODE_OUTLINE) {
+      h = ctx->size;
+      p = 0;
+    } else {
+      if (!(((rg[2] & 0x0F) << 8) | rg[6]) || ctx->style & SSFN_STYLE_ABS_SIZE)
+        h = ctx->size;
+      else
+        h = (4096 << 4) * ctx->size / ((ctx->f->baseline - ctx->f->bbox_top) << s);
+      p = (h + (ctx->style & 0x100 ? 2 : 0) + (ctx->style & 0x200 ? h >> 2 : 0));
+      if (p > 255) {
+        p = h = 255;
+        if (ctx->style & 0x100) h -= 2;
+        if (ctx->style & 0x200) h = h * 4 / 5;
+      }
+      if (ctx->mode == MODE_BITMAP) p = (p + 7) >> 3;
+    }
+    ctx->m = h;
+
+    if (!ctx->h) ctx->h = (uint16_t *) malloc(4096 * 2 * sizeof(uint16_t));
+    if (!ctx->h) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
+
+    if (!(ctx->style & SSFN_STYLE_NOHINTING)) {
+      memset(&ctx->h[4096], 0, 4096 * sizeof(uint16_t));
+      _ssfn_g(ctx, rg, 0);
+    } else
+      ctx->h[4096] = 65535;
+
+    ctx->h[0] = 0;
+    for (i = j = x = y = m = 0; i < 4096 && j < 4095; i++) {
+      y = ctx->h[4096 + i] == 65535 ? 4095 - j : ctx->h[4096 + i];
+      j += y;
+      if (j == x) {
+        ctx->h[j] = (((j << 4) * h + (1 << 15)) >> 16) << 8;
+        if (!y) j++;
+      } else {
+        y = _ssfn_g2o(y << 4);
+        m += y;
+        if ((i & 1) || y < 256) { continue; }
+        m &= ~0xFF;
+        n = ctx->h[x];
+        for (l = 0; l + x <= j; l++) ctx->h[x + l] = n + ((m - n) * l / (j - x));
+      }
+      x = j;
+    }
+    ctx->uix = _ssfn_g2ixc((((rg[2] & 0x0F) << 8) | rg[6]) << s);
+    ctx->uax = _ssfn_g2iyc((((rg[2] & 0xF0) << 4) | rg[7]) << s);
+    if (ctx->mode == MODE_NONE) return nullptr;
+
+    bl = ((((rg[3] & 0x0F) << 8) | rg[8])) << s;
+    bt = ((((rg[3] & 0xF0) << 4) | rg[9])) << s;
+    i = p * h;
+    ctx->ret = (ssfn_glyph_t *) malloc(i + 8 + sizeof(uint8_t *));
+    if (!ctx->ret) return nullptr;
+
+    memset(&ctx->ret->data, 0, i);
+    ctx->ret->cmap = nullptr;
+    ctx->ret->mode = ctx->mode;
+    ctx->ret->pitch = p;
+    ctx->ret->w = 0;
+    ctx->ret->h = h;
+    ctx->ret->baseline = (((ctx->f->baseline << s) - bt) * h + (1 << 16) - 1) >> 16;
+    ctx->u = ctx->ret->baseline + ((((ctx->f->underline - ctx->f->baseline) << s) * h) >> 16);
+
+    ctx->ret->adv_x = ctx->uix;
+    ctx->ret->adv_y = ctx->uax;
+
+    ctx->ix = ctx->uix = 4096 << 4;
+    ctx->uax = 0;
+    _ssfn_g(ctx, rg, 1);
+
+    if (!(ctx->style & 0x200) || ctx->ix == 4096 << 4) ctx->ix = 0;
+    if (ctx->mode == MODE_OUTLINE) {
+      if (ctx->np > p * h) {
+        ctx->ret = (ssfn_glyph_t *) realloc(ctx->ret, ctx->np + 8 + sizeof(uint8_t *));
+        if (!ctx->ret) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
+      }
+      for (s = i = 0; i < ctx->np; i += 2) {
+        c = ctx->p[i + 0] == 0xffff ? 0xff : _ssfn_g2ix(ctx->p[i + 0] + bl);
+        d = ctx->p[i + 1] == 0xffff ? 0xff : _ssfn_g2iy(ctx->p[i + 1] + bt);
+        if (s < 2 || ctx->ret->data[s - 2] != c || ctx->ret->data[s - 1] != d) {
+          ctx->ret->data[s++] = c;
+          ctx->ret->data[s++] = d;
+        }
+      }
+      ctx->ret->pitch = s;
+      ctx->ret = (ssfn_glyph_t *) realloc(ctx->ret, s + 8 + sizeof(uint8_t *));
+      if (!ctx->ret) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
+    } else {
+      _ssfn_r(ctx);
+      if (ctx->style & SSFN_STYLE_STHROUGH) {
+        if (ctx->ret->w < ctx->ret->adv_x) ctx->ret->w = ctx->ret->adv_x;
+        memset(&ctx->ret->data[(ctx->ret->baseline - (ctx->size >> 2)) * p], 0xFF,
+               (ctx->size / 64 + 2) * p);
+      }
+      if (ctx->style & SSFN_STYLE_UNDERLINE) {
+        if (ctx->ret->w < ctx->ret->adv_x) ctx->ret->w = ctx->ret->adv_x;
+        if (ctx->uax > ctx->ix) ctx->uax = _ssfn_g2i(ctx->uax - ctx->ix);
+        if (ctx->uix != 4096 << 4)
+          ctx->uix = _ssfn_g2i(ctx->uix - ctx->ix);
+        else
+          ctx->uix = ctx->ret->w + 3;
+        m = ctx->u * p;
+        n = ctx->size > 127 ? 2 : 1;
+        while (n--) {
+          if (ctx->uix > 3) {
+            j = ctx->uix - 3;
+            if (ctx->mode == MODE_BITMAP)
+              for (i = 0; i < j; i++) ctx->ret->data[m + (i >> 3)] |= 1 << (i & 7);
+            else
+              memset(&ctx->ret->data[m], 0xFF, j);
+          }
+          if (ctx->uax) {
+            j = ctx->uax + 2;
+            if (ctx->mode == MODE_BITMAP)
+              for (i = j; i < ctx->ret->w; i++) ctx->ret->data[m + (i >> 3)] |= 1 << (i & 7);
+            else
+              memset(&ctx->ret->data[m + j], 0xFF, p - j);
+          }
+          m += p;
+        }
+      }
+      if (ctx->ret->adv_y) ctx->ret->baseline = ctx->ret->w >> 1;
+    }
+    return ctx->ret;
+  }
+
+  /**
+ * Free renderer context
+ *
+ * @param ctx rendering context
+ */
+  void _ssfn_free(ssfn_t *ctx)
+  {
+    int i;
+
+    if (!ctx) return;
+
+    for (i = 0; i < 5; i++)
+      if (ctx->fnt[i]) free(ctx->fnt[i]);
+    if (ctx->p) free(ctx->p);
+    for (i = 0; i < 256; i++)
+      if (ctx->r[i]) free(ctx->r[i]);
+    if (ctx->h) free(ctx->h);
+    memset(ctx, 0, sizeof(ssfn_t));
+  }
   // helper function to truncate a string to a segment starting with "src/";
 
-  static std::string truncpath(const std::string &path)
+  std::string truncpath(const std::string &path)
   {
     std::size_t found = path.find("src/");
     if (found != std::string::npos)
@@ -714,6 +1059,117 @@ namespace {
 
 /* public API implementation */
 
+// constructor: create and initialize context and load font
+ScalableFont::ScalableFont()
+{
+  auto *ctxptr = new ssfn_t;
+  memset(ctxptr, 0, sizeof(ssfn_t));
+  _ssfn_load(ctxptr, ssfn_sans_font);
+  ctx = (void *) ctxptr;
+}
+
+// clean up
+ScalableFont::~ScalableFont()
+{
+  auto *ctxptr = (ssfn_t *) ctx;
+  _ssfn_free(ctxptr);
+  delete ctxptr;
+}
+
+// set font settings
+void ScalableFont::select_font(int family, int style, int size)
+{
+  _ssfn_select((ssfn_t *) ctx, family, style, size);
+}
+
+unsigned char *ScalableFont::create_pixmap(const std::string &text, int &width, int &height,
+                                           const unsigned char *font, const unsigned char *frame,
+                                           const unsigned char *back)
+{
+  auto *ctxptr = (ssfn_t *) ctx;
+  ssfn_glyph_t *g;
+
+  // get a font size specific spacing for a border
+  g = _ssfn_render(ctxptr, ' ');
+  int xspace = g->adv_x;
+  free(g);
+
+  // dry run to determine size of pixmap
+  width = 0;
+  int miny = 1073741824;
+  int maxy = 0;
+  for (auto c : text + "gll") {    // append these characters for consistent spacing
+    if (c == '_') c = ' ';         // ugly hack to work around font issue
+
+    // render character and apply its width
+    g = _ssfn_render(ctxptr, c);
+    width += g->adv_x;
+
+    // loop over bitmap to find minimum and maximum y position
+    for (int y = 0; y < g->h; ++y) {
+      const int ypos = g->h - 1 - y + g->baseline;
+      for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
+        if (m > 0x80) {
+          m = 1;
+          ++i;
+        }
+        if (g->data[y * g->pitch + i] & m) {
+          miny = std::min(miny, ypos);
+          maxy = std::max(maxy, ypos);
+        }
+      }
+    }
+    free(g);
+  }
+
+  int xhalf = xspace / 2;
+  height = maxy - miny + 1 + 3 * xspace;
+
+  // allocate and fill pixmap with background and frame color
+
+  auto *pixmap = new unsigned char[width * height * 3];
+  for (int y = 0; y < height; ++y) {
+    int yoffs = 3 * y * width;
+    for (int x = 0; x < width; ++x) {
+      if ((y < xhalf) || (y >= height - xhalf) || (x < xhalf) || (x >= width - xhalf)) {
+        pixmap[yoffs + 3 * x] = frame[0];
+        pixmap[yoffs + 3 * x + 1] = frame[1];
+        pixmap[yoffs + 3 * x + 2] = frame[2];
+      } else {
+        pixmap[yoffs + 3 * x] = back[0];
+        pixmap[yoffs + 3 * x + 1] = back[1];
+        pixmap[yoffs + 3 * x + 2] = back[2];
+      }
+    }
+  }
+
+  // now render each character again and change the pixels in the pixmap accordingly
+  int penx = 2 * xspace;
+  for (auto c : text) {
+    if (c == '_') c = ' ';    // ugly hack to work around font issue
+
+    g = _ssfn_render(ctxptr, c);
+    for (int y = 0; y < g->h; ++y) {
+      const int yoffs = (g->h - 1 - y + g->baseline - miny + xspace + xhalf / 2) * width * 3;
+      for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
+        if (m > 0x80) {
+          m = 1;
+          ++i;
+        }
+        const int xoffs = (penx + x) * 3;
+        if (g->data[y * g->pitch + i] & m) {
+          pixmap[yoffs + xoffs] = font[0];
+          pixmap[yoffs + xoffs + 1] = font[1];
+          pixmap[yoffs + xoffs + 2] = font[2];
+        }
+      }
+    }
+    penx += g->adv_x;
+    free(g);
+  }
+  return pixmap;
+}
+
 SSFNException::SSFNException(const std::string &file, int line, int flag)
 {
   message = fmt::format("In file {}:{} ", truncpath(file), line);
@@ -722,303 +1178,5 @@ SSFNException::SSFNException(const std::string &file, int line, int flag)
   } else {
     message.append(ssfn_errstr[flag]);
   }
-}
-
-// include font data as constant in memory byte sequence
-#include "scalable_sans_font.h"
-const ssfn_font_t *const ssfn_sans_font = (ssfn_font_t *) VeraR_sfn;
-
-/**
- * Decode a color map pixel into ARGB
- *
- * @param p uint8_t color map pixel
- * @param c uint32_t* pointer to color map
- * @param fg uint32_t foreground color
- * @return uint32_t ARGB pixel
- */
-#define SSFN_CMAP_TO_ARGB(p, c, fg) \
-  (p >= 0xF0 ? (uint32_t) ((p << 28) | ((p & 0xF) << 24) | fg) : c[p])
-
-/**
- * Load a font or font collection into renderer context
- *
- * @param ctx rendering context
- * @param font SSFN font or font collection in memory
- */
-void ssfn_load(ssfn_t *ctx, const ssfn_font_t *font)
-{
-  ssfn_font_t *ptr, *end;
-
-  if (!ctx || !font) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_INVINP);
-
-  if (!memcmp(font->magic, SSFN_COLLECTION, 4)) {
-    end = (ssfn_font_t *) ((uint8_t *) font + font->size);
-    for (ptr = (ssfn_font_t *) ((uint8_t *) font + 8); ptr < end;
-         ptr = (ssfn_font_t *) ((uint8_t *) ptr + ptr->size))
-      ssfn_load(ctx, ptr);
-  } else {
-    if (memcmp(font->magic, SSFN_MAGIC, 4) ||
-        memcmp((uint8_t *) font + font->size - 4, SSFN_ENDMAGIC, 4) ||
-        font->family > SSFN_FAMILY_HAND || font->fragments_offs > font->size ||
-        font->characters_offs > font->size || font->kerning_offs > font->size ||
-        font->fragments_offs >= font->characters_offs || font->quality > 8) {
-      throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADFILE);
-    } else {
-      ctx->len[font->family]++;
-      ctx->fnt[font->family] = (const ssfn_font_t **) realloc(
-          ctx->fnt[font->family], ctx->len[font->family] * sizeof(void *));
-      if (!ctx->fnt[font->family])
-        throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
-      else
-        ctx->fnt[font->family][ctx->len[font->family] - 1] = font;
-    }
-  }
-}
-
-/**
- * Set up rendering parameters
- *
- * @param ctx rendering context
- * @param family one of SSFN_FAMILY_*
- * @param name NULL or UTF-8 string if family is SSFN_FAMILY_BYNAME
- * @param style OR'd values of SSFN_STYLE_*
- * @param size how big glyph it should render, 8 - 255
- */
-void ssfn_select(ssfn_t *ctx, int family, int style, int size)
-{
-  if (!ctx) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_INVINP);
-  if ((style & ~0xCF)) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADSTYLE);
-  if (size < 8 || size > 255) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_BADSIZE);
-
-  ctx->np = ctx->mp = 0;
-  if (ctx->p) {
-    free(ctx->p);
-    ctx->p = nullptr;
-  }
-  ctx->f = nullptr;
-  ctx->family = family;
-  ctx->style = style;
-  ctx->size = size;
-  ctx->mode = SSFN_MODE_BITMAP;
-}
-
-/**
- * Glyph renderer
- *
- * @param ctx rendering context
- * @param unicode character to render
- * @return newly allocated rasterized glyph
- */
-ssfn_glyph_t *ssfn_render(ssfn_t *ctx, uint32_t unicode)
-{
-  ssfn_font_t **fl;
-  int i, j, s, h, p, m, n, bt, bl;
-  int l, x, y;
-  uint8_t *rg = nullptr, c, d;
-
-  if (!ctx) return nullptr;
-  if (ctx->size < 8) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_NOFACE);
-
-  if (ctx->s) {
-    ctx->f = (ssfn_font_t *) ctx->s;
-    rg = _ssfn_c(ctx->f, unicode);
-    if (!rg) rg = _ssfn_c(ctx->f, unicode);
-  } else {
-    p = ctx->family;
-  again:
-    if (p == SSFN_FAMILY_ANY) {
-      n = 0;
-      m = 4;
-    } else
-      n = m = p;
-    for (; n <= m; n++) {
-      fl = (ssfn_font_t **) ctx->fnt[n];
-      if (ctx->style & 3) {
-        /* check if we have a specific ctx->f for the requested style */
-        for (i = 0; i < ctx->len[n]; i++)
-          if ((fl[i]->style & 3) == (ctx->style & 3) && (rg = _ssfn_c(fl[i], unicode))) {
-            ctx->f = fl[i];
-            break;
-          }
-        /* if bold italic was requested, check if we have at least bold or italic */
-        if (!rg && (ctx->style & 3) == 3)
-          for (i = 0; i < ctx->len[n]; i++)
-            if ((fl[i]->style & 3) && (rg = _ssfn_c(fl[i], unicode))) {
-              ctx->f = fl[i];
-              break;
-            }
-      }
-      /* last resort, get the first ctx->f which has a glyph for this unicode, no matter style */
-      if (!rg) {
-        for (i = 0; i < ctx->len[n]; i++)
-          if ((rg = _ssfn_c(fl[i], unicode))) {
-            ctx->f = fl[i];
-            break;
-          }
-      }
-    }
-    /* if glyph still not found, try any family group */
-    if (!rg) {
-      if (p != SSFN_FAMILY_ANY) {
-        p = SSFN_FAMILY_ANY;
-        goto again;
-      }
-    }
-  }
-  if (!rg) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_NOGLYPH);
-
-  ctx->style &= 0xFF;
-  if ((ctx->style & 1) && !(ctx->f->style & 1)) ctx->style |= 0x100;
-  if ((ctx->style & 2) && !(ctx->f->style & 2)) ctx->style |= 0x200;
-  if (ctx->f->family == SSFN_FAMILY_MONOSPACE) ctx->style |= SSFN_STYLE_ABS_SIZE;
-
-  ctx->g = 4 + ctx->f->quality;
-  ctx->np = 0;
-
-  s = 16 - ctx->g;
-  if (ctx->mode == SSFN_MODE_OUTLINE) {
-    h = ctx->size;
-    p = 0;
-  } else {
-    if (!(((rg[2] & 0x0F) << 8) | rg[6]) || ctx->style & SSFN_STYLE_ABS_SIZE)
-      h = ctx->size;
-    else
-      h = (4096 << 4) * ctx->size / ((ctx->f->baseline - ctx->f->bbox_top) << s);
-    p = (h + (ctx->style & 0x100 ? 2 : 0) + (ctx->style & 0x200 ? h >> 2 : 0));
-    if (p > 255) {
-      p = h = 255;
-      if (ctx->style & 0x100) h -= 2;
-      if (ctx->style & 0x200) h = h * 4 / 5;
-    }
-    if (ctx->mode == SSFN_MODE_BITMAP) p = (p + 7) >> 3;
-  }
-  ctx->m = h;
-
-  if (!ctx->h) ctx->h = (uint16_t *) malloc(4096 * 2 * sizeof(uint16_t));
-  if (!ctx->h) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
-
-  if (!(ctx->style & SSFN_STYLE_NOHINTING)) {
-    memset(&ctx->h[4096], 0, 4096 * sizeof(uint16_t));
-    _ssfn_g(ctx, rg, 0);
-  } else
-    ctx->h[4096] = 65535;
-
-  ctx->h[0] = 0;
-  for (i = j = x = y = m = 0; i < 4096 && j < 4095; i++) {
-    y = ctx->h[4096 + i] == 65535 ? 4095 - j : ctx->h[4096 + i];
-    j += y;
-    if (j == x) {
-      ctx->h[j] = (((j << 4) * h + (1 << 15)) >> 16) << 8;
-      if (!y) j++;
-    } else {
-      y = _ssfn_g2o(y << 4);
-      m += y;
-      if ((i & 1) || y < 256) { continue; }
-      m &= ~0xFF;
-      n = ctx->h[x];
-      for (l = 0; l + x <= j; l++) ctx->h[x + l] = n + ((m - n) * l / (j - x));
-    }
-    x = j;
-  }
-  ctx->uix = _ssfn_g2ixc((((rg[2] & 0x0F) << 8) | rg[6]) << s);
-  ctx->uax = _ssfn_g2iyc((((rg[2] & 0xF0) << 4) | rg[7]) << s);
-  if (ctx->mode == SSFN_MODE_NONE) return nullptr;
-
-  bl = ((((rg[3] & 0x0F) << 8) | rg[8])) << s;
-  bt = ((((rg[3] & 0xF0) << 4) | rg[9])) << s;
-  i = p * h;
-  ctx->ret = (ssfn_glyph_t *) malloc(i + 8 + sizeof(uint8_t *));
-  if (!ctx->ret) return nullptr;
-
-  memset(&ctx->ret->data, 0, i);
-  ctx->ret->cmap = nullptr;
-  ctx->ret->mode = ctx->mode;
-  ctx->ret->pitch = p;
-  ctx->ret->w = 0;
-  ctx->ret->h = h;
-  ctx->ret->baseline = (((ctx->f->baseline << s) - bt) * h + (1 << 16) - 1) >> 16;
-  ctx->u = ctx->ret->baseline + ((((ctx->f->underline - ctx->f->baseline) << s) * h) >> 16);
-
-  ctx->ret->adv_x = ctx->uix;
-  ctx->ret->adv_y = ctx->uax;
-
-  ctx->ix = ctx->uix = 4096 << 4;
-  ctx->uax = 0;
-  _ssfn_g(ctx, rg, 1);
-
-  if (!(ctx->style & 0x200) || ctx->ix == 4096 << 4) ctx->ix = 0;
-  if (ctx->mode == SSFN_MODE_OUTLINE) {
-    if (ctx->np > p * h) {
-      ctx->ret = (ssfn_glyph_t *) realloc(ctx->ret, ctx->np + 8 + sizeof(uint8_t *));
-      if (!ctx->ret) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
-    }
-    for (s = i = 0; i < ctx->np; i += 2) {
-      c = ctx->p[i + 0] == 0xffff ? 0xff : _ssfn_g2ix(ctx->p[i + 0] + bl);
-      d = ctx->p[i + 1] == 0xffff ? 0xff : _ssfn_g2iy(ctx->p[i + 1] + bt);
-      if (s < 2 || ctx->ret->data[s - 2] != c || ctx->ret->data[s - 1] != d) {
-        ctx->ret->data[s++] = c;
-        ctx->ret->data[s++] = d;
-      }
-    }
-    ctx->ret->pitch = s;
-    ctx->ret = (ssfn_glyph_t *) realloc(ctx->ret, s + 8 + sizeof(uint8_t *));
-    if (!ctx->ret) throw SSFNException(__FILE__, __LINE__, SSFN_ERR_ALLOC);
-  } else {
-    _ssfn_r(ctx);
-    if (ctx->style & SSFN_STYLE_STHROUGH) {
-      if (ctx->ret->w < ctx->ret->adv_x) ctx->ret->w = ctx->ret->adv_x;
-      memset(&ctx->ret->data[(ctx->ret->baseline - (ctx->size >> 2)) * p], 0xFF,
-             (ctx->size / 64 + 2) * p);
-    }
-    if (ctx->style & SSFN_STYLE_UNDERLINE) {
-      if (ctx->ret->w < ctx->ret->adv_x) ctx->ret->w = ctx->ret->adv_x;
-      if (ctx->uax > ctx->ix) ctx->uax = _ssfn_g2i(ctx->uax - ctx->ix);
-      if (ctx->uix != 4096 << 4)
-        ctx->uix = _ssfn_g2i(ctx->uix - ctx->ix);
-      else
-        ctx->uix = ctx->ret->w + 3;
-      m = ctx->u * p;
-      n = ctx->size > 127 ? 2 : 1;
-      while (n--) {
-        if (ctx->uix > 3) {
-          j = ctx->uix - 3;
-          if (ctx->mode == SSFN_MODE_BITMAP)
-            for (i = 0; i < j; i++) ctx->ret->data[m + (i >> 3)] |= 1 << (i & 7);
-          else
-            memset(&ctx->ret->data[m], 0xFF, j);
-        }
-        if (ctx->uax) {
-          j = ctx->uax + 2;
-          if (ctx->mode == SSFN_MODE_BITMAP)
-            for (i = j; i < ctx->ret->w; i++) ctx->ret->data[m + (i >> 3)] |= 1 << (i & 7);
-          else
-            memset(&ctx->ret->data[m + j], 0xFF, p - j);
-        }
-        m += p;
-      }
-    }
-    if (ctx->ret->adv_y) ctx->ret->baseline = ctx->ret->w >> 1;
-  }
-  return ctx->ret;
-}
-
-/**
- * Free renderer context
- *
- * @param ctx rendering context
- */
-void ssfn_free(ssfn_t *ctx)
-{
-  int i;
-
-  if (!ctx) return;
-
-  for (i = 0; i < 5; i++)
-    if (ctx->fnt[i]) free(ctx->fnt[i]);
-  if (ctx->p) free(ctx->p);
-  for (i = 0; i < 256; i++)
-    if (ctx->r[i]) free(ctx->r[i]);
-  if (ctx->h) free(ctx->h);
-  memset(ctx, 0, sizeof(ssfn_t));
 }
 }    // namespace SSFN
