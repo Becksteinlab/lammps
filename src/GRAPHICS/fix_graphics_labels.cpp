@@ -689,11 +689,12 @@ void FixGraphicsLabels::end_of_step()
 
       // substitute variables in text
       if (expanded.find('$') != std::string::npos) {
-        int n = expanded.length() + 1;
-        char *copy = (char *) memory->smalloc(n * sizeof(char), "fix/graphics/labels:copy");
-        char *work = (char *) memory->smalloc(n * sizeof(char), "fix/graphics/labels:work");
-        strncpy(copy, expanded.c_str(), n);
-        input->substitute(copy, work, n, n, 0);
+        int ncopy = expanded.length() + 1;
+        int nwork = ncopy;
+        char *copy = (char *) memory->smalloc(ncopy * sizeof(char), "fix/graphics/labels:copy");
+        char *work = (char *) memory->smalloc(nwork * sizeof(char), "fix/graphics/labels:work");
+        strncpy(copy, expanded.c_str(), ncopy);
+        input->substitute(copy, work, ncopy, nwork, 0);
         expanded = copy;
         memory->sfree(copy);
         memory->sfree(work);
