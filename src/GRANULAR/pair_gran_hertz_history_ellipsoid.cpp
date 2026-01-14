@@ -172,12 +172,10 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
           flagi = bonus[ellipsoid[i]].type;
           flagj = bonus[ellipsoid[j]].type;
           if (touch[jj] == 1) {
-            // Continued contact: use grain true shape and last contact point
-            // TODO: move contact point with rigid body motion of the pair ?
-            //       not sure if enough information to do that
-            X0[0] = X0_prev[0];
-            X0[1] = X0_prev[1];
-            X0[2] = X0_prev[2];
+            // Continued contact: use grain true shape and last contact point with respect to grain i
+            X0[0] = x[i][0] + X0_prev[0];
+            X0[1] = x[i][1] + X0_prev[1];
+            X0[2] = x[i][2] + X0_prev[2];
             X0[3] = X0_prev[3];
             int status = MathExtraSuperellipsoids::determine_contact_point(x[i], Ri, shapei, blocki, flagi,
                                                                            x[j], Rj, shapej, blockj, flagj,
@@ -238,9 +236,12 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
         history = &allhistory[size_history * jj];
         for (int k = 0; k < size_history; k++) history[k] = 0.0;
       } else {
-        X0_prev[0] = X0[0];
-        X0_prev[1] = X0[1];
-        X0_prev[2] = X0[2];
+        // Store contact point with respect to grain i for next time step
+        // This is crucial for periodic BCs when grains can move by large amount in one time step
+        // Keeping the previous contact point relative to global frame would lead to bad initial guess
+        X0_prev[0] = X0[0] - x[i][0];
+        X0_prev[1] = X0[1] - x[i][1];
+        X0_prev[2] = X0[2] - x[i][2];
         X0_prev[3] = X0[3];
 
         double nji[3] = { -nij[0], -nij[1], -nij[2] };
