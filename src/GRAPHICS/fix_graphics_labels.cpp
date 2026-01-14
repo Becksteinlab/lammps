@@ -363,7 +363,7 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
             pix.transcolor[0] = -255.0;
             pix.transcolor[1] = -255.0;
             pix.transcolor[2] = -255.0;
-          } else {            
+          } else {
             try {
               unsigned char rgb[3];
               get_color(arg[iarg + 1], rgb);
@@ -723,7 +723,7 @@ void FixGraphicsLabels::end_of_step()
         imgparms[n][8] = (double)txt.transcolor[1] / 255.0;
         imgparms[n][9] = (double)txt.transcolor[2] / 255.0;
       }
-      
+
       imgparms[n][10] = txt.scale;
       ++n;
     }
