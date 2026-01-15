@@ -2214,8 +2214,16 @@ int DumpImage::modify_param(int narg, char **arg)
   int n = DumpCustom::modify_param(narg,arg);
   if (n) return n;
 
+  // determine offset in list of arguments for error pointer. also handle the no match case.
+  int argoff = 0;
+  while (input && input->arg[argoff] && input->arg[argoff+1]) {
+    if ((strcmp(input->arg[argoff], arg[0]) == 0) && (strcmp(input->arg[argoff+1], arg[1]) == 0))
+      break;
+    ++argoff;
+  }
+
   if (strcmp(arg[0],"acolor") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify acolor", error);
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->ntypes,nlo,nhi,lmp,Atom::ATOM);
 
@@ -2236,7 +2244,7 @@ int DumpImage::modify_param(int narg, char **arg)
   }
 
   if (strcmp(arg[0],"adiam") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify adiam", error);
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->ntypes,nlo,nhi,lmp,Atom::ATOM);
     double diam = utils::numeric(FLERR,arg[2],false,lmp);
@@ -2246,7 +2254,7 @@ int DumpImage::modify_param(int narg, char **arg)
   }
 
   if (strcmp(arg[0],"atrans") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify atrans", error);
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->ntypes,nlo,nhi,lmp,Atom::ATOM);
     double opacity = utils::numeric(FLERR,arg[2],false,lmp);
@@ -2256,8 +2264,8 @@ int DumpImage::modify_param(int narg, char **arg)
   }
 
   if ((strcmp(arg[0],"amap") == 0) || (strcmp(arg[0],"gmap") == 0)) {
-    if (narg < 6) error->all(FLERR,"Illegal dump_modify command");
-    if (strlen(arg[3]) != 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 6) utils::missing_cmd_args(FLERR, "dump_modify amap/gmap", error);
+    if (strlen(arg[3]) != 2) error->all(FLERR,"Illegal dump_modify amap/gmap command");
     int factor = 0;
     if (arg[3][0] == 's') factor = 1;
     else if (arg[3][0] == 'c') factor = 2;
@@ -2270,12 +2278,12 @@ int DumpImage::modify_param(int narg, char **arg)
     int flag = 0;
     if (strcmp(arg[0],"amap") == 0) flag = image->map_reset(0,n-1,&arg[1]);
     if (strcmp(arg[0],"gmap") == 0) flag = image->map_reset(1,n-1,&arg[1]);
-    if (flag) error->all(FLERR,"Illegal dump_modify command");
+    if (flag) error->all(FLERR, "Illegal dump_modify command");
     return n;
   }
 
   if (strcmp(arg[0],"bcolor") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify bcolor", error);
     if (atom->nbondtypes == 0)
       error->all(FLERR,"Dump modify bcolor not allowed with no bond types");
     int nlo,nhi;
@@ -2291,38 +2299,40 @@ int DumpImage::modify_param(int narg, char **arg)
     for (int i = nlo; i <= nhi; i++) {
       bcolortype[i] = image->color2rgb(colors[m%ncolors].c_str());
       if (bcolortype[i] == nullptr)
-        error->all(FLERR,"Invalid color in dump_modify command");
+        error->all(FLERR, argoff + 2, "Invalid color in dump_modify bcolor command");
       m++;
     }
     return 3;
   }
 
   if (strcmp(arg[0],"bdiam") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify bdiam", error);
     if (atom->nbondtypes == 0)
-      error->all(FLERR,"Dump modify bdiam not allowed with no bond types");
+      error->all(FLERR, argoff, "Dump modify bdiam not allowed with no bond types");
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->nbondtypes,nlo,nhi,lmp,Atom::BOND);
     double diam = utils::numeric(FLERR,arg[2],false,lmp);
-    if (diam <= 0.0) error->all(FLERR,"Illegal dump_modify command");
+    if (diam <= 0.0)
+      error->all(FLERR, argoff + 2, "Invalid bdiam diameter in dump_modify command");
     for (int i = nlo; i <= nhi; i++) bdiamtype[i] = diam;
     return 3;
   }
 
   if (strcmp(arg[0],"btrans") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify btrans", error);
     if (atom->nbondtypes == 0)
       error->all(FLERR,"Dump modify btrans not allowed with no bond types");
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->nbondtypes,nlo,nhi,lmp,Atom::BOND);
     double opacity = utils::numeric(FLERR,arg[2],false,lmp);
-    if ((opacity < 0.0) || (opacity > 1.0)) error->all(FLERR,"Illegal dump_modify command");
+    if ((opacity < 0.0) || (opacity > 1.0))
+      error->all(FLERR, argoff + 2, "Invalid btrans opacity in dump_modify command");
     for (int i = nlo; i <= nhi; i++) bopacity[i] = opacity;
     return 3;
   }
 
   if (strcmp(arg[0],"backcolor") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify backcolor", error);
     double *color = image->color2rgb(arg[1]);
     if (color == nullptr) error->all(FLERR,"Invalid color in dump_modify command");
     image->background[0] = static_cast<int>(color[0]*255.0);
@@ -2332,14 +2342,15 @@ int DumpImage::modify_param(int narg, char **arg)
   }
 
   if (strcmp(arg[0],"backcolor2") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify backcolor2", error);
     if (strcmp(arg[1],"none") == 0) {
       image->background2[0] = -1;
       image->background2[1] = -1;
       image->background2[2] = -1;
     } else {
       double *color = image->color2rgb(arg[1]);
-      if (color == nullptr) error->all(FLERR,"Invalid color in dump_modify command");
+      if (color == nullptr)
+        error->all(FLERR, argoff + 1, "Invalid color in dump_modify backcolor2 command");
       image->background2[0] = static_cast<int>(color[0]*255.0);
       image->background2[1] = static_cast<int>(color[1]*255.0);
       image->background2[2] = static_cast<int>(color[2]*255.0);
@@ -2348,50 +2359,50 @@ int DumpImage::modify_param(int narg, char **arg)
   }
 
   if (strcmp(arg[0],"boxcolor") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify boxcolor", error);
     image->boxcolor = image->color2rgb(arg[1]);
     if (image->boxcolor == nullptr)
-      error->all(FLERR,"Invalid color in dump_modify command");
+      error->all(FLERR, argoff + 1, "Invalid color in dump_modify boxcolor command");
     return 2;
   }
 
   if (strcmp(arg[0],"boxtrans") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify boxtrans", error);
     boxopacity = utils::numeric(FLERR,arg[1],false,lmp);
     if ((boxopacity < 0.0) || (boxopacity > 1.0))
-      error->all(FLERR,"Invalid boxtrans in dump_modify command");
+      error->all(FLERR, argoff + 1, "Invalid boxtrans opacity in dump_modify command");
     return 2;
   }
 
   if (strcmp(arg[0],"subboxtrans") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify subboxtrans", error);
     subboxopacity = utils::numeric(FLERR,arg[1],false,lmp);
     if ((subboxopacity < 0.0) || (subboxopacity > 1.0))
-      error->all(FLERR,"Invalid subboxtrans in dump_modify command");
+      error->all(FLERR, argoff + 1, "Invalid subboxtrans opacity in dump_modify command");
     return 2;
   }
 
   if (strcmp(arg[0],"axestrans") == 0) {
-    if (narg < 2) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 2) utils::missing_cmd_args(FLERR, "dump_modify axestrans", error);
     axesopacity = utils::numeric(FLERR,arg[1],false,lmp);
     if ((axesopacity < 0.0) || (axesopacity > 1.0))
-      error->all(FLERR,"Invalid axestrans in dump_modify command");
+      error->all(FLERR, argoff + 1, "Invalid axestrans opacity in dump_modify command");
     return 2;
   }
 
   if (strcmp(arg[0],"color") == 0) {
-    if (narg < 5) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 5) utils::missing_cmd_args(FLERR, "dump_modify color", error);
     int flag = image->addcolor(arg[1],utils::numeric(FLERR,arg[2],false,lmp),
                                utils::numeric(FLERR,arg[3],false,lmp),
                                utils::numeric(FLERR,arg[4],false,lmp));
-    if (flag) error->all(FLERR,"Illegal dump_modify command");
+    if (flag) error->all(FLERR, argoff + 1 + flag, "Incorrect dump_modify color command");
     return 5;
   }
 
   if (strcmp(arg[0],"fcolor") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify fcolor", error);
     auto *color =  image->color2rgb(arg[2]);
-    if (!color) error->all(FLERR, "Unknown color for dump_modify fcolor: {}", arg[2]);
+    if (!color) error->all(FLERR, argoff + 2, "Unknown color for dump_modify fcolor: {}", arg[2]);
     bool match = false;
     for (auto &ifix : fixes) {
       if (ifix.id == arg[1]) {
@@ -2399,15 +2410,16 @@ int DumpImage::modify_param(int narg, char **arg)
         match = true;
       }
     }
-    if (!match) error->all(FLERR, "Fix ID {} is not included in dump {}", arg[1], id);
+    if (!match) error->all(FLERR, argoff + 1, "Fix ID {} is not included in dump {}", arg[1], id);
     return 3;
   }
 
   if (strcmp(arg[0],"ftrans") == 0) {
-    if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
+    if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify ftrans", error);
     double opacity = utils::numeric(FLERR,arg[2],false,lmp);
     if ((opacity < 0.0) || (opacity > 1.0))
-      error->all(FLERR, "Illegal transparency value for dump_modify ftrans: {}", arg[2]);
+      error->all(FLERR, argoff + 2,
+                 "Illegal transparency value for dump_modify ftrans: {}", arg[2]);
     bool match = false;
     for (auto &ifix : fixes) {
       if (ifix.id == arg[1]) {
@@ -2415,7 +2427,7 @@ int DumpImage::modify_param(int narg, char **arg)
         match = true;
       }
     }
-    if (!match) error->all(FLERR, "Fix ID {} is not included in dump {}", arg[1], id);
+    if (!match) error->all(FLERR, argoff + 1, "Fix ID {} is not included in dump {}", arg[1], id);
     return 3;
   }
 

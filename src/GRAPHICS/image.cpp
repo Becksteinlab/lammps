@@ -1666,8 +1666,9 @@ int Image::addcolor(char *name, double r, double g, double b)
   username[icolor] = new char[n];
   strcpy(username[icolor],name);
 
-  if (r < 0.0 || r > 1.0 || g < 0.0 || g > 1.0 || b < 0.0 || b > 1.0)
-    return 1;
+  if (r < 0.0 || r > 1.0) return 1;
+  if (g < 0.0 || g > 1.0) return 2;
+  if (b < 0.0 || b > 1.0) return 3;
 
   userrgb[icolor][0] = r;
   userrgb[icolor][1] = g;
