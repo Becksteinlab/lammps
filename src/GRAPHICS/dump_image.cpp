@@ -2392,9 +2392,14 @@ int DumpImage::modify_param(int narg, char **arg)
     if (narg < 3) error->all(FLERR,"Illegal dump_modify command");
     auto *color =  image->color2rgb(arg[2]);
     if (!color) error->all(FLERR, "Unknown color for dump_modify fcolor: {}", arg[2]);
+    bool match = false;
     for (auto &ifix : fixes) {
-      if (ifix.id == arg[1]) ifix.rgb = color;
+      if (ifix.id == arg[1]) {
+        ifix.rgb = color;
+        match = true;
+      }
     }
+    if (!match) error->all(FLERR, "Fix ID {} is not included in dump {}", arg[1], id);
     return 3;
   }
 
@@ -2403,9 +2408,14 @@ int DumpImage::modify_param(int narg, char **arg)
     double opacity = utils::numeric(FLERR,arg[2],false,lmp);
     if ((opacity < 0.0) || (opacity > 1.0))
       error->all(FLERR, "Illegal transparency value for dump_modify ftrans: {}", arg[2]);
+    bool match = false;
     for (auto &ifix : fixes) {
-      if (ifix.id == arg[1]) ifix.opacity = opacity;
+      if (ifix.id == arg[1]) {
+        ifix.opacity = opacity;
+        match = true;
+      }
     }
+    if (!match) error->all(FLERR, "Fix ID {} is not included in dump {}", arg[1], id);
     return 3;
   }
 
