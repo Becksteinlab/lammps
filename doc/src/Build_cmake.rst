@@ -254,7 +254,7 @@ of them you can use the command:
 
 Especially, when programming LAMMPS and you are making just local
 changes, or only want to make certain that the code still compiles
-and links, you may want to skip may of the extra stept that are
+and links, you may want to skip may of the extra steps that are
 run by default and then append "/fast" to the target.  Example:
 
 .. code-block:: bash

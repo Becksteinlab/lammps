@@ -351,8 +351,8 @@ Play the movie:
 
 --------------
 
-Prototying dump image visualizations with LAMMPS-GUI
-----------------------------------------------------
+Prototyping dump image visualizations with LAMMPS-GUI
+-----------------------------------------------------
 
 One of the challenges when using :doc:`dump image <dump_image>` for
 creating visualizations compared to the likes of `OVITO
