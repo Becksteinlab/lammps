@@ -42,6 +42,7 @@ class PairGranHookeHistoryEllipsoid : public Pair {
   int pack_forward_comm(int, int *, double *, int, int *) override;
   void unpack_forward_comm(int, int, double *) override;
   double memory_usage() override;
+  void transfer_history(double *, double *, int, int) override;
 
  protected:
   double kn, kt, gamman, gammat, xmu;

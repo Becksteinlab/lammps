@@ -147,6 +147,8 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
       radsum = radi + radj;
 
       X0_prev = &allhistory[3 + size_history * jj];
+      int ref_index = (atom->tag[i] < atom->tag[j]) ? i : j;
+
 
       // TODO: Below could be a `touch()` function
       bool touching;
@@ -173,19 +175,19 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
           flagj = bonus[ellipsoid[j]].type;
           if (touch[jj] == 1) {
             // Continued contact: use grain true shape and last contact point with respect to grain i
-            X0[0] = x[i][0] + X0_prev[0];
-            X0[1] = x[i][1] + X0_prev[1];
-            X0[2] = x[i][2] + X0_prev[2];
+            X0[0] = x[ref_index][0] + X0_prev[0];
+            X0[1] = x[ref_index][1] + X0_prev[1];
+            X0[2] = x[ref_index][2] + X0_prev[2];
             X0[3] = X0_prev[3];
             int status = MathExtraSuperellipsoids::determine_contact_point(x[i], Ri, shapei, blocki, flagi,
                                                                            x[j], Rj, shapej, blockj, flagj,
-                                                                           X0, nij);
+                                                                           X0, nij, contact_formulation);
             if (status == 0)
               touching = true;
             else if (status == 1)
               touching = false;
             else // TODO: Consider making an else if and print warning if LAPACK ok, but NR not converged, instead of error and fail the run ?
-              error->all(FLERR, "Ellipsoid contact detection failed with status {} ", status);
+              error->all(FLERR, "Ellipsoid contact detection (old contact) failed with status {} betwen particle {} and particle {} ", status, atom->tag[i], atom->tag[j]);
           } else {
             // New contact: Build initial guess incrementally by morphing the particles from spheres to actual shape
 
@@ -216,7 +218,7 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
               // Avoid incorrect values of n1/n2 - 2 in second derivatives.
               int status = MathExtraSuperellipsoids::determine_contact_point(x[i], Ri, shapei, blocki, iter_ig == 1 ? AtomVecEllipsoid::BlockType::ELLIPSOID : flagi,
                                                                              x[j], Rj, shapej, blockj, iter_ig == 1 ? AtomVecEllipsoid::BlockType::ELLIPSOID : flagj,
-                                                                             X0, nij);
+                                                                             X0, nij, contact_formulation);
               if (status == 0)
                 touching = true;
               else if (status == 1)
@@ -239,9 +241,9 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
         // Store contact point with respect to grain i for next time step
         // This is crucial for periodic BCs when grains can move by large amount in one time step
         // Keeping the previous contact point relative to global frame would lead to bad initial guess
-        X0_prev[0] = X0[0] - x[i][0];
-        X0_prev[1] = X0[1] - x[i][1];
-        X0_prev[2] = X0[2] - x[i][2];
+        X0_prev[0] = X0[0] - x[ref_index][0];
+        X0_prev[1] = X0[1] - x[ref_index][1];
+        X0_prev[2] = X0[2] - x[ref_index][2];
         X0_prev[3] = X0[3];
 
         double nji[3] = { -nij[0], -nij[1], -nij[2] };
@@ -480,6 +482,7 @@ void PairGranHertzHistoryEllipsoid::settings(int narg, char **arg)
       error->all(FLERR, "Illegal pair_style command");
   }
 
+  size_history = 8; // reset to default size
   if (bounding_box == 0) size_history--;
 
   if (kn < 0.0 || kt < 0.0 || gamman < 0.0 || gammat < 0.0 || xmu < 0.0 || xmu > 10000.0 ||
@@ -557,14 +560,15 @@ double PairGranHertzHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
   flagj = bonus[ellipsoid[j]].type;
   double* X0_prev = &allhistory[3 + size_history * neighprev];
   if (touch[neighprev] == 1) {
+    int ref_index = (atom->tag[i] < atom->tag[j]) ? i : j;
     // Continued contact: use grain true shape and last contact point
-    X0[0] = X0_prev[0];
-    X0[1] = X0_prev[1];
-    X0[2] = X0_prev[2];
+    X0[0] = X0_prev[0] + x[ref_index][0];
+    X0[1] = X0_prev[1] + x[ref_index][1];
+    X0[2] = X0_prev[2] + x[ref_index][2];
     X0[3] = X0_prev[3];
     int status = MathExtraSuperellipsoids::determine_contact_point(x[i], Ri, shapei, blocki, flagi,
                                                                    x[j], Rj, shapej, blockj, flagj,
-                                                                   X0, nij);
+                                                                   X0, nij, contact_formulation);
     if (status == 1) {
         fforce = 0.0;
         for (int m = 0; m < single_extra; m++) svector[m] = 0.0;
@@ -592,7 +596,7 @@ double PairGranHertzHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
       // Avoid incorrect values of n1/n2 - 2 in second derivatives.
       int status = MathExtraSuperellipsoids::determine_contact_point(x[i], Ri, shapei, blocki, iter_ig == 1 ? AtomVecEllipsoid::BlockType::ELLIPSOID : flagi,
                                                                      x[j], Rj, shapej, blockj, iter_ig == 1 ? AtomVecEllipsoid::BlockType::ELLIPSOID : flagj,
-                                                                     X0, nij);
+                                                                     X0, nij, contact_formulation);
       if (status == 1) {
         fforce = 0.0;
         for (int m = 0; m < single_extra; m++) svector[m] = 0.0;

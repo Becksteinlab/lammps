@@ -23,7 +23,6 @@
 // #include "math_const.h"
 
 // #include <algorithm>
-// #include <cstdio>
 // #include <cstring>
 
 extern "C" { // General Matrices
@@ -34,7 +33,7 @@ extern "C" { // General Matrices
 namespace MathExtraSuperellipsoids {
 
 static constexpr int ITERMAX_NR = 100;
-static constexpr double TOL_NR_RES = 1e-10 * 1e-10;
+static constexpr double TOL_NR_RES = 1e-5 * 1e-5;
 static constexpr double TOL_NR_POS = 1e-6 * 1e-6;
 
 static constexpr int ITERMAX_LS = 10;
@@ -290,14 +289,14 @@ double shape_and_derivatives_local_ellipsoid(const double* xlocal, const double*
 double shape_and_derivatives_global(const double* xc, const double R[3][3], 
     const double* shape, const double* block, const int flag, 
     const double* X0, double* grad, double hess[3][3],
-    int formulation, double avg_radius) 
+    const int formulation, const double avg_radius) 
 {
   double xlocal[3], tmp_v[3], tmp_m[3][3];
   MathExtra::sub3(X0, xc, tmp_v); 
   MathExtra::transpose_matvec(R, tmp_v, xlocal);
   double shapefunc = shape_and_derivatives_local(xlocal, shape, block, flag, tmp_v, hess);
   if (formulation == FORMULATION_GEOMETRIC) {
-      apply_regularization_shape_function(block[0], avg_radius, &shapefunc, tmp_v, hess);
+     apply_regularization_shape_function(block[0], avg_radius, &shapefunc, tmp_v, hess);
   }
   MathExtra::matvec(R, tmp_v, grad);
   MathExtra::times3_transpose(hess, R, tmp_m);
@@ -480,9 +479,9 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
           a = 1; // reset a to 1 for proper step size in geometric formulation
           if (spatial_residual_norm > max_step) {
               double scale = max_step / spatial_residual_norm;
-              residual[0] *= scale;
-              residual[1] *= scale;
-              residual[2] *= scale;
+              rhs[0] *= scale;
+              rhs[1] *= scale;
+              rhs[2] *= scale;
           }
       }
 
@@ -569,6 +568,23 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       X0[2] += rhs[2];
       X0[3] += rhs[3];
       norm = compute_residual_and_jacobian(xci, Ri, shapei, blocki, flagi, xcj, Rj, shapej, blockj, flagj, X0, shapefunc, residual, jacobian, formulation, avg_radius_i, avg_radius_j);
+      if (norm < TOL_NR_RES) {
+        converged = true;
+        // must re-compute the normal 'nij' for this final point
+        double xilocal[3], tmp_v[3], gradi[3], hess_dummy[3][3];
+        MathExtra::sub3(X0, xci, tmp_v);
+        MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
+        
+        // We only need the gradient for the normal
+        shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hess_dummy);
+        if (formulation == FORMULATION_GEOMETRIC) {
+            // If you use regularization, apply it here too for consistency
+            apply_regularization_shape_function(blocki[0], avg_radius_i, &shapefunc[0], tmp_v, hess_dummy);
+        }
+        MathExtra::matvec(Ri, tmp_v, gradi);
+        MathExtra::normalize3(gradi, nij);
+      }
+
     } else {
       X0[0] = X_line[0];
       X0[1] = X_line[1];
@@ -580,16 +596,36 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       break;
   }
 
+  // If we ran out of iterations, check if the residual is acceptable.
+  // We ignore the "step size" check here because sliding on flat faces (N=6,8)
+  // often keeps moving while maintaining a perfect residual.
+  if (!converged && norm < TOL_NR_RES) {
+       converged = true;
+       
+       // Re-compute the normal 'nij' for this final point
+       // because the loop broke without updating it for the final X0.
+       double xilocal[3], tmp_v[3], gradi[3], hess_dummy[3][3];
+       MathExtra::sub3(X0, xci, tmp_v);
+       MathExtra::transpose_matvec(Ri, tmp_v, xilocal);
+       
+       shape_and_derivatives_local(xilocal, shapei, blocki, flagi, tmp_v, hess_dummy);
+       if (formulation == FORMULATION_GEOMETRIC) {
+           apply_regularization_shape_function(blocki[0], avg_radius_i, &shapefunc[0], tmp_v, hess_dummy);
+       }
+       MathExtra::matvec(Ri, tmp_v, gradi);
+       MathExtra::normalize3(gradi, nij);
+  }
+
   // LAPACK dgetrs() error values are negative, return values:
   // 2 = failed convergence
   // 1 = converged but grains not touching
   // 0 = converged and grains touching
-  if (!converged)
-    return 2; // TODO: consider not failing if not converged but shapefuncs positive (i.e., no contact)
-              // JB: might be risky to assume no contact if not converged, NR might have gone to a far away point
+  if (!converged){
+    if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0) return 1;
+    return 2;} // not failing if not converged but shapefuncs positive (i.e., no contact)
+              // might be risky to assume no contact if not converged, NR might have gone to a far away point
               // but no guarantee there is no contact
-  if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0)
-    return 1;
+  if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0) return 1;
   return 0;
 }
 
