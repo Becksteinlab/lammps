@@ -119,7 +119,7 @@ int FixGraphicsPeriodic::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsPeriodic::setup(int vflag)
+void FixGraphicsPeriodic::setup(int)
 {
   end_of_step();
 }
@@ -138,11 +138,10 @@ void FixGraphicsPeriodic::end_of_step()
   const auto *const mask = atom->mask;
   const auto *const type = atom->type;
   const auto *const num_bond = atom->num_bond;
-  const auto *const *const bond_type = atom->bond_type;
   const auto *const *const bond_atom = atom->bond_atom;
 
   const auto nlocal = atom->nlocal;
-  const auto prd = domain->prd;
+  const auto *const prd = domain->prd;
 
   // count number of replica objects needed
   int n = 0;

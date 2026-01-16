@@ -29,7 +29,6 @@ using namespace ImageObjects;
 namespace {
 
 using LAMMPS_NS::MathConst::MY_2PI;
-constexpr double RADINC = MY_2PI / RESOLUTION;
 constexpr double RADOVERLAP = 0.01;
 constexpr double SMALL = 1.0e-10;
 
@@ -171,8 +170,7 @@ void ArrowObj::draw(Image *img, const double *color, const double *center, doubl
   double lscale = vec3len(dir) * length;
   double wscale = scale / diameter;
 
-  auto arrow =
-      std::move(transform(triangles, dir, {center[0], center[1], center[2]}, lscale, wscale));
+  auto arrow = transform(triangles, dir, {center[0], center[1], center[2]}, lscale, wscale);
 
   // nothing to draw
   if (!arrow.size()) return;
@@ -183,7 +181,7 @@ void ArrowObj::draw(Image *img, const double *color, const double *center, doubl
 
   // infer cylinder end points for body from list of triangles
   // (middle corner of all triangles in the the second and last set of triangles)
-  if (arrow.size() > resolution + 2)
+  if ((int) arrow.size() > resolution + 2)
     img->draw_cylinder(arrow[1][1].data(), arrow[arrow.size() - 1][1].data(), color, scale, 0,
                        opacity);
 }
@@ -202,8 +200,7 @@ void ArrowObj::draw(Image *img, const double *color, const double *bottom, const
   double lscale = vec3len(dir);
   double wscale = scale / diameter;
 
-  auto arrow =
-      std::move(transform(triangles, dir, {center[0], center[1], center[2]}, lscale, wscale));
+  auto arrow = transform(triangles, dir, {center[0], center[1], center[2]}, lscale, wscale);
 
   // nothing to draw
   if (!arrow.size()) return;
@@ -214,7 +211,7 @@ void ArrowObj::draw(Image *img, const double *color, const double *bottom, const
 
   // infer cylinder end points for body from list of triangles
   // (middle corner of all triangles in the the second and last set of triangles)
-  if (arrow.size() > resolution + 2)
+  if ((int) arrow.size() > resolution + 2)
     img->draw_cylinder(arrow[1][1].data(), arrow[arrow.size() - 1][1].data(), color, scale, 0,
                        opacity);
 }
@@ -296,7 +293,7 @@ void ConeObj::draw(Image *img, int flag, const vec3 &dir, const vec3 &mid, const
 
   // rotate to selected axis and translate from origin to original center
   // no need of scaling here since length and width was already applied during construction
-  auto cone = std::move(transform(triangles, dir, mid, 1.0, 1.0));
+  auto cone = transform(triangles, dir, mid, 1.0, 1.0);
 
   // nothing to draw
   if (!cone.size()) return;
@@ -330,32 +327,32 @@ void ConeObj::draw(Image *img, const vec3 &bot, const vec3 &top, const double *c
   // nothing to draw
   if (!triangles.size()) return;
 
-  vec3 mid{0.5*(top + bot)};
+  vec3 mid{0.5 * (top + bot)};
   vec3 dir{top - bot};
   double length = vec3len(dir);
   dir = vec3norm(dir);
 
   // rotate to selected axis and translate from origin to original center
   // no need of scaling here since length and width was already applied during construction
-  auto cone = std::move(transform(triangles, dir, mid, length, 1.0));
+  auto cone = transform(triangles, dir, mid, length, 1.0);
 
   // nothing to draw
   if (!cone.size()) return;
 
-  int n = 0;
   for (auto &tri : cone) {
     // draw triangle
     img->draw_triangle(tri[0].data(), tri[1].data(), tri[2].data(), color, opacity);
   }
 }
 
-// Refine triangle mesh by replacing each triangle with four triangles.
-// Compute the new positions so they are located on a sphere with radius 1.
-//
-//    /\            /\
-//   /  \          /__\
-//  /    \   -->  /\  /\
-// /______\      /__\/__\
+/****************************************************************************
+ * Refine triangle mesh by replacing each triangle with four triangles.
+ * Compute the new positions so they are located on a sphere with radius 1.
+ *    /\            /\
+ *   /  \          /_ \
+ *  /    \   -->  /\  /\
+ * /______\      /__\/__\
+ ***************************************************************************/
 
 void EllipsoidObj::refine()
 {
@@ -518,12 +515,13 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   }
 }
 
-// refine triangle mesh by replacing each triangle with four triangles
-//
-//    /\            /\
-//   /  \          /__\
-//  /    \   -->  /\  /\
-// /______\      /__\/__\
+/***********************************************************************
+ * refine triangle mesh by replacing each triangle with four triangles
+ *    /\            /\
+ *   /  \          /__\
+ *  /    \   -->  /\  /\
+ * /______\      /__\/__\
+***********************************************************************/
 
 void PlaneObj::refine()
 {
@@ -580,7 +578,7 @@ void PlaneObj::draw(Image *img, int flag, const double *color, const double *cen
 
   const vec3 dir{norm[0], norm[1], norm[2]};
   const vec3 offs{center[0], center[1], center[2]};
-  auto plane = std::move(transform(triangles, dir, offs, scale, scale));
+  auto plane = transform(triangles, dir, offs, scale, scale);
 
   for (auto tri : plane) {
 

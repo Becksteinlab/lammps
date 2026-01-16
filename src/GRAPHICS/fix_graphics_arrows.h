@@ -56,7 +56,7 @@ class FixGraphicsArrows : public Fix {
   char *id_vec;
 
   bool autoscale;
-  bool autovalue;
+  double autovalue;
   int numobjs;
   int *imgobjs;
   double **imgparms;

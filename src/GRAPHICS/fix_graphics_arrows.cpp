@@ -396,8 +396,7 @@ void FixGraphicsArrows::end_of_step()
 
     double mysum = 0.0;
     if (autoscale) {
-      for (int n = 0; n < numobjs; ++n)
-        mysum += MathExtra::len3(vdata[n]);
+      for (int n = 0; n < numobjs; ++n) mysum += MathExtra::len3(vdata[n]);
 
       if (mysum != 0.0)
         scale = autovalue / (mysum / static_cast<double>(numobjs));

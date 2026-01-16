@@ -26,7 +26,6 @@ class Image : protected Pointers {
   double xctr, yctr, zctr;    // center of image in user coords
   double up[3];               // up direction in image
   double zoom;                // zoom factor
-  double persp;               // perspective factor
   double shiny;               // shininess of objects
   int fsaa;                   // antialiasing on or off
   int ssao;                   // SSAO on or off
@@ -184,7 +183,5 @@ class ColorMap : protected Pointers {
   MapEntry *mentry;
   int nentry;
 };
-
 }    // namespace LAMMPS_NS
-
 #endif

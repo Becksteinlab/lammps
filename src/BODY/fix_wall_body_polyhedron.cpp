@@ -46,7 +46,6 @@ enum {FAR=0,XLO,XHI,YLO,YHI,ZLO,ZHI};
 static constexpr int DELTA = 10000;
 static constexpr double EPSILON = 1.0e-3; // dimensionless threshold (dot products, end point checks)
 static constexpr double BIG = 1.0e20;
-static constexpr int MAX_CONTACTS = 4;    // maximum number of contacts for 2D models
 
 /* ---------------------------------------------------------------------- */
 
@@ -390,10 +389,6 @@ void FixWallBodyPolyhedron::post_force(int /*vflag*/)
         edge[iefirst+ni][5] = 0;
       }
 
-      int num_contacts;
-      Contact contact_list[MAX_CONTACTS];
-
-      num_contacts = 0;
       facc[0] = facc[1] = facc[2] = 0;
       edge_against_wall(i, wall_pos, vwall, x);
     } // group bit

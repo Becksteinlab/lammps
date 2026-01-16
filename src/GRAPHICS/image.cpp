@@ -194,9 +194,9 @@ void scale_pixmap(int ow, int oh, const unsigned char *opix, int nw, int nh, uns
 // convert an RGB color to YUV colorspace
 void rgb2yuv(int *rgb, int *yuv)
 {
-  yuv[0] = (0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]);
-  yuv[1] = -(0.14713 * rgb[0]) - (0.28886 * rgb[1]) + (0.436 * rgb[2]);
-  yuv[2] = (0.615 * rgb[0]) - (0.51499 * rgb[1]) - (0.10001 * rgb[2]);
+  yuv[0] = static_cast<int>((0.299 * rgb[0]) + (0.587 * rgb[1]) + (0.114 * rgb[2]));
+  yuv[1] = static_cast<int>(-(0.14713 * rgb[0]) - (0.28886 * rgb[1]) + (0.436 * rgb[2]));
+  yuv[2] = static_cast<int>((0.615 * rgb[0]) - (0.51499 * rgb[1]) - (0.10001 * rgb[2]));
 }
 
 // convert XPM-like bitmap to 8-bit pixmap
@@ -335,7 +335,6 @@ Image::Image(LAMMPS *lmp, int nmap_caller) :
   theta = 60.0 * DEG2RAD;
   phi = 30.0 * DEG2RAD;
   zoom = 1.0;
-  persp = 0.0;
   shiny = 1.0;
   ssao = NO;
   fsaa = NO;
@@ -567,9 +566,9 @@ void Image::clear()
   } else {
     for (int iy = 0; iy < height; iy ++) {
       double fraction = (double) iy / (double) height;
-      red   = fraction * background2[0] + (1.0 - fraction) * background[0];
-      green = fraction * background2[1] + (1.0 - fraction) * background[1];
-      blue  = fraction * background2[2] + (1.0 - fraction) * background[2];
+      red   = static_cast<int>(fraction * background2[0] + (1.0 - fraction) * background[0]);
+      green = static_cast<int>(fraction * background2[1] + (1.0 - fraction) * background[1]);
+      blue  = static_cast<int>(fraction * background2[2] + (1.0 - fraction) * background[2]);
       for (int ix = 0; ix < width; ix ++) {
         imageBuffer[iy * width * 3 + ix * 3 + 0] = red;
         imageBuffer[iy * width * 3 + ix * 3 + 1] = green;
@@ -811,8 +810,8 @@ void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsi
   // adjust scale factor for FSAA and only scale as much as needed.
   if (fsaa) scale *= 2.0;
   if (scale != 1.0) {
-    int nwidth = scale * pixwidth + 0.5;
-    int nheight = scale * pixheight + 0.5;
+    int nwidth = std::lround(scale * pixwidth + 0.5);
+    int nheight = std::lround(scale * pixheight + 0.5);
     npixmap = new unsigned char[3*nwidth*nheight];
     scale_pixmap(pixwidth, pixheight, pixmap, nwidth, nheight, npixmap);
     mypixmap = npixmap;
@@ -1395,7 +1394,7 @@ void Image::compute_SSAO()
     int y = index / width;
 
     double cdepth = depthBuffer[index];
-    if (cdepth < 0) { continue; }
+    if (cdepth < 0) continue;
 
     double sx = surfaceBuffer[index * 2 + 0];
     double sy = surfaceBuffer[index * 2 + 1];
@@ -1550,7 +1549,7 @@ void Image::write_PNG(FILE *fp)
     return;
   }
 
-  if (setjmp(png_jmpbuf(png_ptr))) {
+  if (setjmp(png_jmpbuf(png_ptr))) { // NOLINT
     png_destroy_write_struct(&png_ptr, &info_ptr);
     return;
   }
@@ -1666,8 +1665,9 @@ int Image::addcolor(char *name, double r, double g, double b)
   username[icolor] = new char[n];
   strcpy(username[icolor],name);
 
-  if (r < 0.0 || r > 1.0 || g < 0.0 || g > 1.0 || b < 0.0 || b > 1.0)
-    return 1;
+  if (r < 0.0 || r > 1.0) return 1;
+  if (g < 0.0 || g > 1.0) return 2;
+  if (b < 0.0 || b > 1.0) return 3;
 
   userrgb[icolor][0] = r;
   userrgb[icolor][1] = g;
@@ -2217,117 +2217,102 @@ ColorMap::~ColorMap()
 /* ----------------------------------------------------------------------
    redefine color map
    args = lo hi style delta N entry1 entry2 ... entryN as defined by caller
-   return 1 if any error in args, else return 0
+   return > 0 if any error in args, else return 0
+   return value is position of failed arg, i.e. array index+1
 ------------------------------------------------------------------------- */
 
 int ColorMap::reset(int narg, char **arg)
 {
-  if (!islower(arg[0][0])) {
+  if (utils::is_double(arg[0])) {
     mlo = NUMERIC;
     mlovalue = utils::numeric(FLERR,arg[0],false,lmp);
   } else if (strcmp(arg[0],"min") == 0) mlo = MINVALUE;
   else return 1;
 
-  if (!islower(arg[1][0])) {
+  if (utils::is_double(arg[1])) {
     mhi = NUMERIC;
     mhivalue = utils::numeric(FLERR,arg[1],false,lmp);
   } else if (strcmp(arg[1],"max") == 0) mhi = MAXVALUE;
-  else return 1;
+  else return 2;
 
-  if (mlo == NUMERIC && mhi == NUMERIC && mlovalue >= mhivalue) return 1;
+  if ((mlo == NUMERIC) && (mhi == NUMERIC) && (mlovalue >= mhivalue)) return 1;
 
-  if (mlo == MINVALUE || mhi == MAXVALUE) dynamic = 1;
+  if ((mlo == MINVALUE) || (mhi == MAXVALUE)) dynamic = 1;
   else dynamic = 0;
 
-  if (strlen(arg[2]) != 2) return 1;
+  if (strlen(arg[2]) != 2) return 3;
   if (arg[2][0] == 'c') mstyle = CONTINUOUS;
   else if (arg[2][0] == 'd') mstyle = DISCRETE;
   else if (arg[2][0] == 's') mstyle = SEQUENTIAL;
-  else return 1;
+  else return 3;
   if (arg[2][1] == 'a') mrange = ABSOLUTE;
   else if (arg[2][1] == 'f') mrange = FRACTIONAL;
-  else return 1;
+  else return 3;
 
   if (mstyle == SEQUENTIAL) {
     mbinsize = utils::numeric(FLERR,arg[3],false,lmp);
-    if (mbinsize <= 0.0) return 1;
+    if (mbinsize <= 0.0) return 4;
     mbinsizeinv = 1.0/mbinsize;
   }
 
   nentry = utils::inumeric(FLERR,arg[4],false,lmp);
-  if (nentry < 1) return 1;
+  if (nentry < 1) return 5;
   delete [] mentry;
   mentry = new MapEntry[nentry];
 
   int expandflag = 0;
-
   int n = 5;
   for (int i = 0; i < nentry; i++) {
     if (mstyle == CONTINUOUS) {
-      if (n+2 > narg) return 1;
-      if (!islower(arg[n][0])) {
+      if (n+2 > narg) return n;
+      if (utils::is_double(arg[n])) {
         mentry[i].single = NUMERIC;
         mentry[i].svalue = utils::numeric(FLERR,arg[n],false,lmp);
       } else if (strcmp(arg[n],"min") == 0) mentry[i].single = MINVALUE;
       else if (strcmp(arg[n],"max") == 0) mentry[i].single = MAXVALUE;
-      else return 1;
+      else return n+1;
       mentry[i].color = image->color2rgb(arg[n+1]);
       n += 2;
     } else if (mstyle == DISCRETE) {
-      if (n+3 > narg) return 1;
-      if (!islower(arg[n][0])) {
+      if (n+3 > narg) return n+1;
+      if (utils::is_double(arg[n])) {
         mentry[i].lo = NUMERIC;
         mentry[i].lvalue = utils::numeric(FLERR,arg[n],false,lmp);
       } else if (strcmp(arg[n],"min") == 0) mentry[i].lo = MINVALUE;
       else if (strcmp(arg[n],"max") == 0) mentry[i].lo = MAXVALUE;
-      else return 1;
-      if (!islower(arg[n+1][0])) {
+      else return n+1;
+      if (utils::is_double(arg[n+1])) {
         mentry[i].hi = NUMERIC;
         mentry[i].hvalue = utils::numeric(FLERR,arg[n+1],false,lmp);
       } else if (strcmp(arg[n+1],"min") == 0) mentry[i].hi = MINVALUE;
       else if (strcmp(arg[n+1],"max") == 0) mentry[i].hi = MAXVALUE;
-      else return 1;
+      else return n+2;
       mentry[i].color = image->color2rgb(arg[n+2]);
       n += 3;
     } else if (mstyle == SEQUENTIAL) {
-      // NOTE: this is unfinished code, not sure how useful it is
-      // idea is to allow a list of colors to be specified with a single arg
-      // problem is that sequential colors in ALL are not very different
-      // e.g. ALL or USER or ALL5:10 or USER1:10:2
-      // current code is just 1st nentry values of ALL or USER
-      // need to comment out error check in DumpImage::modify_param()
-      //   for amap check on (narg < n) to get it to work
-      // need to add extra logic here to check not accessing undefined colors
-      if (i == 0) {
-        if (n+1 > narg) return 1;
-        if (strcmp(arg[n],"ALL") == 0) expandflag = 1;
-        if (strcmp(arg[n],"USER") == 0) expandflag = 2;
-      }
-      if (expandflag == 0) {
-        if (n+1 > narg) return 1;
-        mentry[i].color = image->color2rgb(arg[n]);
-      } else if (expandflag == 1) {
-        mentry[i].color = image->color2rgb(nullptr,i+1);
-      } else if (expandflag == 2) {
-        mentry[i].color = image->color2rgb(nullptr,-(i+1));
-      }
+      if (n+1 > narg) return n+1;
+      mentry[i].color = image->color2rgb(arg[n]);
       n += 1;
     }
-    if (mentry[i].color == nullptr) return 1;
+    if (mentry[i].color == nullptr) return n;
   }
 
   if (mstyle == CONTINUOUS) {
-    if (nentry < 2) return 1;
-    if (mentry[0].single != MINVALUE || mentry[nentry-1].single != MAXVALUE)
-      return 1;
+    if (nentry < 2) return 5;
+    if (mentry[0].single != MINVALUE)
+      return 6;
+    if (mentry[nentry-1].single != MAXVALUE)
+      return 4 + nentry*2;
     for (int i = 2; i < nentry-1; i++)
-      if (mentry[i].svalue <= mentry[i-1].svalue) return 1;
+      if (mentry[i].svalue <= mentry[i-1].svalue) return 4 + 2*(i+1);
   } else if (mstyle == DISCRETE) {
-    if (nentry < 1) return 1;
-    if (mentry[nentry-1].lo != MINVALUE || mentry[nentry-1].hi != MAXVALUE)
-      return 1;
+    if (nentry < 1) return 5;
+    if (mentry[nentry-1].lo != MINVALUE)
+      return 3 + nentry*3;
+    if (mentry[nentry-1].hi != MAXVALUE)
+      return 4 + nentry*3;
   } else if (mstyle == SEQUENTIAL) {
-    if (nentry < 1) return 1;
+    if (nentry < 1) return 5;
   }
 
   // one-time call to minmax if color map is static

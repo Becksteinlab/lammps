@@ -223,7 +223,7 @@ void FixWallBodyPolygon::setup(int vflag)
 
 void FixWallBodyPolygon::post_force(int /*vflag*/)
 {
-  double vwall[3],dx,dy,dz,del1,del2,delxy,delr,rsq,eradi,wall_pos;
+  double vwall[3],dx,dy,dz,del1,del2,rsq,wall_pos;
   int i,ni,npi,ifirst,nei,iefirst,side;
   double facc[3];
 
@@ -323,7 +323,6 @@ void FixWallBodyPolygon::post_force(int /*vflag*/)
       ifirst = dfirst[i];
       nei = ednum[i];
       iefirst = edfirst[i];
-      eradi = enclosing_radius[i];
 
       // reset vertex and edge forces
 
@@ -620,7 +619,6 @@ int FixWallBodyPolygon::compute_distance_to_wall(double* x0, double rradi, doubl
                                                  int side, double &d, double hi[3], int &contact)
 {
   int mode;
-  double delxy;
 
   // h0 = position of the projection of x0 on the wall
   if (wallstyle == XPLANE) {

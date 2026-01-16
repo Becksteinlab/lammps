@@ -39,6 +39,8 @@ class FixGraphicsLabels : public Fix {
 
  protected:
   struct PixmapInfo {
+    std::string filename;
+    double timestamp;
     double pos[3];
     int width;
     int height;
@@ -56,10 +58,11 @@ class FixGraphicsLabels : public Fix {
     int width;
     int height;
     unsigned char *pixmap;
-    double fontcolor[3];
-    double backcolor[3];
-    double framecolor[3];
-    double transcolor[3];
+    unsigned char fontcolor[3];
+    unsigned char backcolor[3];
+    unsigned char framecolor[3];
+    unsigned char transcolor[3];
+    bool notrans;
     double size;
     double scale;
     int xvar, yvar, zvar, svar;

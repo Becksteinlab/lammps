@@ -5,7 +5,7 @@ Snapshots from LAMMPS simulations can be viewed, visualized, and
 analyzed in a variety of ways.
 
 LAMMPS snapshots are created by the :doc:`dump <dump>` command, which
-can create files in several formats. The native LAMMPS dump format is a
+can create files in several formats.  The native LAMMPS dump format is a
 text file (see :lammps:`dump atom` or :lammps:`dump custom`) which can
 be visualized by `several visualization tools
 <https://www.lammps.org/viz.html>`_ for MD simulation trajectories.
@@ -24,13 +24,13 @@ noted by LAMMPS-GUI and can be viewed and animated directly in the
 ``Slide Show`` dialog. The images can be transformed (i.e. scaled,
 mirrored, or rotated) and exported into a video, too.  The ``Image
 Viewer`` dialog in LAMMPS-GUI can be used to visualize the *current*
-system, adjust a variety of visualization settings interactively from
-the GUI, and then one can export the corresponding LAMMPS commands to
-the clipboard to be inserted into an input file.
+system, adjust a variety of visualization settings quasi-interactively
+from the GUI.
 
-Programs included with LAMMPS as auxiliary tools can convert
-between LAMMPS format files and other formats.  See the :doc:`Tools
-<Tools>` page for details.  These are rarely needed these days.
+Programs included with LAMMPS as auxiliary tools can convert between
+LAMMPS format files and other formats so they can be read by certain
+programs.  See the :doc:`Tools <Tools>` page for details.  These are
+rarely needed these days.
 
 ------------------------
 
@@ -41,12 +41,11 @@ Advanced graphics features in the *dump image* command
 
 The following paragraphs discuss some of the more advanced features in
 the :doc:`dump image <dump_image>` command in LAMMPS with the help of
-some simple input file examples.  For exact details of keywords and
-arguments, please refer to the detailed documentation of the respective
-commands.
+some input file examples.  For exact details of keywords and arguments,
+please refer to the detailed documentation of the respective commands.
 
 Please note that many of these features were added or significantly
-updated after LAMMPS version 10 Sep 2025 and well into the 2026 stable
+updated after LAMMPS version 10 Dec 2025 and well into the 2026 stable
 version development cycle.  If you are using an older version of LAMMPS,
 these examples may likely cause errors or look differently.
 
@@ -55,14 +54,57 @@ these examples may likely cause errors or look differently.
 
 ------------
 
+Complete example inputs
+-----------------------
+
+The discussions below only quote relevant sections of input files to
+show specifically the commands used in the visualizations.  There are
+complete example files in the ``examples/GRAPHICS`` folder of the LAMMPS
+source code distribution.
+
+---------------
+
 Image quality and resolution
 ----------------------------
 
-The two keywords *fsaa* and *ssao* can be used to improve the image
-quality at the expense of additional computational cost to render the
-images. The images below show from left to right the same render with
-the default settings, with *fsaa* enabled, with *ssao* enabled, and with
-both features enabled.
+The image resolution is determined by the *size* keyword.  The default
+setting is to create images with 512x512 pixels.  This is rather low
+resolution.  A typical (non-"retina") computer screen at the time of
+writing this howto has about 100 dpi (= dots per inch) so that this
+image covers an area of a bit over 5x5 inches (or about 135x135
+millimeters).  Images for use in presentations, posters, or publications
+should generally be generated at larger sizes.  When the image is meant
+for printing, one has to consider that a printer may have a resolution
+of 300 dpi or even 600 dpi which means that images should be created 3x3
+or 6x6 times larger to utilize the full resolution of the printer and
+show as much details and be as clean as possible.  Otherwise images have
+to be scaled up which can make them look blurry and with ragged edges.
+
+The keywords *fsaa* and *ssao* can be used to further improve the image
+quality at the expense of significant additional computational cost to
+render the images:
+
+- FSAA stands for `Full Scene Anti-Aliasing
+  <https://en.wikipedia.org/wiki/Spatial_anti-aliasing#Super_sampling_/_full-scene_anti-aliasing>`_
+  and means in the case of LAMMPS that the image is rendered at four
+  times the size (double the width and double the height) and then the
+  pixels in the final image are computed by taking the average of 2x2
+  pixel groups.  This will result in smoother, less ragged edges of
+  objects in the image.
+
+- SSAO stands for `Screen Space Ambient Occlusion
+  <https://en.wikipedia.org/wiki/Screen_space_ambient_occlusion>`_ and
+  is an image enhancement technique that uses intermediate image data
+  (like the information of how close or far away a pixel is to the
+  camera and its neighboring pixels) and brightens or darkens randomly
+  selected pixels in its neighborhood based on that information.  This
+  enhances the depth perception of objects in an image.
+
+Both methods are complementary and thus can be combined for additional
+improvement of the image quality.  The images below show from left to
+right the same excerpt of a dump image output with the default settings,
+with *fsaa* enabled, with *ssao* enabled, and with both features
+enabled.
 
 .. |imagequality1| image:: JPG/image.default.png
    :width: 24%
@@ -79,19 +121,19 @@ The computational cost to create the images with :doc:`dump image
 <dump_image>` depends on the image size, the number of objects to be
 rendered (this number can grow quickly when using fine triangle meshes),
 and the choice of the *fsaa* and *ssao* settings.  For high resolution
-images, a correspondingly large image size has to be chosen.  Same as it
-is done implicitly when enabling FSAA, one can improve image quality by
-rendering images at a large size and then processing and scaling them to
-the desired size in an image processing software.  Since the simulation
-has to wait for dump image to complete its image rendering, creating
-high resolution and high quality images can slow down a simulation
-significantly with frequent output.  On the other hand, the image
-rasterizer in LAMMPS is fairly simple and thus fast compared to more
-advanced image generation tools like ray tracers.  Also, the method it
-uses to generate the image allows to have each MPI create images for the
-data they own and then those images are merged in the end.  At the
-moment there is no GPU acceleration or multi-threading parallelization
-available, except for the multi-threading support for SSAO processing.
+images, a correspondingly large image size has to be chosen.
+
+Since the simulation has to wait for the dump image command to complete
+its image rendering, creating high resolution, high quality images can
+slow down a simulation significantly with frequent output of images.  On
+the other hand, the image rasterizer in LAMMPS is fairly simple and thus
+fast compared to more advanced image generation tools like ray tracers.
+The method it uses to generate the images allows to have each MPI
+process create image data for the atoms and objects they "own" and then
+this image data is merged for the final output with a procedure that has
+O(log(N)) complexity with the number of MPI processes.  At the moment
+there is no GPU acceleration and only limited multi-threading
+parallelization available (e.g. for SSAO post-processing of image data).
 
 --------------------
 
@@ -101,7 +143,7 @@ Color selection and color management
 The :doc:`dump image <dump_image>` command in LAMMPS has a variety
 of options to assign colors to the rendered graphics.  In most cases
 the color is assigned to atom (or bond) types and uses a default map
-using six colors as follows:
+with six colors as follows:
 
 * type 1 = red
 * type 2 = green
@@ -309,6 +351,51 @@ Play the movie:
 
 --------------
 
+Prototyping dump image visualizations with LAMMPS-GUI
+-----------------------------------------------------
+
+One of the challenges when using :doc:`dump image <dump_image>` for
+creating visualizations compared to the likes of `OVITO
+<https://www.ovito.org>`_ and `VMD
+<https://www.ks.uiuc.edu/Research/vmd/>`_ is that it is non-interactive
+and it can be tedious and time consuming to find suitable settings for
+camera view or zoom factor and others for a specific system.  You would
+have to run LAMMPS to create an image, then view it in an image viewer
+program, edit the input file and repeat the process until you have found
+settings that you like.
+
+This process can be streamlined with `LAMMPS-GUI
+<https://lammps-gui.lammps.org/>`_, which does not contain its own
+visualization code, but rather uses :doc:`dump image <dump_image>`
+through the :doc:`LAMMPS C-language library interface <Library>` and
+displays the resulting images for its `Image Viewer Dialog
+<https://lammps-gui.lammps.org/visualization.html>`_.  Through the GUI
+elements and dialogs many settings can be adjusted and then the image
+will be recreated with the updated settings and thus allowing to refine
+a visualization in a quasi-interactive fashion.  The resulting command
+lines can be transferred to the cut-n-paste buffer of the windowing
+system and pasted into the input file and then further adjusted.
+
+Once the input contains a :doc:`dump image <dump_image>` command,
+LAMMPS-GUI will notice when a new image has been created and load it
+into "Slide Show Dialog".  This streamlines the process of building more
+complex visualizations once you have copied it into the input since you
+have editor and image viewer as part of the same program and can quickly
+start and stop LAMMPS with a mouse click or keystroke.  A large part of
+the visualization examples on shown in this Howto page have been created
+this way.
+
+.. |gui1| image:: JPG/lammps-gui-main.png
+   :width: 38%
+.. |gui2| image:: JPG/lammps-gui-image.png
+   :width: 32%
+.. |gui3| image:: JPG/lammps-gui-slideshow.png
+   :width: 28%
+
+|gui1|  |gui2|  |gui3|
+
+--------------
+
 Visualizing systems using potentials with implicit bonds
 --------------------------------------------------------
 
@@ -337,7 +424,7 @@ currently three approaches to make those bonds visible.
    the computation of the model.  This is currently only available for
    ReaxFF by using :doc:`fix reaxff/bonds <fix_reaxff_bonds>`.
 
-   #. Use the *autobonds* keyword of :doc:`dump image <dump_image>` to
+#. Use the *autobonds* keyword of :doc:`dump image <dump_image>` to
    approximate the bonds based on a simple distance heuristic.  This is
    similar to the *Dynamic Bonds* representation in `VMD
    <https://www.ks.uiuc.edu/Research/vmd/>`_.  How accurate this option
@@ -390,7 +477,7 @@ currently three approaches to make those bonds visible.
 
 .. raw:: html
 
-   <center>(Visualizing systens with implicit bonds. Left to right:
+   <center>(Visualizing systems with implicit bonds. Left to right:
    using covalent radii, using fix reaxff/bonds, using <i>autobond</i>,
    using fix bond/create/angle. Click to see the full-size
    images)</center>
@@ -643,7 +730,7 @@ styles:
 There is no support for :doc:`fix wall/region <fix_wall_region>` and
 :doc:`fix wall/gran/region <fix_wall_gran_region>`, since regions can be
 visualized with the *region* keyword of :doc:`dump image <dump_image>`
-already (see discussion above).
+(see discussion above).
 
 .. |fix1| image:: img/fix-graphics.png
    :width: 19%
@@ -664,6 +751,8 @@ already (see discussion above).
 
 Below are discussions about some aspects of specific fix commands and some input examples.
 
+-------------
+
 Fix graphics/objects
 ^^^^^^^^^^^^^^^^^^^^
 
@@ -671,6 +760,31 @@ Fix :doc:`graphics/objects <fix_graphics_objects>` adds some graphics
 primitives and more complex objects like a progress bar to the
 visualization where properties of the object(s) are controlled by
 :doc:`equal-style or compatible variables <variable>`.
+
+Fix graphics/labels
+^^^^^^^^^^^^^^^^^^^
+
+Fix :doc:`graphics/labels <fix_graphics_labels>` adds graphics from
+pixmaps to the visualization.  These can be either images or text that
+is rendered internally into a pixmap with a background and a frame.
+Those pixmaps can be scaled, moved, made transparent, and updated during
+the simulation and then integrated into the :doc:`dump image
+<dump_image>` output.  In both cases a "transparency" color can be
+chosen to skip copying any pixels of that color to make parts of the
+pixmap transparent.  The text labels can contain :doc:`variables
+<variable>` that will be expanded in the same was as with :doc:`fix
+print <fix_print>` so they can report values of computed properties.
+Label positions are provided in the frame of reference of the simulation
+box and thus they can obscure other objects in then visualization or be
+obscured by objects.
+
+.. figure:: JPG/fix-graphics-labels-objects.png
+   :align: center
+
+   Example image using graphics objects and labels that are updated during
+   the simulation.
+
+-----------------------
 
 Fix graphics/arrows
 ^^^^^^^^^^^^^^^^^^^
@@ -770,7 +884,6 @@ and a transparent white triangle surface to represent those molecules.
 .. raw:: html
 
    <center>(Isosurface graphics visualization example. Click to see the full-size images)</center><br>
-
 
 Fix reaxff/bonds
 ^^^^^^^^^^^^^^^^

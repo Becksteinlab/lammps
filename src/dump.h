@@ -53,6 +53,8 @@ class Dump : protected Pointers {
   virtual void unpack_reverse_comm(int, int *, double *) {}
 
   void modify_params(int, char **);
+  virtual void *extract(const char *, int &) { return nullptr; }
+
   virtual double memory_usage();
 
  protected:

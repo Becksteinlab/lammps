@@ -27,6 +27,7 @@
 #include "variable.h"
 
 #include <algorithm>
+#include <array>
 #include <cstring>
 
 #ifdef LAMMPS_JPEG
@@ -46,29 +47,35 @@ using namespace FixConst;
 
 namespace {
 
-void get_color(const std::string &color, double *rgb)
+void get_color(const std::string &color, unsigned char *rgb)
 {
   if (color == "white") {
-    rgb[0] = 255.0;
-    rgb[1] = 255.0;
-    rgb[2] = 255.0;
+    rgb[0] = 255;
+    rgb[1] = 255;
+    rgb[2] = 255;
   } else if (color == "black") {
-    rgb[0] = 0.0;
-    rgb[1] = 0.0;
-    rgb[2] = 0.0;
+    rgb[0] = 0;
+    rgb[1] = 0;
+    rgb[2] = 0;
   } else if (color == "silver") {
-    rgb[0] = 192.0;
-    rgb[1] = 192.0;
-    rgb[2] = 192.0;
+    rgb[0] = 192;
+    rgb[1] = 192;
+    rgb[2] = 192;
   } else if (color == "darkgray") {
-    rgb[0] = 64.0;
-    rgb[1] = 64.0;
-    rgb[2] = 64.0;
+    rgb[0] = 64;
+    rgb[1] = 64;
+    rgb[2] = 64;
   } else {
     auto val = ValueTokenizer(color, "/");
-    rgb[0] = val.next_int();
-    rgb[1] = val.next_int();
-    rgb[2] = val.next_int();
+    auto tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[0] = (unsigned char) tmp;
+    tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[1] = (unsigned char) tmp;
+    tmp = val.next_int();
+    if ((tmp < 0) || (tmp > 255)) throw TokenizerException("Invalid RGB value", color);
+    rgb[2] = (unsigned char) tmp;
     if (val.has_next()) throw TokenizerException("Extra token", val.next_string());
   }
 }
@@ -76,18 +83,18 @@ void get_color(const std::string &color, double *rgb)
 // read image into buffer that is locally allocated with new
 // return null pointer if incompatible format or not supported
 
-unsigned char *read_image(FILE *fp, int &width, int &height, std::string &fileinfo)
+unsigned char *read_image(FILE *fp, int &width, int &height, const std::string &filename,
+                          std::string &info)
 {
   if (!fp) return nullptr;
   unsigned char *pixmap = nullptr;
 
-  if (utils::strmatch(fileinfo, "\\.jpg$") || utils::strmatch(fileinfo, "\\.JPG$") ||
-      utils::strmatch(fileinfo, "\\.jpeg$") || utils::strmatch(fileinfo, "\\.JPEG$")) {
+  if (utils::strmatch(filename, "\\.jpg$") || utils::strmatch(filename, "\\.JPG$") ||
+      utils::strmatch(filename, "\\.jpeg$") || utils::strmatch(filename, "\\.JPEG$")) {
 
 #if defined(LAMMPS_JPEG)
     struct jpeg_decompress_struct cinfo;
     struct jpeg_error_mgr jerr;
-    JSAMPROW row_pointer;
 
     // initialize for reading from input stream
     jpeg_create_decompress(&cinfo);
@@ -107,7 +114,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     width = cinfo.output_width;
     height = cinfo.output_height;
     pixmap = new unsigned char[3 * width * height];
-    JSAMPARRAY scanline = new unsigned char *[1];
+    auto **scanline = new unsigned char *[height];
     for (int i = 0; i < height; ++i) {
       scanline[0] = &pixmap[(height - 1 - i) * 3 * width];
       jpeg_read_scanlines(&cinfo, scanline, 1);
@@ -115,13 +122,14 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     delete[] scanline;
     jpeg_destroy_decompress(&cinfo);
 
-    fileinfo = fmt::format("{}x{} JPEG file, 8-bit RGB", width, height);
+    info = fmt::format("{}x{} JPEG file, 8-bit RGB", width, height);
     return pixmap;
 #else
+    info = "JPEG image format not supported in this LAMMPS binary";
     return nullptr;
 #endif
 
-  } else if (utils::strmatch(fileinfo, "\\.png$") || utils::strmatch(fileinfo, "\\.PNG$")) {
+  } else if (utils::strmatch(filename, "\\.png$") || utils::strmatch(filename, "\\.PNG$")) {
 
 #if defined(LAMMPS_PNG)
     png_structp png_ptr = nullptr;
@@ -143,7 +151,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     }
 
     // set up error handling
-    if (setjmp(png_jmpbuf(png_ptr))) {
+    if (setjmp(png_jmpbuf(png_ptr))) {    // NOLINT
       png_destroy_read_struct(&png_ptr, &info_ptr, nullptr);
       delete[] pixmap;
       return nullptr;
@@ -160,7 +168,10 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     width = pngwidth;
     height = pngheight;
 
-    fileinfo = fmt::format("{}x{} PNG file, 8-bit RGB", width, height);
+    if ((bit_depth != 8) || (color_type != PNG_COLOR_TYPE_RGB))
+      info = fmt::format("{}x{} PNG file, Converted to 8-bit RGB", width, height);
+    else
+      info = fmt::format("{}x{} PNG file, 8-bit RGB", width, height);
 
     // convert data to compatible RGB data while reading
     if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_expand(png_ptr);
@@ -180,7 +191,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     if ((channels != 3) || (rowbytes != 3 * width)) return nullptr;
 
     pixmap = new unsigned char[height * width * 3];
-    png_bytepp row_pointers = new png_bytep[height];
+    auto *row_pointers = new png_bytep[height];
     for (int i = 0; i < height; ++i) row_pointers[i] = pixmap + (height - 1 - i) * rowbytes;
 
     png_read_image(png_ptr, row_pointers);
@@ -192,6 +203,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
 
     return pixmap;
 #else
+    info = "PNG image format not supported in this LAMMPS binary";
     return nullptr;
 #endif
 
@@ -211,7 +223,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
 
     // skip over optional comments
     do {
-      char *ptr = fgets(buffer, 128, fp);
+      (void) fgets(buffer, 128, fp);
     } while (buffer[0] == '#');
 
     int rv = sscanf(buffer, "%d%d", &width, &height);
@@ -222,8 +234,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
     rv = sscanf(buffer, "%d", &tmp);
     if ((rv != 1) || (tmp != 255)) return nullptr;
 
-    fileinfo =
-        fmt::format("{}x{} PPM {} file, 8-bit RGB", width, height, binary ? "binary" : "text");
+    info = fmt::format("{}x{} PPM {} file, 8-bit RGB", width, height, binary ? "binary" : "text");
     pixmap = new unsigned char[3 * width * height];
     if (binary) {
       // read raw data directly into buffer in the expected order of lines
@@ -266,11 +277,19 @@ unsigned char *read_image(FILE *fp, int &width, int &height, std::string &filein
 
     return pixmap;
   }
+  info = "Unknown image file format.";
   return nullptr;
 }
 }    // namespace
 
 /* ---------------------------------------------------------------------- */
+
+#define PARSE_VARIABLE(value, name, index)      \
+  if (strstr(arg[index], "v_") == arg[index]) { \
+    varflag = 1;                                \
+    name = utils::strdup(arg[index] + 2);       \
+  } else                                        \
+    value = utils::numeric(FLERR, arg[index], false, lmp)
 
 FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
     Fix(lmp, narg, arg), imgobjs(nullptr), imgparms(nullptr)
@@ -291,49 +310,34 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
   int iarg = 4;
   while (iarg < narg) {
     if (strcmp(arg[iarg], "image") == 0) {
-      if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels", error);
+      if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels image", error);
 
       // clang-format off
-      PixmapInfo pix{{0.0, 0.0, 0.0}, 0, 0, nullptr, {-1.0, -1.0, -1.0}, 1.0,
+      PixmapInfo pix{"", 0.0, {0.0, 0.0, 0.0}, 0, 0, nullptr, {-1.0, -1.0, -1.0}, 1.0,
         -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
       // clang-format on
 
       // read and store image file with pixmap only on MPI rank 0.
       // must always open in binary mode to avoid data corruption on Windows
       if (comm->me == 0) {
-        std::string fileinfo = arg[iarg + 1];
-        FILE *fp = fopen(fileinfo.c_str(), "rb");
+        pix.filename = arg[iarg + 1];
+        FILE *fp = fopen(pix.filename.c_str(), "rb");
         if (!fp)
-          error->one(FLERR, iarg + 1, "Cannot open fix graphics/labels image file {}: {}", fileinfo,
-                     utils::getsyserror());
-
-        pix.pixmap = read_image(fp, pix.width, pix.height, fileinfo);
+          error->one(FLERR, iarg + 1, "Cannot open fix graphics/labels image file {}: {}",
+                     pix.filename, utils::getsyserror());
+        pix.timestamp = platform::file_write_time(pix.filename);
+        std::string info;
+        pix.pixmap = read_image(fp, pix.width, pix.height, pix.filename, info);
         fclose(fp);
         if (!pix.pixmap)
-          error->one(FLERR, iarg + 1,
-                     "Reading fix graphics/labels image file {} failed.\n"
-                     "                Unsupported file format or broken file",
-                     arg[iarg + 1]);
+          error->one(FLERR, iarg + 1, "Reading fix graphics/labels image file {} failed: {}",
+                     pix.filename, info);
 
-        utils::logmesg(lmp, "Read image from {} file: {} format\n", arg[iarg + 1], fileinfo);
+        utils::logmesg(lmp, "Read image from {} file: {} format\n", pix.filename, info);
       }
-
-      if (strstr(arg[iarg + 2], "v_") == arg[iarg + 2]) {
-        varflag = 1;
-        pix.xstr = utils::strdup(arg[iarg + 2] + 2);
-      } else
-        pix.pos[0] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
-      if (strstr(arg[iarg + 3], "v_") == arg[iarg + 3]) {
-        varflag = 1;
-        pix.ystr = utils::strdup(arg[iarg + 3] + 2);
-      } else
-        pix.pos[1] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
-      if (strstr(arg[iarg + 4], "v_") == arg[iarg + 4]) {
-        varflag = 1;
-        pix.zstr = utils::strdup(arg[iarg + 4] + 2);
-      } else
-        pix.pos[2] = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
-
+      PARSE_VARIABLE(pix.pos[0], pix.xstr, iarg + 2);
+      PARSE_VARIABLE(pix.pos[1], pix.ystr, iarg + 3);
+      PARSE_VARIABLE(pix.pos[2], pix.zstr, iarg + 4);
       iarg += 5;
 
       // check remaining arguments for optional image arguments
@@ -344,33 +348,28 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
         if (strcmp(arg[iarg], "scale") == 0) {
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels image scale", error);
-          if (strstr(arg[iarg + 1], "v_") == arg[iarg + 1]) {
-            varflag = 1;
-            pix.sstr = utils::strdup(arg[iarg + 1] + 2);
-          } else
-            pix.scale = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
-          if (pix.scale <= 0.0)
-            error->all(FLERR, iarg + 1, "Invalid fix graphics/labels image scale value: {}",
-                       pix.scale);
+          PARSE_VARIABLE(pix.scale, pix.sstr, iarg + 1);
           iarg += 2;
         } else if (strcmp(arg[iarg], "transcolor") == 0) {
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels image transcolor", error);
           if (strcmp(arg[iarg + 1], "auto") == 0) {
-            pix.transcolor[0] = pix.pixmap[0];
-            pix.transcolor[1] = pix.pixmap[1];
-            pix.transcolor[2] = pix.pixmap[2];
+            if (pix.pixmap) {
+              pix.transcolor[0] = pix.pixmap[0];
+              pix.transcolor[1] = pix.pixmap[1];
+              pix.transcolor[2] = pix.pixmap[2];
+            }
           } else if (strcmp(arg[iarg + 1], "none") == 0) {
             pix.transcolor[0] = -255.0;
             pix.transcolor[1] = -255.0;
             pix.transcolor[2] = -255.0;
           } else {
-            auto rgb = ValueTokenizer(arg[iarg + 1], "/");
             try {
-              pix.transcolor[0] = rgb.next_int();
-              pix.transcolor[1] = rgb.next_int();
-              pix.transcolor[2] = rgb.next_int();
-              if (rgb.has_next()) throw TokenizerException("Extra token", rgb.next_string());
+              unsigned char rgb[3];
+              get_color(arg[iarg + 1], rgb);
+              pix.transcolor[0] = rgb[0];
+              pix.transcolor[1] = rgb[1];
+              pix.transcolor[2] = rgb[2];
             } catch (TokenizerException &e) {
               error->all(FLERR, iarg + 1, "Error parsing RGB color value {}: {}", arg[iarg + 1],
                          e.what());
@@ -384,33 +383,20 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       pixmaps.emplace_back(pix);
 
     } else if (strcmp(arg[iarg], "text") == 0) {
-      if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels", error);
+      if (iarg + 5 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels text", error);
 
       // clang-format off
-      TextInfo txt{"", {0.0, 0.0, 0.0}, 0, 0, nullptr, {255.0, 255.0, 255.0},
-                   {192.0, 192.0, 192.0}, {192.0, 192.0, 192.0}, {192.0, 192.0, 192.0},
-                   48.0, 0.5, -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
+      TextInfo txt{"", {0.0, 0.0, 0.0}, 0, 0, nullptr, {255, 255, 255}, {192, 192, 192},
+                   {192, 192, 192}, {192, 192, 192}, false, 48.0, 0.5,
+                   -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
       // clang-format on
 
       txt.text = arg[iarg + 1];
       if (txt.text.find('$') != std::string::npos) varflag = 1;
 
-      if (strstr(arg[iarg + 2], "v_") == arg[iarg + 2]) {
-        varflag = 1;
-        txt.xstr = utils::strdup(arg[iarg + 2] + 2);
-      } else
-        txt.pos[0] = utils::numeric(FLERR, arg[iarg + 2], false, lmp);
-      if (strstr(arg[iarg + 3], "v_") == arg[iarg + 3]) {
-        varflag = 1;
-        txt.ystr = utils::strdup(arg[iarg + 3] + 2);
-      } else
-        txt.pos[1] = utils::numeric(FLERR, arg[iarg + 3], false, lmp);
-      if (strstr(arg[iarg + 4], "v_") == arg[iarg + 4]) {
-        varflag = 1;
-        txt.zstr = utils::strdup(arg[iarg + 4] + 2);
-      } else
-        txt.pos[2] = utils::numeric(FLERR, arg[iarg + 4], false, lmp);
-
+      PARSE_VARIABLE(txt.pos[0], txt.xstr, iarg + 2);
+      PARSE_VARIABLE(txt.pos[1], txt.ystr, iarg + 3);
+      PARSE_VARIABLE(txt.pos[2], txt.zstr, iarg + 4);
       iarg += 5;
 
       // check remaining arguments for optional image arguments
@@ -421,13 +407,10 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
         if (strcmp(arg[iarg], "size") == 0) {
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels text size", error);
-          if (strstr(arg[iarg + 1], "v_") == arg[iarg + 1]) {
-            varflag = 1;
-            txt.sstr = utils::strdup(arg[iarg + 1] + 2);
-          } else {
-            // text is rendered as 2x2 size pixmap and later scaled down for anti-aliasing
-            txt.size = 2.0 * utils::numeric(FLERR, arg[iarg + 1], false, lmp);
-          }
+          PARSE_VARIABLE(txt.size, txt.sstr, iarg + 1);
+          // for sizes 4 to 64, text is rendered at 2x2 size and scaled down for anti-aliasing.
+          // for larger sizes, the image is rendered at max supported size and scaled as needed.
+          txt.size *= 2.0;
           if ((txt.size < 8.0) || (txt.size > 1024.0))
             error->all(FLERR, iarg + 1, "Invalid fix graphics/labels text size value: {}",
                        txt.size * 0.5);
@@ -472,9 +455,7 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
           if (iarg + 2 > narg)
             utils::missing_cmd_args(FLERR, "fix graphics/labels text transcolor", error);
           if (strcmp(arg[iarg + 1], "none") == 0) {
-            txt.transcolor[0] = -255.0;
-            txt.transcolor[1] = -255.0;
-            txt.transcolor[2] = -255.0;
+            txt.notrans = true;
           } else {
             try {
               get_color(arg[iarg + 1], txt.transcolor);
@@ -619,7 +600,7 @@ void FixGraphicsLabels::init()
 
 /* ---------------------------------------------------------------------- */
 
-void FixGraphicsLabels::setup(int vflag)
+void FixGraphicsLabels::setup(int)
 {
   end_of_step();
 }
@@ -645,6 +626,28 @@ void FixGraphicsLabels::end_of_step()
     if (pix.zstr) pix.pos[2] = input->variable->compute_equal(pix.zvar);
     if (pix.sstr) pix.scale = input->variable->compute_equal(pix.svar);
 
+    // if image file has been changed since, free old data and re-read file
+
+    if (comm->me == 0) {
+      auto timestamp = platform::file_write_time(pix.filename);
+      if (pix.timestamp != timestamp) {
+        pix.timestamp = timestamp;
+
+        FILE *fp = fopen(pix.filename.c_str(), "rb");
+        if (!fp)
+          error->one(FLERR, Error::NOLASTLINE, "Cannot open fix graphics/labels image file {}: {}",
+                     pix.filename, utils::getsyserror());
+        std::string info;
+        pix.pixmap = read_image(fp, pix.width, pix.height, pix.filename, info);
+        fclose(fp);
+        if (!pix.pixmap)
+          error->one(FLERR, Error::NOLASTLINE,
+                     "Reading fix graphics/labels image file {} failed: {}", pix.filename, info);
+
+        utils::logmesg(lmp, "Re-read image from {} file: {} format\n", pix.filename, info);
+      }
+    }
+
     imgobjs[n] = Graphics::PIXMAP;
     imgparms[n][0] = 1;
     imgparms[n][1] = pix.pos[0];
@@ -660,139 +663,72 @@ void FixGraphicsLabels::end_of_step()
     ++n;
   }
 
-  // initialize font rendered and load in-memory font
-  SSFN::ssfn_t ctx;
-  SSFN::ssfn_glyph_t *g;
-  memset(&ctx, 0, sizeof(SSFN::ssfn_t));
-  SSFN::ssfn_load(&ctx, SSFN::ssfn_sans_font);
-  for (auto &txt : texts) {
-    if (txt.xstr) txt.pos[0] = input->variable->compute_equal(txt.xvar);
-    if (txt.ystr) txt.pos[1] = input->variable->compute_equal(txt.yvar);
-    if (txt.zstr) txt.pos[2] = input->variable->compute_equal(txt.zvar);
-    // text is rasterized at twice the size for some anti-aliasing. clamp to avoid crashes.
-    if (txt.sstr) {
-      txt.size = 2.0 * input->variable->compute_equal(txt.svar);
-      if (txt.size > 128.0) {
-        txt.scale = txt.size / 256.0;
-        txt.size = 128.0;
+  // initialize font renderer and load in-memory font
+
+  try {
+    SSFN::ScalableFont renderfont;
+
+    for (auto &txt : texts) {
+      if (txt.xstr) txt.pos[0] = input->variable->compute_equal(txt.xvar);
+      if (txt.ystr) txt.pos[1] = input->variable->compute_equal(txt.yvar);
+      if (txt.zstr) txt.pos[2] = input->variable->compute_equal(txt.zvar);
+
+      // text is rasterized at twice the size for some anti-aliasing. clamp to avoid crashes.
+      if (txt.sstr) {
+        txt.size = 2.0 * input->variable->compute_equal(txt.svar);
+        if (txt.size > 128.0) {
+          txt.scale = txt.size / 256.0;
+          txt.size = 128.0;
+        } else {
+          txt.size = MAX(txt.size, 8.0);
+          txt.scale = 0.5;
+        }
+      }
+
+      renderfont.select_font(SSFN::FAMILY_SANS, SSFN::STYLE_REGULAR, (int) txt.size);
+
+      // need to render the pixmap if NULL, the size is a variable, or we need to substitute the text
+      if (txt.sstr || !txt.pixmap || (txt.text.find('$') != std::string::npos)) {
+        auto expanded = txt.text;
+
+        // substitute variables in text
+        if (expanded.find('$') != std::string::npos) {
+          int ncopy = expanded.length() + 1;
+          int nwork = ncopy;
+          char *copy = (char *) memory->smalloc(ncopy * sizeof(char), "fix/graphics/labels:copy");
+          char *work = (char *) memory->smalloc(nwork * sizeof(char), "fix/graphics/labels:work");
+          strncpy(copy, expanded.c_str(), ncopy);
+          input->substitute(copy, work, ncopy, nwork, 0);
+          expanded = copy;
+          memory->sfree(copy);
+          memory->sfree(work);
+        }
+
+        delete[] txt.pixmap;
+        txt.pixmap = renderfont.create_pixmap(expanded, txt.width, txt.height, txt.fontcolor,
+                                              txt.framecolor, txt.backcolor);
+      }
+      imgobjs[n] = Graphics::PIXMAP;
+      imgparms[n][0] = 1;
+      imgparms[n][1] = txt.pos[0];
+      imgparms[n][2] = txt.pos[1];
+      imgparms[n][3] = txt.pos[2];
+      imgparms[n][4] = txt.width;
+      imgparms[n][5] = txt.height;
+      imgparms[n][6] = ubuf((int64_t) txt.pixmap).d;
+      if (txt.notrans) {
+        imgparms[n][7] = imgparms[n][8] = imgparms[n][9] = -1.0;
       } else {
-        txt.size = MAX(txt.size, 8.0);
-        txt.scale = 0.5;
+        imgparms[n][7] = (double)txt.transcolor[0] / 255.0;
+        imgparms[n][8] = (double)txt.transcolor[1] / 255.0;
+        imgparms[n][9] = (double)txt.transcolor[2] / 255.0;
       }
 
+      imgparms[n][10] = txt.scale;
+      ++n;
     }
-
-    SSFN::ssfn_select(&ctx, SSFN_FAMILY_SANS, nullptr, SSFN_STYLE_REGULAR, (int) (txt.size),
-                      SSFN_MODE_BITMAP);
-    if (ctx.err != SSFN_OK) continue;
-
-    // need to render the pixmap if NULL, the size is a variable, or we need to substitute the text
-    if (txt.sstr || !txt.pixmap || (txt.text.find('$') != std::string::npos)) {
-      auto expanded = txt.text;
-
-      // substitute variables in text
-      if (expanded.find('$') != std::string::npos) {
-        int n = expanded.length() + 1;
-        char *copy = (char *) memory->smalloc(n * sizeof(char), "fix/graphics/labels:copy");
-        char *work = (char *) memory->smalloc(n * sizeof(char), "fix/graphics/labels:work");
-        strncpy(copy, expanded.c_str(), n);
-        input->substitute(copy, work, n, n, 0);
-        expanded = copy;
-        memory->sfree(copy);
-        memory->sfree(work);
-      }
-
-      // get a font size specific spacing for a border
-      g = SSFN::ssfn_render(&ctx, ' ');
-      int xspace = g->adv_x;
-      free(g);
-
-      // dry run to determine size of pixmap
-      int width = 0;
-      int miny = 1073741824;
-      int maxy = 0;
-      for (auto c : expanded + "gll") {    // append these characters for consistent spacing
-        if (c == '_') c = ' ';             // ugly hack to work around font issue
-
-        g = SSFN::ssfn_render(&ctx, c);
-        width += g->adv_x;
-        // loop over bitmap to find minimum and maximum y position
-        for (int y = 0; y < g->h; ++y) {
-          const int ypos = g->h - 1 - y + g->baseline;
-          for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
-            if (m > 0x80) {
-              m = 1;
-              ++i;
-            }
-            if (g->data[y * g->pitch + i] & m) {
-              miny = MIN(miny, ypos);
-              maxy = MAX(maxy, ypos);
-            }
-          }
-        }
-        free(g);
-      }
-
-      int xhalf = xspace / 2;
-      txt.width = width;
-      int height = txt.height = maxy - miny + 1 + 3 * xspace;
-      delete[] txt.pixmap;
-      txt.pixmap = new unsigned char[height * width * 3];
-
-      // fill entire pixmap with background and frame color
-      for (int y = 0; y < height; ++y) {
-        int yoffs = 3 * y * width;
-        for (int x = 0; x < width; ++x) {
-          if ((y < xhalf) || (y >= height - xhalf) || (x < xhalf) || (x >= width - xhalf)) {
-            txt.pixmap[yoffs + 3 * x] = txt.framecolor[0];
-            txt.pixmap[yoffs + 3 * x + 1] = txt.framecolor[1];
-            txt.pixmap[yoffs + 3 * x + 2] = txt.framecolor[2];
-          } else {
-            txt.pixmap[yoffs + 3 * x] = txt.backcolor[0];
-            txt.pixmap[yoffs + 3 * x + 1] = txt.backcolor[1];
-            txt.pixmap[yoffs + 3 * x + 2] = txt.backcolor[2];
-          }
-        }
-      }
-
-      // now render each character again and change the pixels in the pixmap accordingly
-      int penx = 2 * xspace;
-      for (auto c : expanded) {
-        if (c == '_') c = ' ';    // ugly hack to work around font issue
-
-        g = SSFN::ssfn_render(&ctx, c);
-        for (int y = 0; y < g->h; ++y) {
-          const int yoffs = (g->h - 1 - y + g->baseline - miny + xspace + xhalf/2) * width * 3;
-          for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
-            if (m > 0x80) {
-              m = 1;
-              ++i;
-            }
-            const int xoffs = (penx + x) * 3;
-            if (g->data[y * g->pitch + i] & m) {
-              txt.pixmap[yoffs + xoffs] = txt.fontcolor[0];
-              txt.pixmap[yoffs + xoffs + 1] = txt.fontcolor[1];
-              txt.pixmap[yoffs + xoffs + 2] = txt.fontcolor[2];
-            }
-          }
-        }
-        penx += g->adv_x;
-        free(g);
-      }
-    }
-    imgobjs[n] = Graphics::PIXMAP;
-    imgparms[n][0] = 1;
-    imgparms[n][1] = txt.pos[0];
-    imgparms[n][2] = txt.pos[1];
-    imgparms[n][3] = txt.pos[2];
-    imgparms[n][4] = txt.width;
-    imgparms[n][5] = txt.height;
-    imgparms[n][6] = ubuf((int64_t) txt.pixmap).d;
-    imgparms[n][7] = txt.transcolor[0] / 255.0;
-    imgparms[n][8] = txt.transcolor[1] / 255.0;
-    imgparms[n][9] = txt.transcolor[2] / 255.0;
-    imgparms[n][10] = txt.scale;
-    ++n;
+  } catch (const SSFN::SSFNException &e) {
+    error->all(FLERR, Error::NOLASTLINE, "Error during font rendering: {}", e.what());
   }
 
   if (varflag) modify->addstep_compute((update->ntimestep / nevery) * nevery + nevery);

@@ -3052,6 +3052,7 @@ Pishevar
 Pitera
 pitorsion
 pixmap
+pixmaps
 pj
 pjintve
 pKa

@@ -44,6 +44,8 @@ class DumpImage : public DumpCustom {
   int pack_forward_comm(int, int *, double *, int, int *) override;
   void unpack_forward_comm(int, int, double *) override;
 
+  void *extract(const char *, int &) override;
+
  protected:
   int filetype;
   enum { PPM, JPG, PNG };    // file type constants

@@ -415,7 +415,7 @@ constexpr int TRITABLE[256][16] = {
 /* ---------------------------------------------------------------------- */
 
 FixGraphicsIsosurface::FixGraphicsIsosurface(LAMMPS *lmp, int narg, char **arg) :
-    Fix(lmp, narg, arg), pstr(nullptr), pcomp(nullptr), pfix(nullptr), pdata(nullptr),
+    Fix(lmp, narg, arg), pdata(nullptr), pstr(nullptr), pcomp(nullptr), pfix(nullptr),
     imgobjs(nullptr), imgparms(nullptr)
 {
   if (narg < 6) utils::missing_cmd_args(FLERR, "fix graphics/isosurface", error);
@@ -611,7 +611,7 @@ void FixGraphicsIsosurface::init()
   }
 
   // request updates of computes, if needed
-  if ((pflag != ArgInfo::NONE) || (pflag != ArgInfo::MASS)) {
+  if ((pflag != ArgInfo::NONE) && (pflag != ArgInfo::MASS)) {
     bigint nextstep = (update->ntimestep / nevery) * nevery + nevery;
     if ((nextstep - nevery) == update->ntimestep) nextstep = update->ntimestep;
     modify->addstep_compute(nextstep);
@@ -697,10 +697,7 @@ int FixGraphicsIsosurface::pack_forward_comm(int n, int *list, double *buf, int 
                                              int * /*pbc*/)
 {
   int m = 0;
-  for (int i = 0; i < n; ++i) {
-    int j = list[i];
-    buf[m++] = pdata[list[i]];
-  }
+  for (int i = 0; i < n; ++i) buf[m++] = pdata[list[i]];
 
   return m;
 }
