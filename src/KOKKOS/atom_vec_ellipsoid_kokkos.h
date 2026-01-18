@@ -76,11 +76,18 @@ class AtomVecEllipsoidKokkos : public AtomVecKokkos, public AtomVecEllipsoid {
 
   void pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
                               const DAT::tdual_double_2d_lr &buf) override;
+
   void unpack_comm_bonus_kokkos(const int &n, const int &nfirst,
                                 const DAT::tdual_double_2d_lr &buf) override;
 
   void pack_comm_self_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
                                    const int nfirst) override;
+
+  void pack_comm_self_fused_bonus_kokkos(const int &n,
+                                         const DAT::tdual_int_2d_lr &list,
+                                         const DAT::tdual_int_1d &sendnum_scan,
+                                         const DAT::tdual_int_1d &firstrecv,
+                                         const DAT::tdual_int_1d &g2l) override;
 
   void pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_sendlist,
                                 DAT::tdual_double_2d_lr &buf,

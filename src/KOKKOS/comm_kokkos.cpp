@@ -167,7 +167,7 @@ void CommKokkos::forward_comm_device()
     k_swap.sync<DeviceType>();
     k_swap2.sync<DeviceType>();
     k_pbc.sync<DeviceType>();
-    n = atomKK->avecKK->pack_comm_self_fused(totalsend,k_sendlist,k_sendnum_scan,
+    n = atomKK->avecKK->pack_comm_self_fused_kokkos(totalsend,k_sendlist,k_sendnum_scan,
                     k_firstrecv,k_pbc_flag,k_pbc,k_g2l);
   } else {
 
@@ -236,7 +236,7 @@ void CommKokkos::forward_comm_device()
         if (!ghost_velocity) {
           if (sendnum[iswap]) {
             auto k_sendlist_iswap = Kokkos::subview(k_sendlist,iswap,Kokkos::ALL);
-            n = atomKK->avecKK->pack_comm_self(sendnum[iswap],k_sendlist_iswap,
+            n = atomKK->avecKK->pack_comm_self_kokkos(sendnum[iswap],k_sendlist_iswap,
                                      firstrecv[iswap],pbc_flag[iswap],pbc[iswap]);
           }
         } else {
@@ -326,7 +326,7 @@ void CommKokkos::reverse_comm_device()
     } else {
       if (sendnum[iswap]) {
         auto k_sendlist_iswap = Kokkos::subview(k_sendlist,iswap,Kokkos::ALL);
-        n = atomKK->avecKK->pack_reverse_self(sendnum[iswap],k_sendlist_iswap,
+        n = atomKK->avecKK->pack_reverse_self_kokkos(sendnum[iswap],k_sendlist_iswap,
                                  firstrecv[iswap]);
       }
     }
