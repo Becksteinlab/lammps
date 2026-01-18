@@ -2356,7 +2356,6 @@ int ColorMap::reset(int narg, char **arg)
   delete [] mentry;
   mentry = new MapEntry[nentry];
 
-  int expandflag = 0;
   int n = 5;
   for (int i = 0; i < nentry; i++) {
     if (mstyle == CONTINUOUS) {
