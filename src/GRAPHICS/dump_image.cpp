@@ -106,6 +106,8 @@ DumpImage::DumpImage(LAMMPS *lmp, int narg, char **arg) :
     filetype = JPG;
   else if  (utils::strmatch(filename, "\\.png$") || utils::strmatch(filename, "\\.PNG$"))
     filetype = PNG;
+  else if  (utils::strmatch(filename, "\\.tga$") || utils::strmatch(filename, "\\.TGA$"))
+    filetype = TGA;
   else filetype = PPM;
 
 #ifndef LAMMPS_JPEG
@@ -942,6 +944,7 @@ void DumpImage::write()
   if (me == 0) {
     if (filetype == JPG) image->write_JPG(fp);
     else if (filetype == PNG) image->write_PNG(fp);
+    else if (filetype == TGA) image->write_TGA(fp);
     else image->write_PPM(fp);
     if (multifile) {
       fclose(fp);
