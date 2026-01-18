@@ -482,6 +482,8 @@ int AtomVecKokkos::pack_comm_self(const int &n, const DAT::tdual_int_1d &list,
     atomKK->modified(Device,datamask_comm);
   }
 
+  if (bonus_flag) pack_comm_self_bonus_kokkos(n, list, nfirst);
+
   return n*size_forward;
 }
 
