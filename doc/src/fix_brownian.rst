@@ -42,7 +42,8 @@ Syntax
      *gamma_t* values = *gt* for *brownian* and *brownian/sphere*
         *gt* = magnitude of the (isotropic) translational friction tensor
      *rotation_style* values = *geometric* or *projection* for *brownian/sphere*
-
+        *geometric* = geometric, rotation-based integration scheme
+        *projection* = projection-based integration scheme
      *rotation_temp* values = *T* for *brownian/sphere* and *brownian/asphere*
         *T* = rotation temperature, which can be different than *temp* when out of equilibrium
      *planar_rotation* values = none (constrains rotational diffusion to be in xy plane if in 3D)
@@ -83,7 +84,7 @@ only depends on orientation and so the noise is still additive).
 The overdamped rotational motion for the spherical and ellipsoidal particles
 results from random rotations instead of translations, which are chosen in such
 a way that the motion reproduces the equilibrium Boltzmann distribution for the
-case of conservative torques (see :ref:`(Höfling) <Hoefling1>`, :ref:`(Ilie)
+case of conservative torques (see :ref:`(Hoefling) <Hoefling1>`, :ref:`(Ilie)
 <Ilie1>`, and :ref:`(Delong) <Delong1>`).
 
 For the style *brownian*, only the positions of the particles are
@@ -101,7 +102,7 @@ updated. This style therefore requires the hybrid atom style
 
 where :math:`\mathrm{R}(\boldsymbol{\omega} dt)` is a rotation matrix with axis
 :math:`\boldsymbol{n} = \boldsymbol{\omega} / |\boldsymbol{\omega}|`
-and angle :math:`\theta = |\boldsymbol{\omega}| dt` (see :ref:`(Höfling) <Hoefling1>`).
+and angle :math:`\theta = |\boldsymbol{\omega}| dt` (see :ref:`(Hoefling) <Hoefling1>`).
 For small angles, the action of the rotation matrix can be cast into a
 tangential increment :math:`\boldsymbol{\omega} \times \boldsymbol{\mu}dt` and
 subsequent projection to preserve the magnitude :math:`|\boldsymbol{\mu}(t)|` of
@@ -124,7 +125,7 @@ moments when
 with :math:`d\mathbf{W}` being a random number with zero mean and variance
 :math:`dt` and :math:`T_{rot}` is *rotation_temp*. The geometric integration
 scheme, however, accepts time steps that can be an order of magnitude larger
-(see :ref:`(Höfling) <Hoefling1>`).
+(see :ref:`(Hoefling) <Hoefling1>`).
 
 For the style *brownian/asphere*, the center of mass positions and the
 quaternions of ellipsoidal particles are updated. This fix style is
@@ -212,6 +213,8 @@ If the *dipole* keyword is used, then the dipole moments of the particles
 are updated as described above. Only compatible with *brownian/asphere*
 (as *brownian/sphere* updates dipoles automatically).
 
+.. versionadded:: TBD
+
 If the *rotation_style* keyword is used with the *geometric* value, then the
 geometric, rotation-based integration scheme (:ref:`(Hoefling) <Hoefling1>`)
 is used. If the keyword is used with the *projection* value, the linearized,
@@ -270,6 +273,8 @@ Related commands
 Default
 """""""
 
+.. versionchanged:: TBD
+
 The default for *rng* is *uniform*. The default for *rotation_style* is *geometric*.
 The default for the rotational and translational friction tensors are the identity
 tensor.
@@ -278,7 +283,7 @@ tensor.
 
 .. _Hoefling1:
 
-**(Höfling)** Höfling and Straube, Physical Review Research, 7, 043034 (2025).
+**(Hoefling)** :math:`\mathrm{H\ddot{o}fling}` and Straube, Physical Review Research, 7, 043034 (2025).
 
 .. _Ilie1:
 
@@ -286,7 +291,7 @@ tensor.
 
 .. _Delong1:
 
-**(Delong)** Delong, Usabiaga, Donev, Journal of Chemical Physics. 143, 144107 (2015)
+**(Delong)** Delong, Usabiaga, Donev, Journal of Chemical Physics. 143, 144107 (2015).
 
 .. _Dunweg7:
 

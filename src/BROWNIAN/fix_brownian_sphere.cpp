@@ -310,7 +310,7 @@ void FixBrownianSphere::initial_integrate_templated()
             double n[3];
             MathExtra::scale3(1 / wperplen, wperp, n);
 
-            // cross-product u × n 
+            // cross-product u × n
             double uxn[3];
             MathExtra::cross3(u, n, uxn);
 
