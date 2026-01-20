@@ -57,8 +57,6 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
 
   tags_stored = false;
   counter_changed_csp_nghs = 0;
-  scalar_flag = 1;
-  extscalar = 1;
 
   if (narg < 9) error->all(FLERR, "fix lambda/la/csp/apip requires six arguments");
 
@@ -106,7 +104,7 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   if (cut_lo > cut_hi || cut_lo < 0) error->all(FLERR, "0 <= cut_lo <= cut_hi required");
   if (threshold_lo > threshold_hi || threshold_lo < 0) error->all(FLERR, "0 <= threshold_lo <= threshold_hi required");
   if (lambda_non_group < 0 || lambda_non_group > 1) error->all(FLERR, "0 <= lambda_non_group <= 1 required");
-
+  if (!const_ngh_flag) { scalar_flag = 1; extscalar = 1; }
 
 
   if (!atom->apip_lambda_flag) { error->all(FLERR, "fix lambda/la/csp/apip requires atomic style with lambda."); }
@@ -311,8 +309,6 @@ void FixLambdaLACSPAPIP::pre_force_dyn_pairs()
   // zero values
   for (i = 0; i < nlocal; i++) csp[i] = 0;
   for (i = 0; i < nmax; i++) csp_norm[i] = csp_avg[i] = 0;
-
-  counter_changed_csp_nghs = 0;
 
   for (ii = 0; ii < inum; ii++) {
     i = ilist[ii];

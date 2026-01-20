@@ -14,4 +14,5 @@ One can obtain a conservative adaptive-precision interatomic potential via local
 
 David Immel, Ralf Drautz, Godehard Sutmann; Conservative adaptive-precision interatomic potentials;  arXiv:2512.07693
 
-and demonstrated with in.surface.la .
+and demonstrated with in.surface.la.cons , where the descriptor is calculated using the differentiable centro-symmetry parameter.
+When the original CSP is used, the potential is not conservative any more when CSP-pairs change between timesteps as demonstrated with in.surface.la.nocons .

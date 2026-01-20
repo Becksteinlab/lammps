@@ -7,7 +7,7 @@ variable	ace_file string "../../../potentials/Cu-PBE-core-rep.ace"
 # The csp is used as detection mechanism for atoms of interest.
 variable	cspavg_lattice string "fcc"
 variable	cspavg_cutoff equal 8.0
-# Thresholds between which the switching parameter changes from 1 to 0 based on cspavg.
+# Thresholds between which the switching parameter changes from 1 to 0 based on the locally averaged (la) CSP.
 variable	cspavg_csp_lo equal 0.7
 variable	cspavg_csp_hi equal 2.0
 # This range determines where the weighting function changes from 1 to 0.
@@ -30,13 +30,12 @@ timestep	0.001
 #delete_atoms	region del
 #displace_atoms	all random 0.028 0.028 0.028 42 units lattice
 #velocity	all create 300.0 42
-#write_data	data.surface.cspavg
-read_data	data.surface.cspavg
+#write_data	data.surface.la
+read_data	data.surface.la
 
 
 fix		nve all nve
 
-#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} csp_mode dynamic # for a non-conservative potential
 fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} # for a conservative potential
 
 pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
@@ -64,16 +63,16 @@ compute		csp_avg all property/atom apip_la_avg
 variable	flag_simple atom c_lambda==1
 variable	flag_switch atom c_lambda<1&&c_lambda>0
 variable	flag_complex atom c_lambda==0
-compute		lambda_types all reduce sum v_flag_simple v_flag_switch v_flag_complex c_csp c_csp_avg
+compute		lambda_types all reduce sum v_flag_simple v_flag_switch v_flag_complex
 
 
-thermo_style	custom step temp etotal c_lambda_types[*] fnorm fmax f_lambda_cspavg
+thermo_style	custom step temp etotal c_lambda_types[*] fnorm fmax
 thermo		1
 
-#dump		1 all custom 10 dump.surface.cspavg.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
+#dump		1 all custom 10 dump.surface.la.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
 
 
 run		100
 
 # dump atoms
-#write_dump	all custom dump.surface.cspavg.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
+#write_dump	all custom dump.surface.la.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
