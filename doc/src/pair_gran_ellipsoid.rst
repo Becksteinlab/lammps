@@ -291,6 +291,14 @@ All settings are global and are made via the pair_style command.
 However you must still use the :doc:`pair_coeff <pair_coeff>` for all
 pairs of granular atom types.  For example the command
 
+.. note::
+   For particles with high blockiness exponents (:math:`n > 4`) involved in edge-to-edge
+   or corner-to-corner contacts, the surface normal vector varies rapidly over microscopic
+   distances. The Newton solver may occasionally fail to converge to the strict gradient
+   alignment tolerance (typically :math:`10^{-10}`).
+   You may see warning messages in the log indicating that the solver returned a sub-optimal solution, 
+   but the simulation will proceed using this best-effort contact point.
+
 .. code-block:: LAMMPS
 
    pair_coeff * *
