@@ -163,6 +163,7 @@ ImageViewer::ImageViewer(const QString &fileName, LammpsWrapper *_lammps, QWidge
     shinyfactor = 0.6;
     auto pix    = QPixmap(":/icons/emblem-photos.png");
     xcenter = ycenter = zcenter = 0.5;
+    if (lammps->extract_setting("dimension") == 2) zcenter = 0.0;
     auto bsize = QFontMetrics(QApplication::font()).size(Qt::TextSingleLine, "Height:  200");
 
     auto *renderstatus = new QLabel(QString());
@@ -364,6 +365,7 @@ void ImageViewer::reset_view()
     usessao     = settings.value("ssao", false).toBool();
     antialias   = settings.value("antialias", false).toBool();
     xcenter = ycenter = zcenter = 0.5;
+    if (lammps->extract_setting("dimension") == 2) zcenter = 0.0;
     settings.endGroup();
 
     // reset state of checkable push buttons and combo box (if accessible)
@@ -517,6 +519,7 @@ void ImageViewer::do_recenter()
     xcenter = lammps->extract_variable("LAMMPSGUI_CX");
     ycenter = lammps->extract_variable("LAMMPSGUI_CY");
     zcenter = lammps->extract_variable("LAMMPSGUI_CZ");
+    if (lammps->extract_setting("dimension") == 2) zcenter = 0.0;
     lammps->commands_string("variable LAMMPSGUI_CX delete\n"
                             "variable LAMMPSGUI_CY delete\n"
                             "variable LAMMPSGUI_CZ delete\n");
@@ -537,7 +540,15 @@ void ImageViewer::cmd_to_clipboard()
 
     std::string dumpcmd = "dump viz ";
     dumpcmd += words[1];
-    dumpcmd += " image 100 myimage-*.ppm";
+
+    if (lammps->config_has_png_support()) {
+        dumpcmd += " image 100 myimage-*.png";
+    } else if (lammps->config_has_jpeg_support()) {
+        dumpcmd += " image 100 myimage-*.jpg";
+    } else {
+        dumpcmd += " image 100 myimage-*.ppm";
+    }
+
     for (int i = 4; i < modidx; ++i)
         if (words[i] != "noinit") dumpcmd += " " + words[i];
     dumpcmd += '\n';
@@ -547,9 +558,11 @@ void ImageViewer::cmd_to_clipboard()
         dumpcmd += " " + words[i];
     dumpcmd += '\n';
 #if QT_CONFIG(clipboard)
-    QGuiApplication::clipboard()->setText(dumpcmd.c_str());
+    QGuiApplication::clipboard()->setText(dumpcmd.c_str(), QClipboard::Clipboard);
+    if (QGuiApplication::clipboard()->supportsSelection())
+        QGuiApplication::clipboard()->setText(dumpcmd.c_str(), QClipboard::Selection);
 #else
-    fprintf(stderr, "# customized dump image command:\n%s", dumpcmd.c_str())
+    fprintf(stderr, "# customized dump image command:\n%s", dumpcmd.c_str());
 #endif
 }
 

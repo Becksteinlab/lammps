@@ -134,11 +134,10 @@ if((CMAKE_CXX_COMPILER_ID STREQUAL "NVHPC") OR (CMAKE_CXX_COMPILER_ID STREQUAL "
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Minform=severe")
 endif()
 
-# silence nvcc warnings
-if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND NOT
-    ((CMAKE_CXX_COMPILER_ID STREQUAL "Clang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")
-    OR (CMAKE_CXX_COMPILER_ID STREQUAL "XLClang") OR (CMAKE_CXX_COMPILER_ID STREQUAL "CrayClang")))
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128")
+# silence nvcc warnings when using nvcc_wrapper
+get_filename_component(LAMMPS_CXX_COMPILER_NAME "${CMAKE_CXX_COMPILER}" NAME CACHE)
+if((PKG_KOKKOS) AND (Kokkos_ENABLE_CUDA) AND (LAMMPS_CXX_COMPILER_NAME STREQUAL "nvcc_wrapper"))
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xcudafe --diag_suppress=unrecognized_pragma,--diag_suppress=128,--diag_suppress=186")
 endif()
 
 # we *require* C++11 without extensions but prefer C++17.
@@ -179,15 +178,15 @@ endif()
 # warn about potentially problematic GCC compiler versions
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   if (CMAKE_CXX_STANDARD GREATER_EQUAL 17)
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-      message(WARNING "Using ${CMAKE_CXX_COMPILER_ID} compiler version ${CMAKE_CXX_COMPILER_VERSION} "
-        "with C++17 is not recommended. Please use ${CMAKE_CXX_COMPILER_ID} compiler version 9.x or later")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.3)
+      message(WARNING "Using the GNU compilers version ${CMAKE_CXX_COMPILER_VERSION} with C++17 "
+              "or later is not recommended. Please use GNU compilers version 9.3 or later")
     endif()
   endif()
   if (CMAKE_CXX_STANDARD GREATER_EQUAL 11)
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 5.0)
-      message(WARNING "Using ${CMAKE_CXX_COMPILER_ID} compiler version ${CMAKE_CXX_COMPILER_VERSION} "
-        "with C++11 is not recommended. Please use ${CMAKE_CXX_COMPILER_ID} compiler version 5.x or later")
+      message(WARNING "Using the GNU compilers version ${CMAKE_CXX_COMPILER_VERSION} with C++11 "
+        "or later is not recommended. Please use GNU compilers version 5.0 or later")
     endif()
   endif()
 endif()
@@ -199,7 +198,10 @@ endif()
 
 # do not include the (obsolete) MPI C++ bindings which makes for leaner object files
 # and avoids namespace conflicts. Put this early to increase its visbility.
-set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
+# do not apply when compiling SCAFACOS since it uses the obsolete bindings
+if (NOT PKG_SCAFACOS)
+  set(MPI_CXX_SKIP_MPICXX TRUE CACHE BOOL "Skip MPI C++ Bindings" FORCE)
+endif()
 
 ########################################################################
 # User input options                                                   #
@@ -615,14 +617,6 @@ if(WITH_SWIG)
 endif()
 
 ########################################################################
-# Basic system tests (standard libraries, headers, functions, types)   #
-########################################################################
-if (NOT ((CMAKE_CXX_COMPILER_ID STREQUAL "Intel") OR (CMAKE_CXX_COMPILER_ID STREQUAL "IntelLLVM")))
-  check_include_file_cxx(cmath FOUND_CMATH)
-  if(NOT FOUND_CMATH)
-    message(FATAL_ERROR "Could not find the required 'cmath' header")
-  endif(NOT FOUND_CMATH)
-endif()
 
 # make the standard math library overrideable and autodetected (for systems that don't have it)
 find_library(STANDARD_MATH_LIB m DOC "Standard Math library")
@@ -808,16 +802,17 @@ if(_index GREATER -1)
   target_link_libraries(lammps PRIVATE ${CMAKE_Fortran_IMPLICIT_LINK_LIBRARIES})
 endif()
 set(LAMMPS_CXX_HEADERS angle.h atom.h bond.h citeme.h comm.h command.h compute.h dihedral.h domain.h
-  error.h exceptions.h fix.h force.h group.h improper.h input.h info.h kspace.h lammps.h lattice.h
-  library.h lmppython.h lmptype.h memory.h modify.h neighbor.h neigh_list.h output.h pair.h
-  platform.h pointers.h region.h timer.h universe.h update.h utils.h variable.h)
+  error.h exceptions.h fix.h force.h group.h improper.h input.h info.h json.h json_fwd.h kspace.h
+  lammps.h lattice.h library.h lmppython.h lmptype.h memory.h modify.h neighbor.h neigh_list.h
+  output.h pair.h platform.h pointers.h region.h timer.h universe.h update.h utils.h variable.h)
 set(LAMMPS_FMT_HEADERS core.h format.h)
+set(LAMMPS_JSON_HEADERS json_fwd.hpp json.hpp)
 
 set_target_properties(lammps PROPERTIES OUTPUT_NAME lammps${LAMMPS_MACHINE})
 set_target_properties(lammps PROPERTIES SOVERSION ${SOVERSION})
 set_target_properties(lammps PROPERTIES PREFIX "lib")
-target_include_directories(lammps PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/lammps>)
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/fmt)
+target_include_directories(lammps PUBLIC $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/fmt ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/nlohmann)
 foreach(_HEADER ${LAMMPS_CXX_HEADERS})
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/${_HEADER} COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LAMMPS_SOURCE_DIR}/${_HEADER} ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/${_HEADER} DEPENDS ${LAMMPS_SOURCE_DIR}/${_HEADER})
   add_custom_target(${_HEADER} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/${_HEADER})
@@ -832,6 +827,14 @@ foreach(_HEADER ${LAMMPS_FMT_HEADERS})
   add_dependencies(lammps fmt_${_HEADER})
   if(BUILD_SHARED_LIBS)
     install(FILES ${LAMMPS_SOURCE_DIR}/fmt/${_HEADER} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lammps/fmt)
+  endif()
+endforeach()
+foreach(_HEADER ${LAMMPS_JSON_HEADERS})
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/nlohmann/${_HEADER} COMMAND ${CMAKE_COMMAND} -E copy_if_different ${LAMMPS_SOURCE_DIR}/nlohmann/${_HEADER} ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/nlohmann/${_HEADER} DEPENDS ${LAMMPS_SOURCE_DIR}/nlohmann/${_HEADER})
+  add_custom_target(json_${_HEADER} DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/includes/lammps/nlohmann/${_HEADER})
+  add_dependencies(lammps json_${_HEADER})
+  if(BUILD_SHARED_LIBS)
+    install(FILES ${LAMMPS_SOURCE_DIR}/nlohmann/${_HEADER} DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/lammps/nlohmann)
   endif()
 endforeach()
 target_include_directories(lammps INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/includes>)
@@ -856,7 +859,7 @@ if(BUILD_SHARED_LIBS)
   install(FILES ${CMAKE_CURRENT_BINARY_DIR}/liblammps${LAMMPS_MACHINE}.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
   install(EXPORT LAMMPS_Targets FILE LAMMPS_Targets.cmake NAMESPACE LAMMPS:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LAMMPS)
   include(CMakePackageConfigHelpers)
-  configure_file(LAMMPSConfig.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/LAMMPSConfig.cmake @ONLY)
+  configure_file(LAMMPSConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/LAMMPSConfig.cmake" @ONLY)
   write_basic_package_version_file("LAMMPSConfigVersion.cmake" VERSION ${PROJECT_VERSION} COMPATIBILITY ExactVersion)
   install(FILES "${CMAKE_CURRENT_BINARY_DIR}/LAMMPSConfig.cmake" "${CMAKE_CURRENT_BINARY_DIR}/LAMMPSConfigVersion.cmake" DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/LAMMPS)
 endif()
