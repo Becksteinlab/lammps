@@ -558,66 +558,37 @@ A file that would be parsed by the reader code fragment looks like this:
 
 ----------
 
-Type label mapping
+Type label support
 ------------------
 
-The :cpp:class:`LabelMap <LAMMPS_NS::LabelMap>` class provides a powerful
-abstraction for mapping between symbolic type labels and numeric type indices
-in LAMMPS simulations. Instead of referring to atom types, bond types, angle
-types, dihedral types, and improper types by numeric indices (1, 2, 3, ...),
-users can assign meaningful string labels (e.g., "C", "H", "N", "C-H", "H-C-H")
-that improve readability and maintainability of input scripts.
+The :cpp:class:`LabelMap <LAMMPS_NS::LabelMap>` class provides a two way
+mapping between symbolic type labels in input and output files and
+numeric types as they are used by LAMMPS internally.  Instead of
+changing the numeric types in files to satisfy the requirements from
+LAMMPS for a given application, the symbolic types can remain and only
+the label map needs to be adjusted.  When following the convention that
+the labels for bonded interactions are created by joining the
+constituent atom types with hyphens, this can significantly improve
+readability, maintainability, and re-usability of inputs and reduces the
+chance of errors.
 
-This feature is particularly useful for:
-
-* Complex molecular systems with many atom types
-* Making input scripts self-documenting
-* Avoiding errors from renumbering types
-* Reusing force field definitions across different systems
-
-Type labels are set using the ``labelmap`` command in LAMMPS input scripts:
-
-.. code-block:: LAMMPS
-
-   # Assign atom type labels
-   labelmap atom 1 C 2 H 3 N 4 O
-
-   # Assign bond type labels (hyphen-delimited format)
-   labelmap bond 1 C-H 2 C-C 3 C-N
-
-   # Assign angle type labels
-   labelmap angle 1 H-C-H 2 C-C-H 3 C-N-C
-
-Interaction types (bonds, angles, dihedrals, impropers) use a **hyphen-delimited
-format** that combines constituent atom type labels. For example, a bond between
-carbon and hydrogen atoms can be labeled "C-H", and an angle formed by
-H-C-H atoms can be labeled "H-C-H".
-
-The LabelMap class supports **bidirectional lookup**:
-
-* Forward lookup: Convert a type label string to its numeric type index
-* Reverse lookup: Convert a numeric type index to its label string
-
-It also provides **automatic type inference** for interactions based on their
-constituent atom types. For instance, given atom type labels, the class can
-infer the corresponding bond, angle, dihedral, or improper type from the
-hyphen-delimited format. This handles symmetric matching automatically (e.g.,
-"C-H" matches "H-C" for bonds).
+The LabelMap class supports lookups from symbolic to numeric and vice
+versa.  It also provides automatic type inference for interactions based
+on their constituent atom types.  For instance, based on the atom type
+labels, the corresponding bond, angle, dihedral, or improper types can
+be inferred.
 
 Integration with utils namespace
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Several utility functions in the ``utils`` namespace work with type labels and
 interact with the LabelMap class:
 
 * :cpp:func:`utils::is_type() <LAMMPS_NS::utils::is_type>` - Validates whether
-  a string is a valid type label. Returns 1 for valid labels, 0 for numeric
-  types, -1 for invalid strings. Type labels cannot start with digits, '*', or
-  '#', and cannot contain whitespace or UTF-8 characters.
+  a string is a valid type label.
 
 * :cpp:func:`utils::expand_type() <LAMMPS_NS::utils::expand_type>` - Converts
-  a type label string to its numeric equivalent using the LabelMap. Returns
-  ``nullptr`` if no label map exists or if the string is not a valid type label.
+  a type label string to its numeric equivalent using the LabelMap.
 
 * :cpp:func:`utils::bounds_typelabel() <LAMMPS_NS::utils::bounds_typelabel>` -
   Extended version of ``utils::bounds()`` that accepts type labels in addition
@@ -654,7 +625,7 @@ Usage examples
    // Check if all types have labels
    bool complete = lmap->is_complete(Atom::ATOM);  // Returns true if all atom types labeled
 
-**Example 2: Inferring bond types from atom types**
+**Example 2: Inferring bonded types from atom types**
 
 .. code-block:: c++
    :caption: Using infer_bondtype() with numeric and label-based lookups
@@ -677,33 +648,7 @@ Usage examples
    int bt5 = lmap->infer_bondtype({"H", "C"});  // Returns 1 (symmetric match)
    int bt6 = lmap->infer_bondtype({"C", "N"});  // Returns 3 (C-N)
 
-**Example 3: Inferring angle and dihedral types**
-
-.. code-block:: c++
-   :caption: Using infer_angletype() and infer_dihedraltype()
-
-   #include "label_map.h"
-   #include "atom.h"
-
-   LabelMap *lmap = atom->lmap;
-
-   // Assume: labelmap angle 1 H-C-H 2 C-C-H 3 C-N-C
-   // And: labelmap dihedral 1 H-C-C-H 2 C-C-N-H
-
-   // Infer angle type from numeric atom types
-   int at1 = lmap->infer_angletype(2, 1, 2);  // Returns 1 (H-C-H)
-   int at2 = lmap->infer_angletype(1, 1, 2);  // Returns 2 (C-C-H)
-
-   // Infer angle type from labels (supports bidirectional matching)
-   int at3 = lmap->infer_angletype({"H", "C", "H"});  // Returns 1
-   int at4 = lmap->infer_angletype({"H", "C", "H"});  // Returns 1 (same angle reversed)
-
-   // Infer dihedral type from labels
-   int dt1 = lmap->infer_dihedraltype({"H", "C", "C", "H"});  // Returns 1
-   int dt2 = lmap->infer_dihedraltype({"H", "C", "C", "H"});  // Returns 1 (bidirectional)
-   int dt3 = lmap->infer_dihedraltype({"C", "C", "N", "H"});  // Returns 2
-
-**Example 4: Using utils functions with type labels**
+**Example 2: Using utils functions with type labels**
 
 .. code-block:: c++
    :caption: Validating and expanding type labels with utils functions
@@ -722,19 +667,19 @@ Usage examples
    int result4 = utils::is_type("C H");   // Returns -1 (invalid - contains whitespace)
 
    // Convert type label to numeric string
-   char *numstr = utils::expand_type(__FILE__, __LINE__, "C", Atom::ATOM, lmp);
+   char *numstr = utils::expand_type(FLERR, "C", Atom::ATOM, lmp);
    if (numstr) {
        // Use the numeric type string
        delete[] numstr;  // Must delete after use
    }
 
    // Convert type label to integer
-   int type = utils::expand_type_int(__FILE__, __LINE__, "C", Atom::ATOM, lmp, true);
+   int type = utils::expand_type_int(FLERR, "C", Atom::ATOM, lmp, true);
    // The 'true' argument enables range verification
 
    // Use bounds_typelabel for ranges with label support
    int lo, hi;
-   utils::bounds_typelabel(__FILE__, __LINE__, "C:H", 1, 10, lo, hi, lmp, Atom::ATOM);
+   utils::bounds_typelabel(FLERR, "C:H", 1, 10, lo, hi, lmp, Atom::ATOM);
    // Expands "C:H" to numeric range, e.g., "1:2" -> lo=1, hi=2
 
 ----------

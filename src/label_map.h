@@ -23,26 +23,27 @@
 namespace LAMMPS_NS {
 
 /*! \class LabelMap
- *  \brief Manage type labels for atoms and interactions (bonds, angles, dihedrals, impropers)
+ *  \brief Manage type labels for atoms and bonded interactions (bonds, angles, dihedrals, impropers)
  *
  * The LabelMap class provides functionality to map between string labels and
  * numeric type indices for atoms, bonds, angles, dihedrals, and impropers in LAMMPS.
  * This enables users to reference types by symbolic names (e.g., "C", "H", "C-H")
  * instead of numeric indices, improving readability and maintainability of input scripts.
  *
- * Type labels use a hyphen-delimited format for interaction types:
+ * Type labels for bonded interactions *may* use (but are not required to use) a
+ * hyphen-delimited format indicating the types of the constituent atoms.  Examples:
  * - Bond types: "atom1-atom2" (e.g., "C-H", "N-O")
  * - Angle types: "atom1-atom2-atom3" (e.g., "H-C-H", "C-N-C")
  * - Dihedral types: "atom1-atom2-atom3-atom4" (e.g., "C-C-N-H")
  * - Improper types: "atom1-atom2-atom3-atom4" (e.g., "C-N-C-C")
  *
- * The class supports bidirectional lookup (label ↔ type) and can infer
- * interaction types from constituent atom types using the hyphen-delimited format.
+ * The class supports bidirectional lookup (label ↔ type) and can infer bonded
+ * interaction types from constituent atom types when using the hyphen-delimited format.
  *
  * Related utilities in the utils namespace:
  * - utils::is_type() - Validate type label strings
  * - utils::expand_type() - Convert type labels to numeric types
- * - utils::bounds_typelabel() - Process bounds with type label support
+ * - utils::bounds_typelabel() - Process type range wildcards with type label support
  */
 
 class LabelMap : protected Pointers {
@@ -56,18 +57,22 @@ class LabelMap : protected Pointers {
   /*! Construct a LabelMap instance
    *
    * \param  lmp              Pointer to LAMMPS instance
-   * \param  natomtypes       Number of atom types
-   * \param  nbondtypes       Number of bond types
-   * \param  nangletypes      Number of angle types
-   * \param  ndihedraltypes   Number of dihedral types
-   * \param  nimpropertypes   Number of improper types */
+   * \param  natomtypes       Number of atom types in map
+   * \param  nbondtypes       Number of bond types in map
+   * \param  nangletypes      Number of angle types in map
+   * \param  ndihedraltypes   Number of dihedral types in map
+   * \param  nimpropertypes   Number of improper types in map */
   LabelMap(LAMMPS *lmp, int, int, int, int, int);
   ~LabelMap() override;
 
   /*! Process labelmap command from input script
    *
-   * Parse and store type label mappings from LAMMPS input commands.
-   * Supported syntax: labelmap <atom|bond|angle|dihedral|improper> <type> <label> ...
+\verbatim embed:rst
+
+Add or modify type label mappings from the LAMMPS
+:doc:`labelmap <labelmap>` input command.
+
+\endverbatim
    *
    * \param  narg  Number of arguments
    * \param  arg   Array of argument strings */
@@ -75,8 +80,14 @@ class LabelMap : protected Pointers {
 
   /*! Copy another LabelMap into this one
    *
-   * Merge type labels from another LabelMap instance into the current one.
-   * Used when combining data from multiple sources.
+\verbatim embed:rst
+
+Merge type labels from another LabelMap instance into the current one.
+Currently used when combining data from multiple sources with
+:doc:`read_data add <read_data>` or when replicating the system with
+:doc:`replicate <replicate>`.
+
+\endverbatim
    *
    * \param  lmap  Pointer to source LabelMap
    * \param  mode  Merge mode flag */
@@ -122,8 +133,8 @@ class LabelMap : protected Pointers {
 
   /*! \name Interaction type inference from hyphen-delimited labels
    *
-   * These methods infer interaction types (bonds, angles, dihedrals, impropers)
-   * from constituent atom types using hyphen-delimited format. They support
+   * These methods infer bonded interaction types (bonds, angles, dihedrals, impropers)
+   * from constituent atom types using a hyphen-delimited format. They support
    * bidirectional matching for symmetric interactions.
    * @{ */
 
@@ -131,6 +142,8 @@ class LabelMap : protected Pointers {
    *
    * Look up or create a bond type from two atom type indices by constructing
    * a hyphen-delimited label (e.g., "C-H") and searching the bond type labels.
+   * Since bonded interactions are symmetric, atype1 and atype2 may be swapped
+   * and still match the same bond type.
    *
    * \param  atype1  First atom type index
    * \param  atype2  Second atom type index
@@ -149,7 +162,9 @@ class LabelMap : protected Pointers {
   /*! Infer angle type from three numeric atom types
    *
    * Look up or create an angle type from three atom type indices by
-   * constructing a hyphen-delimited label (e.g., "H-C-H").
+   * constructing a hyphen-delimited label (e.g., "H1-C1-H2").
+   * The first and the third atom types may be swapped and still
+   * match the same angle type.
    *
    * \param  atype1  First atom type index
    * \param  atype2  Second atom type index (center atom)
@@ -160,7 +175,7 @@ class LabelMap : protected Pointers {
   /*! Infer angle type from atom type labels
    *
    * Look up an angle type from a vector of three atom type label strings.
-   * Handles symmetric matching (e.g., "H-C-H" matches "H-C-H" in reverse).
+   * Handles symmetric matching (e.g., "H1-C-H2" matches "H2-C-H1" in reverse).
    *
    * \param  labels  Vector of three atom type label strings
    * \return         Angle type index, or -1 if not found */
@@ -168,8 +183,10 @@ class LabelMap : protected Pointers {
 
   /*! Infer dihedral type from four numeric atom types
    *
-   * Look up or create a dihedral type from four atom type indices by
+   * Look up a dihedral type from four atom type indices by
    * constructing a hyphen-delimited label (e.g., "C-C-N-H").
+   * Atom types may be mirrored (i.e. swap atype1 with atype4
+   * and atype2 with atype3) and still match the same dihedral type.
    *
    * \param  atype1  First atom type index
    * \param  atype2  Second atom type index
@@ -225,8 +242,7 @@ class LabelMap : protected Pointers {
 
   /*! Write label map to data file
    *
-   * Output all type labels to a LAMMPS data file in a format that can
-   * be read back by read_data command.
+   * Output all type labels as sections to a LAMMPS data file.
    *
    * \param  fp  File pointer for writing */
   void write_data(FILE *);
@@ -249,14 +265,15 @@ class LabelMap : protected Pointers {
 
  protected:
   int natomtypes, nbondtypes, nangletypes, ndihedraltypes, nimpropertypes;    //!< Type counts
-  std::vector<std::string> typelabel, btypelabel, atypelabel;    //!< Label storage (atoms, bonds, angles)
-  std::vector<std::string> dtypelabel, itypelabel;               //!< Label storage (dihedrals, impropers)
+  std::vector<std::string> typelabel, btypelabel,
+      atypelabel;                                     //!< Label storage (atoms, bonds, angles)
+  std::vector<std::string> dtypelabel, itypelabel;    //!< Label storage (dihedrals, impropers)
 
-  std::unordered_map<std::string, int> typelabel_map;       //!< Atom label → type mapping
-  std::unordered_map<std::string, int> btypelabel_map;      //!< Bond label → type mapping
-  std::unordered_map<std::string, int> atypelabel_map;      //!< Angle label → type mapping
-  std::unordered_map<std::string, int> dtypelabel_map;      //!< Dihedral label → type mapping
-  std::unordered_map<std::string, int> itypelabel_map;      //!< Improper label → type mapping
+  std::unordered_map<std::string, int> typelabel_map;     //!< Atom label → type mapping
+  std::unordered_map<std::string, int> btypelabel_map;    //!< Bond label → type mapping
+  std::unordered_map<std::string, int> atypelabel_map;    //!< Angle label → type mapping
+  std::unordered_map<std::string, int> dtypelabel_map;    //!< Dihedral label → type mapping
+  std::unordered_map<std::string, int> itypelabel_map;    //!< Improper label → type mapping
 
   /*! \struct Lmap2Lmap
    *  \brief Mapping structure between two LabelMaps
@@ -275,13 +292,14 @@ class LabelMap : protected Pointers {
   Lmap2Lmap lmap2lmap;    //!< Instance of inter-map translation data
 
   void reset_type_labels();    //!< Clear all type labels
-  int find_or_create(const std::string &, std::vector<std::string> &,
-                     std::unordered_map<std::string, int> &);    //!< Look up type or create new type
+  int find_or_create(
+      const std::string &, std::vector<std::string> &,
+      std::unordered_map<std::string, int> &);    //!< Look up type or create new type
   int search(const std::string &,
              const std::unordered_map<std::string, int> &) const;    //!< Look up type index
-  char *read_string(FILE *);                      //!< Read string from binary file
-  void write_string(const std::string &, FILE *); //!< Write string to binary file
-  int read_int(FILE *);                           //!< Read integer from binary file
+  char *read_string(FILE *);                         //!< Read string from binary file
+  void write_string(const std::string &, FILE *);    //!< Write string to binary file
+  int read_int(FILE *);                              //!< Read integer from binary file
 
   void write_map(const std::string &);    //!< Write label map to file for debugging
 };
