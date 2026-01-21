@@ -599,13 +599,10 @@ These functions enable seamless integration of type labels throughout LAMMPS,
 allowing commands that accept type specifications to work with both numeric
 indices and symbolic labels.
 
-Usage examples
-^^^^^^^^^^^^^^
-
-**Example 1: Basic type label lookup**
+Finding types from labels and vice versa
+""""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: c++
-   :caption: Finding types from labels and vice versa
 
    #include "label_map.h"
    #include "atom.h"
@@ -625,10 +622,10 @@ Usage examples
    // Check if all types have labels
    bool complete = lmap->is_complete(Atom::ATOM);  // Returns true if all atom types labeled
 
-**Example 2: Inferring bonded types from atom types**
+Inferring bonded types from atom types
+""""""""""""""""""""""""""""""""""""""
 
 .. code-block:: c++
-   :caption: Using infer_bondtype() with numeric and label-based lookups
 
    #include "label_map.h"
    #include "atom.h"
@@ -648,10 +645,10 @@ Usage examples
    int bt5 = lmap->infer_bondtype({"H", "C"});  // Returns 1 (symmetric match)
    int bt6 = lmap->infer_bondtype({"C", "N"});  // Returns 3 (C-N)
 
-**Example 2: Using utils functions with type labels**
+Validating and expanding type labels
+""""""""""""""""""""""""""""""""""""
 
 .. code-block:: c++
-   :caption: Validating and expanding type labels with utils functions
 
    #include "utils.h"
    #include "lammps.h"
@@ -683,6 +680,9 @@ Usage examples
    // Expands "C:H" to numeric range, e.g., "1:2" -> lo=1, hi=2
 
 ----------
+
+LabelMap class reference
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. doxygenclass:: LAMMPS_NS::LabelMap
    :project: progguide
