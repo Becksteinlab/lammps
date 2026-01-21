@@ -38,23 +38,23 @@ class AtomVecKokkos : virtual public AtomVec {
   virtual void modified(ExecutionSpace space, uint64_t mask) = 0;
   virtual void sync_pinned(ExecutionSpace space, uint64_t mask, int async_flag = 0) = 0;
 
-  int pack_comm_self(const int &n, const DAT::tdual_int_1d &list,
-                     const int nfirst,
-                     const int &pbc_flag, const int pbc[]);
-
-  int pack_comm_self_fused(const int &n, const DAT::tdual_int_2d_lr &list,
-                           const DAT::tdual_int_1d &sendnum_scan,
-                           const DAT::tdual_int_1d &firstrecv,
-                           const DAT::tdual_int_1d &pbc_flag,
-                           const DAT::tdual_int_2d &pbc,
-                           const DAT::tdual_int_1d &g2l);
-
   int pack_comm_kokkos(const int &n, const DAT::tdual_int_1d &list,
                        const DAT::tdual_double_2d_lr &buf,
                        const int &pbc_flag, const int pbc[]);
 
   void unpack_comm_kokkos(const int &n, const int &nfirst,
                           const DAT::tdual_double_2d_lr &buf);
+
+  int pack_comm_self_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                            const int nfirst,
+                            const int &pbc_flag, const int pbc[]);
+
+  int pack_comm_self_fused_kokkos(const int &n, const DAT::tdual_int_2d_lr &list,
+                                  const DAT::tdual_int_1d &sendnum_scan,
+                                  const DAT::tdual_int_1d &firstrecv,
+                                  const DAT::tdual_int_1d &pbc_flag,
+                                  const DAT::tdual_int_2d &pbc,
+                                  const DAT::tdual_int_1d &g2l);
 
   int pack_comm_vel_kokkos(const int &n, const DAT::tdual_int_1d &list,
                            const DAT::tdual_double_2d_lr &buf,
@@ -63,14 +63,14 @@ class AtomVecKokkos : virtual public AtomVec {
   void unpack_comm_vel_kokkos(const int &n, const int &nfirst,
                               const DAT::tdual_double_2d_lr &buf);
 
-  int pack_reverse_self(const int &n, const DAT::tdual_int_1d &list,
-                        const int nfirst);
-
   int pack_reverse_kokkos(const int &n, const int &nfirst,
                           const DAT::tdual_double_2d_lr &buf);
 
   void unpack_reverse_kokkos(const int &n, const DAT::tdual_int_1d &list,
                              const DAT::tdual_double_2d_lr &buf);
+
+  int pack_reverse_self_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                               const int nfirst);
 
   int pack_border_kokkos(int n, DAT::tdual_int_1d k_sendlist,
                          DAT::tdual_double_2d_lr buf,
@@ -91,7 +91,6 @@ class AtomVecKokkos : virtual public AtomVec {
   int pack_exchange_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
                            DAT::tdual_int_1d k_sendlist,
                            DAT::tdual_int_1d k_copylist,
-                           DAT::tdual_int_1d k_sendlist_bonus,
                            DAT::tdual_int_1d k_copylist_bonus,
                            ExecutionSpace space);
 
@@ -108,9 +107,19 @@ class AtomVecKokkos : virtual public AtomVec {
   virtual void unpack_comm_bonus_kokkos(const int &n, const int &nfirst,
                                         const DAT::tdual_double_2d_lr &buf) {}
 
+  virtual void pack_comm_self_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                                           const int nfirst) {}
+
+  virtual void pack_comm_self_fused_bonus_kokkos(const int &n,
+                                           const DAT::tdual_int_2d_lr &list,
+                                           const DAT::tdual_int_1d &sendnum_scan,
+                                           const DAT::tdual_int_1d &firstrecv,
+                                           const DAT::tdual_int_1d &g2l) {}
+
   virtual void pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_sendlist,
                                         DAT::tdual_double_2d_lr &buf,
                                         ExecutionSpace space) {}
+
   virtual void unpack_border_bonus_kokkos(const int &n, const int &nfirst,
                                           const DAT::tdual_double_2d_lr &buf,
                                           ExecutionSpace space) {}
@@ -118,7 +127,6 @@ class AtomVecKokkos : virtual public AtomVec {
   virtual void pack_exchange_bonus_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
                                           DAT::tdual_int_1d k_sendlist,
                                           DAT::tdual_int_1d k_copylist,
-                                          DAT::tdual_int_1d k_sendlist_bonus,
                                           DAT::tdual_int_1d k_copylist_bonus,
                                           ExecutionSpace space) {}
 
@@ -128,8 +136,8 @@ class AtomVecKokkos : virtual public AtomVec {
                                             DAT::tdual_int_1d &k_indices) {}
 
 
-  // TODO: Think of a way to not have these nlocal_bonus functions
-  // Used in CommKokkos::exchange_device() for avecKKEllipsoid
+  // Used in CommKokkos::exchange_device() for bonus data
+
   virtual int get_status_nlocal_bonus() { return 0; }
   virtual void set_status_nlocal_bonus(int) {}
 

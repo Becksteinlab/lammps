@@ -101,6 +101,28 @@ void AtomVecHybridKokkos::unpack_comm_bonus_kokkos(const int &n, const int &nfir
 
 /* ---------------------------------------------------------------------- */
 
+void AtomVecHybridKokkos::pack_comm_self_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
+                                                      const int nfirst)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_comm_self_bonus_kokkos(n,list,nfirst);
+}
+
+/* ---------------------------------------------------------------------- */
+void AtomVecHybridKokkos::pack_comm_self_fused_bonus_kokkos(const int &n,
+                                         const DAT::tdual_int_2d_lr &list,
+                                         const DAT::tdual_int_1d &sendnum_scan,
+                                         const DAT::tdual_int_1d &firstrecv,
+                                         const DAT::tdual_int_1d &g2l)
+{
+  for (int k = 0; k < nstyles; k++)
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_comm_self_fused_bonus_kokkos(n,list,sendnum_scan,firstrecv,g2l);
+}
+
+/* ---------------------------------------------------------------------- */
+
 void AtomVecHybridKokkos::pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_sendlist,
                                                    DAT::tdual_double_2d_lr &buf,
                                                    ExecutionSpace space)
@@ -124,13 +146,13 @@ void AtomVecHybridKokkos::unpack_border_bonus_kokkos(const int &n, const int &nf
 void AtomVecHybridKokkos::pack_exchange_bonus_kokkos(const int &nsend, DAT::tdual_double_2d_lr &buf,
                                                      DAT::tdual_int_1d k_sendlist,
                                                      DAT::tdual_int_1d k_copylist,
-                                                     DAT::tdual_int_1d k_sendlist_bonus,
                                                      DAT::tdual_int_1d k_copylist_bonus,
                                                      ExecutionSpace space)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->pack_exchange_bonus_kokkos(nsend,buf,k_sendlist,k_copylist,
-                                 k_sendlist_bonus,k_copylist_bonus,space);
+    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
+      pack_exchange_bonus_kokkos(nsend,buf,k_sendlist,k_copylist,
+                                 k_copylist_bonus,space);
 }
 
 /* ---------------------------------------------------------------------- */

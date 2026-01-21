@@ -311,6 +311,139 @@ void AtomVecEllipsoidKokkos::unpack_comm_bonus_kokkos(const int &n, const int &f
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
+struct AtomVecEllipsoidKokkos_PackCommSelfBonus {
+  typedef DeviceType device_type;
+  typedef ArrayTypes<DeviceType> AT;
+
+  typename AtomVecEllipsoidKokkosBonusArray<DeviceType>::t_bonus_1d _bonus;
+  typename AT::t_int_1d _ellipsoid;
+
+  int _nfirst;
+  typename AT::t_int_1d_const _list;
+
+  AtomVecEllipsoidKokkos_PackCommSelfBonus(
+    const AtomKokkos* atomKK,
+    const typename DEllipsoidBonusAT::tdual_bonus_1d &bonus,
+    const int &nfirst,
+    const typename DAT::tdual_int_1d &list):
+      _ellipsoid(atomKK->k_ellipsoid.view<DeviceType>()),
+      _bonus(bonus.view<DeviceType>()),
+    _nfirst(nfirst),_list(list.view<DeviceType>()) {}
+
+  KOKKOS_INLINE_FUNCTION
+  void operator() (const int& i) const {
+    const int j = _list(i);
+    if (_ellipsoid(i+_nfirst) >= 0 && _ellipsoid(j) >= 0) {
+      _bonus(_ellipsoid(i+_nfirst)).quat[0] = _bonus(_ellipsoid(j)).quat[0];
+      _bonus(_ellipsoid(i+_nfirst)).quat[1] = _bonus(_ellipsoid(j)).quat[1];
+      _bonus(_ellipsoid(i+_nfirst)).quat[2] = _bonus(_ellipsoid(j)).quat[2];
+      _bonus(_ellipsoid(i+_nfirst)).quat[3] = _bonus(_ellipsoid(j)).quat[3];
+    }
+  }
+};
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecEllipsoidKokkos::pack_comm_self_bonus_kokkos(const int &n,
+                                                         const DAT::tdual_int_1d &list,
+                                                         const int nfirst) {
+  // Check whether to always run forward communication on the host
+  // Choose correct forward PackComm kernel
+
+  if (lmp->kokkos->forward_comm_on_host) {
+    atomKK->sync(HostKK,datamask_comm);
+    struct AtomVecEllipsoidKokkos_PackCommSelfBonus<LMPHostType> f(
+      atomKK,k_bonus,nfirst,list);
+    Kokkos::parallel_for(n,f);
+    atomKK->modified(HostKK,datamask_comm);
+  } else {
+    atomKK->sync(Device,datamask_comm);
+    struct AtomVecEllipsoidKokkos_PackCommSelfBonus<LMPDeviceType> f(
+      atomKK,k_bonus,nfirst,list);
+    Kokkos::parallel_for(n,f);
+    atomKK->modified(Device,datamask_comm);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
+struct AtomVecEllipsoidKokkos_PackCommSelfFusedBonus {
+  typedef DeviceType device_type;
+  typedef ArrayTypes<DeviceType> AT;
+
+  typename AtomVecEllipsoidKokkosBonusArray<DeviceType>::t_bonus_1d _bonus;
+  typename AT::t_int_1d _ellipsoid;
+
+  typename AT::t_int_2d_lr_const _list;
+  typename AT::t_int_1d_const _firstrecv;
+  typename AT::t_int_1d_const _sendnum_scan;
+  typename AT::t_int_1d_const _g2l;
+
+  AtomVecEllipsoidKokkos_PackCommSelfFusedBonus(
+    const AtomKokkos* atomKK,
+    const typename DEllipsoidBonusAT::tdual_bonus_1d &bonus,
+    const typename DAT::tdual_int_2d_lr &list,
+    const typename DAT::tdual_int_1d &firstrecv,
+    const typename DAT::tdual_int_1d &sendnum_scan,
+    const typename DAT::tdual_int_1d &g2l):
+      _ellipsoid(atomKK->k_ellipsoid.view<DeviceType>()),
+      _bonus(bonus.view<DeviceType>()),
+      _list(list.view<DeviceType>()),
+      _firstrecv(firstrecv.view<DeviceType>()),
+      _sendnum_scan(sendnum_scan.view<DeviceType>()),
+      _g2l(g2l.view<DeviceType>()) {};
+
+  KOKKOS_INLINE_FUNCTION
+  void operator() (const int& ii) const {
+
+    int iswap = 0;
+    while (ii >= _sendnum_scan[iswap]) iswap++;
+    int i = ii;
+    if (iswap > 0)
+      i = ii - _sendnum_scan[iswap-1];
+
+    const int _nfirst = _firstrecv[iswap];
+    const int nlocal = _firstrecv[0];
+
+    int j = _list(iswap,i);
+    if (j >= nlocal)
+      j = _g2l(j-nlocal);
+
+    if (_ellipsoid(i+_nfirst) >= 0 && _ellipsoid(j) >= 0) {
+      _bonus(_ellipsoid(i+_nfirst)).quat[0] = _bonus(_ellipsoid(j)).quat[0];
+      _bonus(_ellipsoid(i+_nfirst)).quat[1] = _bonus(_ellipsoid(j)).quat[1];
+      _bonus(_ellipsoid(i+_nfirst)).quat[2] = _bonus(_ellipsoid(j)).quat[2];
+      _bonus(_ellipsoid(i+_nfirst)).quat[3] = _bonus(_ellipsoid(j)).quat[3];
+    }
+  }
+};
+
+/* ---------------------------------------------------------------------- */
+
+void AtomVecEllipsoidKokkos::pack_comm_self_fused_bonus_kokkos(const int &n,
+                               const DAT::tdual_int_2d_lr &list,
+                               const DAT::tdual_int_1d &sendnum_scan,
+                               const DAT::tdual_int_1d &firstrecv,
+                               const DAT::tdual_int_1d &g2l) {
+  if (lmp->kokkos->forward_comm_on_host) {
+    atomKK->sync(HostKK,datamask_comm);
+    struct AtomVecEllipsoidKokkos_PackCommSelfFusedBonus<LMPHostType> f(
+      atomKK,k_bonus,list,firstrecv,sendnum_scan,g2l);
+    Kokkos::parallel_for(n,f);
+    atomKK->modified(HostKK,datamask_comm);
+  } else {
+    atomKK->sync(Device,datamask_comm);
+    struct AtomVecEllipsoidKokkos_PackCommSelfFusedBonus<LMPDeviceType> f(
+      atomKK,k_bonus,list,firstrecv,sendnum_scan,g2l);
+    Kokkos::parallel_for(n,f);
+    atomKK->modified(Device,datamask_comm);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
 struct AtomVecEllipsoidKokkos_PackBorderBonus {
   typedef DeviceType device_type;
   typedef ArrayTypes<DeviceType> AT;
@@ -473,8 +606,6 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
 
   typename AT::t_double_2d_lr_um _buf;
   typename AT::t_int_1d_const _sendlist;
-  typename AT::t_int_1d_const _copylist;
-  typename AT::t_int_1d_const _sendlist_bonus;
   typename AT::t_int_1d_const _copylist_bonus;
   const int _size_exchange;
   const int _offset;
@@ -484,8 +615,6 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
     const DAT::tdual_double_2d_lr &buf,
     const typename DEllipsoidBonusAT::tdual_bonus_1d &bonus,
     DAT::tdual_int_1d &sendlist,
-    DAT::tdual_int_1d &copylist,
-    DAT::tdual_int_1d &sendlist_bonus,
     DAT::tdual_int_1d &copylist_bonus,
     const int &offset):
       _bonus(bonus.template view<DeviceType>()),
@@ -495,8 +624,6 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
 
       _size_exchange(atomKK->avecKK->size_exchange),
       _sendlist(sendlist.template view<DeviceType>()),
-      _copylist(copylist.template view<DeviceType>()),
-      _sendlist_bonus(sendlist_bonus.template view<DeviceType>()),
       _copylist_bonus(copylist_bonus.template view<DeviceType>()),
       _offset(offset) {
     const int maxsendlist = (buf.template view<DeviceType>().extent(0)*
@@ -523,7 +650,7 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
       _buf(mysend,m++) = _bonus(j).quat[3];
     }
 
-    int i_bonus = _sendlist_bonus(mysend); // may be different than ellipsoid[i]
+    int i_bonus = _ellipsoid[i];
     int j_bonus = _copylist_bonus(mysend); // may be different than ellipsoid[j]
 
     if (j_bonus > -1) {
@@ -539,6 +666,51 @@ struct AtomVecEllipsoidKokkos_PackExchangeBonus {
         _bonusw[i_bonus] = _bonus[j_bonus];
       }
     }
+  }
+};
+
+/* ---------------------------------------------------------------------- */
+
+template<class DeviceType>
+struct AtomVecEllipsoidKokkos_BackfillEllipsoid {
+  typedef DeviceType device_type;
+  typedef ArrayTypes<DeviceType> AT;
+
+  typename AtomVecEllipsoidKokkosBonusArray<DeviceType>::t_bonus_1d_randomread _bonus;
+  typename AT::t_int_1d_randomread _ellipsoid;
+  typename AtomVecEllipsoidKokkosBonusArray<DeviceType>::t_bonus_1d _bonusw;
+  typename AT::t_int_1d _ellipsoidw;
+
+  typename AT::t_double_2d_lr_um _buf;
+  typename AT::t_int_1d_const _sendlist;
+  typename AT::t_int_1d_const _copylist;
+  const int _size_exchange;
+  const int _offset;
+
+  AtomVecEllipsoidKokkos_BackfillEllipsoid(
+    const AtomKokkos* atomKK,
+    const DAT::tdual_double_2d_lr &buf,
+    const typename DEllipsoidBonusAT::tdual_bonus_1d &bonus,
+    DAT::tdual_int_1d &sendlist,
+    DAT::tdual_int_1d &copylist,
+    const int &offset):
+      _bonus(bonus.template view<DeviceType>()),
+      _ellipsoid(atomKK->k_ellipsoid.template view<DeviceType>()),
+      _bonusw(bonus.template view<DeviceType>()),
+      _ellipsoidw(atomKK->k_ellipsoid.template view<DeviceType>()),
+
+      _size_exchange(atomKK->avecKK->size_exchange),
+      _sendlist(sendlist.template view<DeviceType>()),
+      _copylist(copylist.template view<DeviceType>()),
+      _offset(offset) {
+    const int maxsendlist = (buf.template view<DeviceType>().extent(0)*
+                             buf.template view<DeviceType>().extent(1))/_size_exchange;
+    buffer_view<DeviceType>(_buf,buf,maxsendlist,_size_exchange);
+  }
+
+  KOKKOS_INLINE_FUNCTION
+  void operator() (const int &mysend) const {
+    const int i = _sendlist(mysend);
 
     // if atom J has bonus data, reset J’s bonus.ilocal to loc I
 
@@ -556,7 +728,6 @@ void AtomVecEllipsoidKokkos::pack_exchange_bonus_kokkos(const int &nsend,
                                                         DAT::tdual_double_2d_lr &k_buf,
                                                         DAT::tdual_int_1d k_sendlist,
                                                         DAT::tdual_int_1d k_copylist,
-                                                        DAT::tdual_int_1d k_sendlist_bonus,
                                                         DAT::tdual_int_1d k_copylist_bonus,
                                                         ExecutionSpace space)
 {
@@ -567,17 +738,33 @@ void AtomVecEllipsoidKokkos::pack_exchange_bonus_kokkos(const int &nsend,
   if (space == HostKK) {
     AtomVecEllipsoidKokkos_PackExchangeBonus<LMPHostType> f(atomKK,
       k_buf,k_bonus,
-      k_sendlist,k_copylist,
-      k_sendlist_bonus,k_copylist_bonus,
+      k_sendlist,k_copylist_bonus,
       offset);
     Kokkos::parallel_for(nsend,f);
+
+    // must backfill ellipsoid after pack exchange bonus in a separate
+    //  functor to prevent race conditions
+
+    AtomVecEllipsoidKokkos_BackfillEllipsoid<LMPHostType> f2(atomKK,
+      k_buf,k_bonus,
+      k_sendlist,k_copylist,
+      offset);
+    Kokkos::parallel_for(nsend,f2);
   } else {
     AtomVecEllipsoidKokkos_PackExchangeBonus<LMPDeviceType> f(atomKK,
       k_buf,k_bonus,
-      k_sendlist,k_copylist,
-      k_sendlist_bonus,k_copylist_bonus,
+      k_sendlist,k_copylist_bonus,
       offset);
     Kokkos::parallel_for(nsend,f);
+
+    // must backfill ellipsoid after pack exchange bonus in a separate
+    //  functor to prevent race conditions
+
+    AtomVecEllipsoidKokkos_BackfillEllipsoid<LMPDeviceType> f2(atomKK,
+      k_buf,k_bonus,
+      k_sendlist,k_copylist,
+      offset);
+    Kokkos::parallel_for(nsend,f2);
   }
 
   atomKK->modified(space,datamask_bonus);
