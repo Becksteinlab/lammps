@@ -578,7 +578,7 @@ chance of errors.
 The LabelMap class also provides automatic type inference for bonded
 interactions based on their constituent atom types.  For instance, based
 on the atom type labels, the corresponding bond, angle, dihedral, or
-improper types can be inferred provided the corresponding type lables
+improper types can be inferred provided the corresponding type labels
 follow the convention that they are composed of the symbolic atom types
 connected by hyphens.
 
