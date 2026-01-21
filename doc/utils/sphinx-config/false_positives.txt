@@ -3892,6 +3892,7 @@ textrm
 tfac
 tfmc
 tfMC
+tga
 tgnpt
 tgnvt
 th
