@@ -97,6 +97,13 @@ TEST_F(LabelMapTest, Atoms)
     EXPECT_EQ(atom->lmap->find_type("O#", Atom::ATOM), 3);
     EXPECT_EQ(atom->lmap->find_type("H", Atom::ATOM), 4);
     EXPECT_EQ(atom->lmap->find_type("X", Atom::ATOM), -1);
+    EXPECT_EQ(atom->lmap->find_type("", Atom::ATOM), -1);
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::ATOM), StrEq("C1"));
+    EXPECT_THAT(atom->lmap->find_label(2, Atom::ATOM), StrEq("N2"));
+    EXPECT_THAT(atom->lmap->find_label(3, Atom::ATOM), StrEq("O#"));
+    EXPECT_THAT(atom->lmap->find_label(4, Atom::ATOM), StrEq("H"));
+    EXPECT_THAT(atom->lmap->find_label(-1, Atom::ATOM), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(5, Atom::ATOM), StrEq(""));
     EXPECT_DOUBLE_EQ(atom->mass[3], 10.0);
 
     EXPECT_EQ(utils::expand_type(FLERR, "1", Atom::ATOM, lmp), nullptr);
@@ -170,9 +177,13 @@ TEST_F(LabelMapTest, Atoms)
     END_HIDE_OUTPUT();
     EXPECT_TRUE(atom->lmap->is_complete(Atom::ATOM));
     EXPECT_EQ(atom->lmap->find_type("C1'", Atom::ATOM), 1);
-    EXPECT_EQ(atom->lmap->find_type("C2\"", Atom::ATOM), 2);
-    EXPECT_EQ(atom->lmap->find_type("C1'-C2\"", Atom::ATOM), 3);
-    EXPECT_EQ(atom->lmap->find_type("C2\"-C1'", Atom::ATOM), 4);
+    EXPECT_EQ(atom->lmap->find_type(R"(C2")", Atom::ATOM), 2);
+    EXPECT_EQ(atom->lmap->find_type(R"(C1'-C2")", Atom::ATOM), 3);
+    EXPECT_EQ(atom->lmap->find_type(R"(C2"-C1')", Atom::ATOM), 4);
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::ATOM), StrEq("C1'"));
+    EXPECT_THAT(atom->lmap->find_label(2, Atom::ATOM), StrEq(R"(C2")"));
+    EXPECT_THAT(atom->lmap->find_label(3, Atom::ATOM), StrEq(R"(C1'-C2")"));
+    EXPECT_THAT(atom->lmap->find_label(4, Atom::ATOM), StrEq(R"(C2"-C1')"));
 }
 
 TEST_F(LabelMapTest, Topology)
@@ -231,6 +242,22 @@ TEST_F(LabelMapTest, Topology)
     EXPECT_EQ(atom->lmap->find_type("C1-N2-C1-N2", Atom::IMPROPER), 1);
     EXPECT_EQ(atom->lmap->find_type("X", Atom::ATOM), -1);
     EXPECT_EQ(atom->lmap->find_type("N2'-C1\"-N2'", Atom::BOND), -1);
+
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::BOND), StrEq("C1-N2"));
+    EXPECT_THAT(atom->lmap->find_label(2, Atom::BOND), StrEq("[C1][C1]"));
+    EXPECT_THAT(atom->lmap->find_label(3, Atom::BOND), StrEq("N2=N2"));
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::ANGLE), StrEq("C1-N2-C1"));
+    EXPECT_THAT(atom->lmap->find_label(2, Atom::ANGLE), StrEq(R"(N2'-C1"-N2')"));
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::DIHEDRAL), StrEq("C1-N2-C1-N2"));
+    EXPECT_THAT(atom->lmap->find_label(1, Atom::IMPROPER), StrEq("C1-N2-C1-N2"));
+    EXPECT_THAT(atom->lmap->find_label(0, Atom::BOND), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(4, Atom::BOND), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(-1, Atom::ANGLE), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(3, Atom::ANGLE), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(0, Atom::DIHEDRAL), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(2, Atom::DIHEDRAL), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(-1, Atom::IMPROPER), StrEq(""));
+    EXPECT_THAT(atom->lmap->find_label(0, Atom::IMPROPER), StrEq(""));
     EXPECT_DOUBLE_EQ(atom->mass[1], 12.0);
     EXPECT_DOUBLE_EQ(atom->mass[2], 14.0);
 
