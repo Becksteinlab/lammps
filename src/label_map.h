@@ -110,7 +110,7 @@ Currently used when combining data from multiple sources with
    * \param  mode     Type category: Atom::ATOM, Atom::BOND, Atom::ANGLE,
    *                  Atom::DIHEDRAL, or Atom::IMPROPER
    * \return          Numeric type index (1-based), or -1 if not found */
-  int find(const std::string &, int) const;
+  int find_type(const std::string &, int) const;
 
   /*! Find type label from numeric type
    *
@@ -120,7 +120,7 @@ Currently used when combining data from multiple sources with
    * \param  mode  Type category: Atom::ATOM, Atom::BOND, Atom::ANGLE,
    *               Atom::DIHEDRAL, or Atom::IMPROPER
    * \return       Reference to type label string, or empty string if not found */
-  const std::string &find(int, int) const;
+  const std::string &find_label(int, int) const;
 
   /*! Check if all types have assigned labels
    *

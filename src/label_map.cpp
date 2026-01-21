@@ -272,7 +272,7 @@ int LabelMap::find_or_create(const std::string &mylabel, std::vector<std::string
    return -1 if type not yet defined
 ------------------------------------------------------------------------- */
 
-int LabelMap::find(const std::string &mylabel, int mode) const
+int LabelMap::find_type(const std::string &mylabel, int mode) const
 {
   switch (mode) {
     case Atom::ATOM:
@@ -300,7 +300,7 @@ int LabelMap::find(const std::string &mylabel, int mode) const
    return "" if type label does not exist
 ------------------------------------------------------------------------- */
 
-const std::string &LabelMap::find(int i, int mode) const
+const std::string &LabelMap::find_label(int i, int mode) const
 {
   switch (mode) {
     case Atom::ATOM:
