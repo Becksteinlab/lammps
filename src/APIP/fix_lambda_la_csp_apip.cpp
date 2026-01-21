@@ -41,6 +41,7 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
 {
   comm_reverse = 2;
   comm_forward = 2;
+  restart_global = 1;
 
   ngh_pairs_size = 0;
   maxneigh = 0;
@@ -152,8 +153,6 @@ void FixLambdaLACSPAPIP::post_constructor()
   sprintf(str_values, "%d", nnn);
 
   // arguments of peratom:
-  // first: 1 -> store in restart file
-  // second: number of doubles to store per atom
   cmd += " all STORE/ATOM ";
   cmd += str_values;      // n1
   cmd += " 0 0 1";                // n2 gflag rflag
@@ -242,7 +241,6 @@ void FixLambdaLACSPAPIP::post_neighbor()
 
 void FixLambdaLACSPAPIP::setup_pre_force(int vflag)
 {
-
   if (!const_ngh_flag || (const_ngh_flag && !tags_stored)) pre_force_dyn_pairs();
   else pre_force_const_pairs();
 
@@ -894,4 +892,51 @@ double FixLambdaLACSPAPIP::compute_scalar()
   int counter;
   MPI_Allreduce(&counter_changed_csp_nghs, &counter, 1, MPI_INT, MPI_SUM, world);
   return counter;
+}
+
+/**
+   * store scalar information regarding the stored CSP-pairs
+   */
+
+void FixLambdaLACSPAPIP::write_restart(FILE *fp)
+{
+  int n = 0;
+  double list[4];
+  list[n++] = tags_stored;
+  list[n++] = counter_changed_csp_nghs;
+  list[n++] = const_ngh_flag;
+  list[n++] = nnn;
+
+  if (comm->me == 0) {
+    int size = n * sizeof(double);
+    fwrite(&size, sizeof(int), 1, fp);
+    fwrite(list, sizeof(double), n, fp);
+  }
+}
+
+/* ----------------------------------------------------------------------
+   use state info from restart file to restart the Fix
+------------------------------------------------------------------------- */
+
+void FixLambdaLACSPAPIP::restart(char *buf)
+{
+  // store arguments passed to the fix for comparison with the ones in the restart file
+  int nnn_tmp = nnn;
+  bool const_ngh_flag_tmp = const_ngh_flag;
+
+  int n = 0;
+  auto *list = (double *) buf;
+
+  tags_stored = static_cast<int>(list[n++]);
+  counter_changed_csp_nghs = static_cast<int>(list[n++]);
+  const_ngh_flag = static_cast<int>(list[n++]);
+  nnn = (static_cast<int>(list[n++]));
+
+  // simple comparisons first
+  if (nnn_tmp != nnn)
+    error->all(FLERR, "fix lambda/la/csp/apip: nnn = {} != {} = nnn in restart file",
+               nnn_tmp, nnn);
+  if (const_ngh_flag_tmp != const_ngh_flag)
+    error->all(FLERR, "fix lambda/la/csp/apip: const_ngh_flag = {} != {} = const_ngh_flag in restart file",
+               const_ngh_flag_tmp, const_ngh_flag);
 }

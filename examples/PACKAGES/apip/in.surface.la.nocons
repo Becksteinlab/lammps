@@ -52,3 +52,21 @@ thermo_modify	format 2 "%10.09f" colname 3 "#changedCSPpairs"
 
 
 run		10
+
+# restarting is possible
+
+#write_restart	restart.surface.la.nocons
+#clear
+#read_restart	restart.surface.la.nocons
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} csp_mode dynamic
+#pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
+#pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
+#pair_coeff	* * pace/apip ${ace_file} Cu
+#pair_coeff	* * zero
+#pair_coeff	* * la/csp/apip
+#fix		nve all nve
+#thermo_style	custom step etotal f_lambda_cspavg
+#thermo_modify	format 2 "%10.09f" colname 3 "#changedCSPpairs"
+#thermo		1
+#run		10
+#shell		rm restart.surface.la.nocons

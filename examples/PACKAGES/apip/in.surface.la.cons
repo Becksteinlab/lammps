@@ -76,3 +76,21 @@ run		100
 
 # dump atoms
 #write_dump	all custom dump.surface.la.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
+
+# restarting is possible
+# As the conservative potential relies on the CSP-pairs to be constant, one needs a restart file that contains these CSP-pairs.
+
+#write_restart	restart.surface.la.cons
+#clear
+#read_restart	restart.surface.la.cons
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
+#pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
+#pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
+#pair_coeff	* * pace/apip ${ace_file} Cu
+#pair_coeff	* * zero
+#pair_coeff	* * la/csp/apip
+#fix		nve all nve
+#thermo_style	custom step temp etotal fnorm fmax
+#thermo		1
+#run		10
+#shell		rm restart.surface.la.cons
