@@ -99,7 +99,7 @@ Arguments
 **Positional Arguments:**
 
 * ``data_file``: Output LAMMPS data file name
-* ``param_file``: Output LAMMPS parameter file name  
+* ``param_file``: Output LAMMPS parameter file name
 * ``topology``: AMBER topology file (.prmtop)
 * ``mol2``: MOL2 coordinate file
 * ``frcmod``: Force field parameter file (.frcmod)
@@ -128,7 +128,7 @@ Basic Usage
 
    amber2lammps(
        data_file="system.data",
-       param_file="system.param", 
+       param_file="system.param",
        topology="system.prmtop",
        mol2="system.mol2",
        frcmod="system.frcmod",
@@ -191,7 +191,7 @@ If you need to generate AMBER input files from PDB, use this workflow:
    # Step 3: Create tleap input file
    with open("tleap.in", "w") as f:
        f.write("source leaprc.gaff2\\n")
-       f.write("MOL = loadmol2 molecule.mol2\\n") 
+       f.write("MOL = loadmol2 molecule.mol2\\n")
        f.write("check MOL\\n")
        f.write("loadamberparams molecule.frcmod\\n")
        f.write("saveamberparm MOL molecule.prmtop molecule.crd\\n")
