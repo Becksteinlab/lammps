@@ -80,6 +80,21 @@ void get_color(const std::string &color, unsigned char *rgb)
   }
 }
 
+struct TGAHeader {
+  unsigned char idlength;
+  unsigned char colormaptype;
+  unsigned char datatypecode;
+  unsigned char colormaporigin[2];
+  unsigned char colormaplength[2];
+  unsigned char colormapdepth;
+  unsigned char x_origin[2];
+  unsigned char y_origin[2];
+  unsigned char width[2];
+  unsigned char height[2];
+  unsigned char bitsperpixel;
+  unsigned char imagedescriptor;
+};
+
 // read image into buffer that is locally allocated with new
 // return null pointer if incompatible format or not supported
 
@@ -89,8 +104,8 @@ unsigned char *read_image(FILE *fp, int &width, int &height, const std::string &
   if (!fp) return nullptr;
   unsigned char *pixmap = nullptr;
 
-  if (utils::strmatch(filename, "\\.jpg$") || utils::strmatch(filename, "\\.JPG$") ||
-      utils::strmatch(filename, "\\.jpeg$") || utils::strmatch(filename, "\\.JPEG$")) {
+  if (utils::strmatch(filename, R"(\.jpg$)") || utils::strmatch(filename, R"(\.JPG$)") ||
+      utils::strmatch(filename, R"(\.jpeg$)") || utils::strmatch(filename, R"(\.JPEG$)")) {
 
 #if defined(LAMMPS_JPEG)
     struct jpeg_decompress_struct cinfo;
@@ -129,7 +144,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, const std::string &
     return nullptr;
 #endif
 
-  } else if (utils::strmatch(filename, "\\.png$") || utils::strmatch(filename, "\\.PNG$")) {
+  } else if (utils::strmatch(filename, R"(\.png$)") || utils::strmatch(filename, R"(\.PNG$)")) {
 
 #if defined(LAMMPS_PNG)
     png_structp png_ptr = nullptr;
@@ -205,7 +220,109 @@ unsigned char *read_image(FILE *fp, int &width, int &height, const std::string &
     info = "PNG image format not supported in this LAMMPS binary";
     return nullptr;
 #endif
+  } else if (utils::strmatch(filename, R"(\.tga$)") || utils::strmatch(filename, R"(\.TGA$)")) {
 
+    TGAHeader header;
+    auto rv = fread(&header, sizeof(TGAHeader), 1, fp);
+    if (rv != 1) {
+      info = "Short TGA file";
+      return nullptr;
+    }
+
+    bool compressed = false;
+    if (header.datatypecode == 10) compressed = true;
+    if ((header.datatypecode != 2) && (header.datatypecode != 10)) {
+      info = "Unsupportd TGA file type";
+      return nullptr;
+    }
+    width = (int) header.width[0] + ((int) header.width[1]) * 256;
+    height = (int) header.height[0] + ((int) header.height[1]) * 256;
+
+    bool right2left = (header.imagedescriptor & 0x10) ? true : false;
+    bool fromtop = (header.imagedescriptor & 0x20) ? true : false;
+
+    if (((header.imagedescriptor & 0xC0) != 0) || ((header.imagedescriptor & 0x0F) != 0) ||
+        (header.bitsperpixel != 3 * 8 * sizeof(unsigned char))) {
+      info = "Unsupported TGA file type";
+      return nullptr;
+    }
+    char *id = nullptr;
+    if (header.idlength) {
+      id = new char[header.idlength];
+      if (fread(id, header.idlength, 1, fp) != 1) {
+        delete[] id;
+        return nullptr;
+      }
+      id[header.idlength-1] = '\0';
+    }
+
+    info = fmt::format("{}x{} TGA file, {}-bit RGB", width, height, (int) header.bitsperpixel / 3);
+    if (right2left) info += ", right-to-left";
+    if (fromtop) info += ", top-to-bottom";
+    if (compressed) info += ", RLE-encoded";
+    if (header.idlength) info += id;
+    delete[] id;
+
+    fprintf(stderr, "'%s'\n", info.c_str());
+
+    pixmap = new unsigned char[3 * width * height];
+    if (compressed) {
+      unsigned char len;
+      unsigned char pix[3];
+      int i = 0;
+      while (i < 3 * width * height) {
+        if (0 == fread(&len, 1, 1, fp)) break;
+        if (len < 128) {
+          ++len;
+          for (int j = 0; j < len; ++j) {
+            int y = (fromtop) ? (height - 1 - i / (3 * width)) : i / (3 * width);
+            int x = (right2left) ? (height - 1 - (i - 3 * y * width) / 3) : (i - 3 * y * width) / 3;
+            if (fread(pix, sizeof(unsigned char), 3, fp) != 3) {
+              delete[] pixmap;
+              info = "Short TGA file";
+              return nullptr;
+            }
+            pixmap[y * 3 * width + 3 * x] = pix[2];
+            pixmap[y * 3 * width + 3 * x + 1] = pix[1];
+            pixmap[y * 3 * width + 3 * x + 2] = pix[0];
+            i += 3;
+          }
+        } else {
+          len -= 127;
+          if (fread(pix, sizeof(unsigned char), 3, fp) != 3) {
+            delete[] pixmap;
+            info = "Short TGA file";
+            return nullptr;
+          }
+          for (int j = 0; j < len; ++j) {
+            int y = (fromtop) ? (height - 1 - i / (3 * width)) : i / (3 * width);
+            int x = (right2left) ? (height - 1 - (i - 3 * y * width) / 3) : (i - 3 * y * width) / 3;
+            pixmap[y * 3 * width + 3 * x] = pix[2];
+            pixmap[y * 3 * width + 3 * x + 1] = pix[1];
+            pixmap[y * 3 * width + 3 * x + 2] = pix[0];
+            i += 3;
+          }
+        }
+      }
+    } else {
+      unsigned char pix[3];
+      for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+          int y = fromtop ? (height - 1 - i) : i;
+          int x = right2left ? (width - 1 - j) : j;
+          if (fread(pix, sizeof(unsigned char), 3, fp) != 3) {
+            delete[] pixmap;
+            info = "Short TGA file";
+            return nullptr;
+          }
+          // swap BGR to RGB
+          pixmap[y * 3 * width + 3 * x] = pix[2];
+          pixmap[y * 3 * width + 3 * x + 1] = pix[1];
+          pixmap[y * 3 * width + 3 * x + 2] = pix[0];
+        }
+      }
+    }
+    return pixmap;
   } else {
 
     // read file in NetPBM binary or ASCII format

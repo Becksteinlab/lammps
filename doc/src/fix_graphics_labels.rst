@@ -99,14 +99,15 @@ compatible.
 The *image* keyword reads an image file and adds it to the visualization
 centered around the provided position and optionally scaled by the
 provided scale factor.  The filename suffix determines whether LAMMPS
-will try to read a file in JPEG, PNG, or PPM format.  If the suffix is
-".jpg" or ".jpeg", then LAMMPS attempts to read the image in `JPEG
-format <jpeg_format_>`_, if the suffix is ".png", then lammps attempts
-to read the image in `PNG format <png_format_>`_.  Otherwise LAMMPS will
-try to read the image in `ppm (aka netpbm) format <ppm_format_>`_.  Not
-all variants of those file formats are compatible with image reader code
-in LAMMPS.  If LAMMPS encounters an incompatible or unrecognizable file
-format or a corrupted file, it will stop with an error.
+will try to read a file in JPEG, PNG, TGA, or PPM format.  If the suffix
+is ".jpg" or ".jpeg", then LAMMPS attempts to read the image in `JPEG
+format <jpeg_format_>`_, if the suffix is ".png", then LAMMPS attempts
+to read the image in `PNG format <png_format_>`_, and if the suffix is
+".tga" then LAMMPS will read the file in `TGA format <tga_format_>`_.  Otherwise LAMMPS
+will try to read the image in `ppm (aka netpbm) format <ppm_format_>`_.
+Not all variants of those file formats are compatible with image reader
+code in LAMMPS.  If LAMMPS encounters an incompatible or unrecognizable
+file format or a corrupted file, it will stop with an error.
 
 If LAMMPS detects during a run that the file has been changed, it will
 re-read it.  This allows for instance to create a plot using internal
@@ -188,6 +189,7 @@ more detailed discussion on using variables with graphics objects.
 .. _jpeg_format: https://jpeg.org/jpeg/
 .. _png_format: https://en.wikipedia.org/wiki/portable_network_graphics
 .. _ppm_format: https://en.wikipedia.org/wiki/netpbm
+.. _tga_format: https://en.wikipedia.org/wiki/Truevision_TGA
 
 -----------
 
