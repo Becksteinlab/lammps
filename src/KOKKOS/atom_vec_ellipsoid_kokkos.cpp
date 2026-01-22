@@ -590,6 +590,8 @@ void AtomVecEllipsoidKokkos::unpack_border_bonus_kokkos(const int &n, const int 
   }
 
   atomKK->modified(space,datamask_bonus);
+
+  nghost_bonus = k_nghost_bonus.view_host()();
 }
 
 /* ---------------------------------------------------------------------- */
