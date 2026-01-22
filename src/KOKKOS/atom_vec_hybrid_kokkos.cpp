@@ -46,10 +46,10 @@ void AtomVecHybridKokkos::process_args(int narg, char **arg)
 {
   AtomVecHybrid::process_args(narg,arg);
   
-  // Seems process_args is first to be called, so set up nstyles_cast here
-  nstyles_cast = new AtomVecKokkos*[nstyles];
+  // Seems process_args is first to be called, so set up stylesKK here
+  stylesKK = new AtomVecKokkos*[nstyles];
   for (int k = 0; k < nstyles; k++) {
-    nstyles_cast[k] = dynamic_cast<AtomVecKokkos*>(styles[k]);
+    stylesKK[k] = dynamic_cast<AtomVecKokkos*>(styles[k]);
   }
 }
 
@@ -60,7 +60,7 @@ void AtomVecHybridKokkos::grow(int n)
   for (int k = 0; k < nstyles; k++) styles[k]->grow(n);
   nmax = atomKK->k_x.view_host().extent(0);
  
-  // TODO: all these ptrs need to go
+  // ptrs for atom_vec.cpp
   tag = atom->tag;
   type = atom->type;
   mask = atom->mask;
@@ -77,7 +77,7 @@ void AtomVecHybridKokkos::grow(int n)
 void AtomVecHybridKokkos::sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorter)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->sort_kokkos(Sorter);
+    stylesKK[k]->sort_kokkos(Sorter);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -85,9 +85,9 @@ void AtomVecHybridKokkos::sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorte
 void AtomVecHybridKokkos::pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
                                                  const DAT::tdual_double_2d_lr &buf)
 {
-  // TODO: set up an nstyles_cast_bonus for only bonus atom_style functions?
+  // TODO: set up an stylesKK_bonus for only bonus atom_style functions?
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->pack_comm_bonus_kokkos(n,list,buf);
+    stylesKK[k]->pack_comm_bonus_kokkos(n,list,buf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -96,7 +96,7 @@ void AtomVecHybridKokkos::unpack_comm_bonus_kokkos(const int &n, const int &nfir
                                                    const DAT::tdual_double_2d_lr &buf)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->unpack_comm_bonus_kokkos(n,nfirst,buf);
+    stylesKK[k]->unpack_comm_bonus_kokkos(n,nfirst,buf);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -105,8 +105,7 @@ void AtomVecHybridKokkos::pack_comm_self_bonus_kokkos(const int &n, const DAT::t
                                                       const int nfirst)
 {
   for (int k = 0; k < nstyles; k++)
-    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
-      pack_comm_self_bonus_kokkos(n,list,nfirst);
+    stylesKK[k]->pack_comm_self_bonus_kokkos(n,list,nfirst);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -117,8 +116,7 @@ void AtomVecHybridKokkos::pack_comm_self_fused_bonus_kokkos(const int &n,
                                          const DAT::tdual_int_1d &g2l)
 {
   for (int k = 0; k < nstyles; k++)
-    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
-      pack_comm_self_fused_bonus_kokkos(n,list,sendnum_scan,firstrecv,g2l);
+    stylesKK[k]->pack_comm_self_fused_bonus_kokkos(n,list,sendnum_scan,firstrecv,g2l);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -128,7 +126,7 @@ void AtomVecHybridKokkos::pack_border_bonus_kokkos(int n, DAT::tdual_int_1d k_se
                                                    ExecutionSpace space)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->pack_border_bonus_kokkos(n,k_sendlist,buf,space);
+    stylesKK[k]->pack_border_bonus_kokkos(n,k_sendlist,buf,space);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -138,7 +136,7 @@ void AtomVecHybridKokkos::unpack_border_bonus_kokkos(const int &n, const int &nf
                                                      ExecutionSpace space)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->unpack_border_bonus_kokkos(n,nfirst,buf,space);
+    stylesKK[k]->unpack_border_bonus_kokkos(n,nfirst,buf,space);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -150,8 +148,7 @@ void AtomVecHybridKokkos::pack_exchange_bonus_kokkos(const int &nsend, DAT::tdua
                                                      ExecutionSpace space)
 {
   for (int k = 0; k < nstyles; k++)
-    (dynamic_cast<AtomVecKokkos*>(styles[k]))->
-      pack_exchange_bonus_kokkos(nsend,buf,k_sendlist,k_copylist,
+    stylesKK[k]->pack_exchange_bonus_kokkos(nsend,buf,k_sendlist,k_copylist,
                                  k_copylist_bonus,space);
 }
 
@@ -163,8 +160,7 @@ void AtomVecHybridKokkos::unpack_exchange_bonus_kokkos(DAT::tdual_double_2d_lr &
                                                        DAT::tdual_int_1d &k_indices)
 {
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->unpack_exchange_bonus_kokkos(k_buf,nrecv,nlocal,dim,lo,hi,
-                                   space,k_indices);
+    stylesKK[k]->unpack_exchange_bonus_kokkos(k_buf,nrecv,space,k_indices);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -175,31 +171,31 @@ void AtomVecHybridKokkos::set_size_exchange()
 
   size_exchange_bonus = 0;
   for (int k = 0; k < nstyles; k++)
-    size_exchange_bonus += nstyles_cast[k]->size_exchange_bonus;
+    size_exchange_bonus += stylesKK[k]->size_exchange_bonus;
 
   size_exchange += size_exchange_bonus;
 
   for (int k = 0; k < nstyles; k++)
-    nstyles_cast[k]->size_exchange = size_exchange;
+    stylesKK[k]->size_exchange = size_exchange;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void AtomVecHybridKokkos::sync(ExecutionSpace space, uint64_t h_mask)
 {
-  for (int k = 0; k < nstyles; k++) nstyles_cast[k]->sync(space,h_mask);
+  for (int k = 0; k < nstyles; k++) stylesKK[k]->sync(space,h_mask);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void AtomVecHybridKokkos::sync_pinned(ExecutionSpace space, uint64_t h_mask, int async_flag)
 {
-  for (int k = 0; k < nstyles; k++) nstyles_cast[k]->sync_pinned(space,h_mask,async_flag);
+  for (int k = 0; k < nstyles; k++) stylesKK[k]->sync_pinned(space,h_mask,async_flag);
 }
 
 /* ---------------------------------------------------------------------- */
 
 void AtomVecHybridKokkos::modified(ExecutionSpace space, uint64_t h_mask)
 {
-  for (int k = 0; k < nstyles; k++) nstyles_cast[k]->modified(space,h_mask);
+  for (int k = 0; k < nstyles; k++) stylesKK[k]->modified(space,h_mask);
 }

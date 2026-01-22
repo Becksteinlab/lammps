@@ -79,7 +79,7 @@ class AtomVecHybridKokkos : public AtomVecKokkos, public AtomVecHybrid {
   void sync_pinned(ExecutionSpace space, uint64_t mask, int async_flag = 0) override;
 
  private:
-  class AtomVecKokkos **nstyles_cast;
+  class AtomVecKokkos **stylesKK;
 };
 
 } // namespace LAMMPS_NS
