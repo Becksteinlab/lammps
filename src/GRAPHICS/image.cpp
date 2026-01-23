@@ -2323,8 +2323,8 @@ ColorMap::ColorMap(LAMMPS *lmp, Image *caller) : Pointers(lmp)
 
   dynamic = 1;
 
-  mlo = MINVALUE;
-  mhi = MAXVALUE;
+  locurrent = mlo = MINVALUE;
+  hicurrent = mhi = MAXVALUE;
   mstyle = CONTINUOUS;
   mrange = FRACTIONAL;
 

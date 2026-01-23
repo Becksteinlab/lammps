@@ -607,7 +607,8 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       // clang-format on
       scale.dumpid = arg[iarg + 1];
       scale.text = arg[iarg + 2];
-      if (scale.text.find('$') != std::string::npos) varflag = 1;
+      // we always need to trigger computes in case of dynamic color scales
+      varflag = 1;
 
       PARSE_VARIABLE(scale.pos[0], scale.xstr, iarg + 3);
       PARSE_VARIABLE(scale.pos[1], scale.ystr, iarg + 4);
@@ -708,6 +709,8 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       error->all(FLERR, iarg, "Unknown fix graphics/labels keyword: {}", arg[iarg]);
     }
   }
+
+  if (varflag) modify->addstep_compute_all(update->ntimestep);
 }
 #undef PARSE_VARIABLE
 /* ---------------------------------------------------------------------- */
@@ -961,28 +964,26 @@ void FixGraphicsLabels::end_of_step()
 
       renderfont.select_font(SSFN::FAMILY_SANS, SSFN::STYLE_REGULAR, (int) scale.size);
 
-      // need to render the pixmap if NULL, the size is a variable, or we need to substitute the text
-      if (scale.sstr || !scale.pixmap || (scale.text.find('$') != std::string::npos)) {
-        auto expanded = scale.text;
+      auto expanded = scale.text;
 
-        // substitute variables in text
-        if (expanded.find('$') != std::string::npos) {
-          int ncopy = expanded.length() + 1;
-          int nwork = ncopy;
-          char *copy = (char *) memory->smalloc(ncopy * sizeof(char), "fix/graphics/labels:copy");
-          char *work = (char *) memory->smalloc(nwork * sizeof(char), "fix/graphics/labels:work");
-          strncpy(copy, expanded.c_str(), ncopy);
-          input->substitute(copy, work, ncopy, nwork, 0);
-          expanded = copy;
-          memory->sfree(copy);
-          memory->sfree(work);
-        }
-
-        delete[] scale.pixmap;
-        scale.pixmap = renderfont.create_colorscale(
-            expanded, scale.width, scale.height, scale.fontcolor, scale.framecolor, scale.backcolor,
-            scale.horizontal, scale.length, image, 0, scale.tics);
+      // substitute variables in text
+      if (expanded.find('$') != std::string::npos) {
+        int ncopy = expanded.length() + 1;
+        int nwork = ncopy;
+        char *copy = (char *) memory->smalloc(ncopy * sizeof(char), "fix/graphics/labels:copy");
+        char *work = (char *) memory->smalloc(nwork * sizeof(char), "fix/graphics/labels:work");
+        strncpy(copy, expanded.c_str(), ncopy);
+        input->substitute(copy, work, ncopy, nwork, 0);
+        expanded = copy;
+        memory->sfree(copy);
+        memory->sfree(work);
       }
+
+      delete[] scale.pixmap;
+      scale.pixmap = renderfont.create_colorscale(
+          expanded, scale.width, scale.height, scale.fontcolor, scale.framecolor, scale.backcolor,
+          scale.horizontal, scale.length, image, 0, scale.tics);
+
       imgobjs[n] = Graphics::PIXMAP;
       imgparms[n][0] = 1;
       imgparms[n][1] = scale.pos[0];
