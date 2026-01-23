@@ -14,7 +14,7 @@ Syntax
 * graphics/labels = style name of this fix command
 * Nevery = update graphics information every this many time steps
 * zero or more keyword/args groups may be appended
-* keyword = *image* or *text*
+* keyword = *image* or *text* or *colorscale*
 
   .. parsed-literal::
 
@@ -63,6 +63,39 @@ Syntax
           *horizontal* = create horizontal text label
           *vertical* = create vertical text label
 
+     *colorscale* dump-ID titletext x y z keyword args = display text in visualization
+        labeltext = text for the label, must be quoted if it contains whitespace
+        x, y, z  = position where the center of the text is located in the visualization
+        any of x, y, or z can be a variable (see below)
+
+        keyword = *fontcolor* or *framecolor* or *backcolor* or *transcolor* or *size* or *horizontal* or *vertical*
+          *fontcolor* arg = select color for text: *white* (default) or *black* or *r/g/b*
+             *white* = uses white
+             *black* = uses black
+             *r/g/b* = provide three integers in the range 0 to 255
+          *framecolor* arg = select color for frame around text: *silver* (default) or *darkgray* or *white* or *black* or *r/g/b*
+             *silver* = uses a very light gray
+             *darkgray* = uses a very dark gray
+             *white* = uses white
+             *black* = uses black
+             *r/g/b* = provide three integers in the range 0 to 255
+          *backcolor* arg = select color for background of the text: *silver* (default) or *darkgray* or *white* or *black* *r/g/b*
+             *silver* = uses a very light gray
+             *darkgray* = uses a very dark gray
+             *white* = uses white
+             *black* = uses black
+             *r/g/b* = provide three integers in the range 0 to 255
+          *transcolor* arg = select color for transparency: *silver* (default) or *darkgray* or *white* or *black* or *none* or *r/g/b*
+             *silver* = uses a very light gray
+             *darkgray* = uses a very dark gray
+             *white* = uses white
+             *black* = uses black
+             *none* = disables transparency
+             *r/g/b* = provide three integers in the range 0 to 255
+          *size* value = set the size of the characters (default 24), can be a variable (see below)
+          *horizontal* = create horizontal text label
+          *vertical* = create vertical text label
+
 Examples
 """"""""
 
@@ -72,6 +105,8 @@ Examples
    fix pot all graphics/labels 100 image teapot.ppm 1.0 v_ypos v_zpos scale v_prog transcolor 19/92/192
    fix lbl all graphics/labels 1000 text "LAMMPS graphics demo" 5.0 -1.0 -2.0 backcolor darkgray framecolor black
    fix info all graphics/labels 1000 text "Step: $(step)  Angle: ${rot}" 5.0 -1.0 -2.0 size 32
+   fix obj all graphics/labels 200 colorscale viz "Atom Velocity" 20.0 6.5 13.0 size 32 length 1000 &
+                                     transcolor none framecolor white backcolor darkgray tics 12
 
 Description
 """""""""""
@@ -180,8 +215,68 @@ are required arguments.  Optional keyword / value pairs may be added:
   (this is the default setting).  The *vertical* keyword selects
   creating a vertical text label instead.
 
-There may be multiple *image* or *text* keywords with their arguments
-in a single fix *graphics/labels* command.
+The *colorscale* keyword will create a colormap legend indicating the
+mapping of values to the color of atoms in the :doc:`dump image
+<dump_image>` instance with the given dump-ID and adds it to the
+visualization centered around the provided position in a similar fashion
+as with the *image* or *text* keywords.  The requirements for the text
+argument are the same as in the :doc:`fix print <fix_print>` command: it
+must be a single argument, so text with whitespace must be quoted; and
+the text may contain equal style or immediate variables using the
+``${name}`` or ``$(expression)`` format.  The variables are evaluated
+and expanded at every *Nevery* time step.  The text is shown in the
+center of and above the colormap.  To the left from the text is the
+lower boundary value and to the right the upper boundary value.  The
+colors are created by a linear interpolation between the lower and upper
+boundary value.  When using a dynamic color map with "min" or "max" the
+upper and lower values will be determined every time the fix is executed
+and the text updated accordingly.  For creating movies it is generally
+recommended to use a fixed range.
+
+When using the *colorscale* keyword, the dump-ID, text and its position
+in the "scene" are required arguments.  Optional keyword / value pairs
+may be added:
+
+  The *size* value determines the size of the letters in the text in
+  pixels (approximately) and values between 4 and 512 are accepted.  The
+  default value is 24. The size of the colorbar follows the size of the
+  text.
+
+  The *ticks* value determines how many "ticks" or lines separating the
+  colors are drawn.  This can simplify determining which value a
+  specific color corresponds to.
+
+  There are four color settings: *fontcolor* or *framecolor* or
+  *backcolor* or *transcolor*\ .  The color can be specified for all of
+  those either as an R/G/B triple with values ranging from 0 to 255 for
+  each channel (e.g. yellow would be "255/255/0").  There are also a few
+  shortcuts for common choices: *silver*, *darkgray*, *white*, *black*.
+  The default *backcolor* value is *silver*.
+
+  - *fontcolor* selects the color for the text, the border of the
+    colorbar and the ticks. default is *white*
+  - *backcolor* selects the color for the background, default is
+    *silver*
+  - *framecolor* selects the color for the frame around the background,
+    default is *silver*.
+  - *transcolor* value selects a color for transparency, default is
+    *silver*.  If this color is the same as any of the other color
+    settings, those pixels are not drawn.  Thus with the default
+    settings, the text will be rendered in white without background or
+    frame.  The *none* setting for *transcolor* disables transparency
+    processing.
+
+  When rendering text with transparent background it is recommended to
+  select a similar color but slightly darker or brighter color as
+  background.  This will reduce unwanted color effects at the edges due
+  to anti-aliasing.
+
+  The *horizontal* keyword selects creating a horizontal colorscale label
+  (this is the default setting).  The *vertical* keyword selects
+  creating a vertical text label instead.
+
+There may be multiple *image* or *text* or *colorscale* keywords with
+their arguments in a single fix *graphics/labels* command.
 
 The arguments for the positions of an *image* or *text* and the *scale*
 factor of an *image* or the *size* of a *text* can be specified as
@@ -332,4 +427,4 @@ Related commands
 Default
 """""""
 
-transcolor = "none" for *image* and "silver" for *text*, scale = 1.0, fontcolor = white, backcolor = silver, framecolor = silver, size = 24, horizontal
+transcolor = "none" for *image* and "silver" for *text*, scale = 1.0, fontcolor = white, backcolor = silver, framecolor = silver, size = 24, horizontal, tics = 0

@@ -585,6 +585,9 @@ coleman
 Colliex
 collinear
 collisional
+colorbar
+colormap
+colorscale
 Columic
 colvars
 Colvars
