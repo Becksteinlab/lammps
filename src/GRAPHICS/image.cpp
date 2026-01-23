@@ -2388,6 +2388,7 @@ int ColorMap::reset(int narg, char **arg)
   if (nentry < 1) return 5;
   delete [] mentry;
   mentry = new MapEntry[nentry];
+  mentry[0].svalue = 0.0;
 
   int n = 5;
   for (int i = 0; i < nentry; i++) {
