@@ -1754,6 +1754,15 @@ int Image::map_minmax(int index, double mindynamic, double maxdynamic)
 }
 
 /* ----------------------------------------------------------------------
+   set min/max bounds of dynamic color map index
+------------------------------------------------------------------------- */
+
+int Image::map_info(int index, double &min, double &max)
+{
+  return maps[index]->info(min, max);
+}
+
+/* ----------------------------------------------------------------------
    return 3-vector color corresponding to value from color map index
 ------------------------------------------------------------------------- */
 
@@ -2489,6 +2498,13 @@ int ColorMap::minmax(double mindynamic, double maxdynamic)
   }
 
   return 0;
+}
+
+int ColorMap::info(double &min, double &max)
+{
+  min = locurrent;
+  max = hicurrent;
+  return dynamic;
 }
 
 /* ----------------------------------------------------------------------
