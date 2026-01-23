@@ -68,7 +68,7 @@ Force fields howto
 
    Howto_FFgeneral
    Howto_bioFF
-   Howto_amber_to_lammps
+   Howto_amber2lammps
    Howto_amoeba
    Howto_tip3p
    Howto_tip4p

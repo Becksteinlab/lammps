@@ -43,7 +43,6 @@ Pre-processing tools
 .. table_from_list::
    :columns: 6
 
-   * :ref:`amber2lmp <amber>`
    * :ref:`ch2lmp <charmm>`
    * :ref:`chain <chain>`
    * :ref:`createatoms <createatoms>`
@@ -66,7 +65,6 @@ Post-processing tools
 .. table_from_list::
    :columns: 6
 
-   * :ref:`amber2lmp <amber>`
    * :ref:`binary2txt <binary>`
    * :ref:`ch2lmp <charmm>`
    * :ref:`colvars <colvars_tools>`
@@ -107,28 +105,6 @@ Miscellaneous tools
 
 Tool descriptions
 =================
-
-.. _amber:
-
-amber2lmp tool (Legacy)
---------------------------
-
-The amber2lmp subdirectory contains legacy Python scripts for converting
-files between the AMBER MD code and LAMMPS. These scripts are obsolete
-and no longer maintained.
-They may not work correctly with current versions of Python (Python 3).
-
-**For modern AMBER to LAMMPS conversion, please use the external AMBER2LAMMPS tool:**
-
-* **Project:** https://github.com/askforarun/AMBER2LAMMPS
-* **Dependencies:** NumPy, ParmEd
-* **Documentation:** See :doc:`Howto_amber_to_lammps` for detailed usage
-* **Support:** Please use the AMBER2LAMMPS issue tracker (not the LAMMPS repository)
-
-The legacy tools were written by Keir Novik while he was at Queen Mary
-University of London. They are provided for reference only.
-
-----------
 
 .. _binary:
 

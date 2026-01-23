@@ -1308,6 +1308,7 @@ framecolor
 framerate
 Frauenheim
 Fraunhofer
+frcmod
 fread
 Freitas
 Frenkel
@@ -2949,6 +2950,7 @@ parameterize
 parameterized
 params
 ParaView
+parmchk
 parmin
 Parrinello
 Partay
@@ -3140,6 +3142,7 @@ printf
 printflag
 priori
 Priya
+prmtop
 proc
 Proc
 procs
