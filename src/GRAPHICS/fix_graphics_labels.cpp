@@ -15,11 +15,14 @@
 
 #include "atom.h"
 #include "comm.h"
+#include "dump_image.h"
 #include "error.h"
 #include "graphics.h"
+#include "image.h"
 #include "input.h"
 #include "memory.h"
 #include "modify.h"
+#include "output.h"
 #include "respa.h"
 #include "text_file_reader.h"
 #include "tokenizer.h"
@@ -253,7 +256,7 @@ unsigned char *read_image(FILE *fp, int &width, int &height, const std::string &
         delete[] id;
         return nullptr;
       }
-      id[header.idlength-1] = '\0';
+      id[header.idlength - 1] = '\0';
     }
 
     info = fmt::format("{}x{} TGA file, {}-bit RGB", width, height, (int) header.bitsperpixel / 3);
@@ -457,7 +460,9 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       // check remaining arguments for optional image arguments
       while (iarg < narg) {
         // if next argument is next keyword; exit loop
-        if ((strcmp(arg[iarg], "image") == 0) || (strcmp(arg[iarg], "text") == 0)) break;
+        if ((strcmp(arg[iarg], "image") == 0) || (strcmp(arg[iarg], "text") == 0) ||
+            (strcmp(arg[iarg], "colorscale") == 0))
+          break;
 
         if (strcmp(arg[iarg], "scale") == 0) {
           if (iarg + 2 > narg)
@@ -516,7 +521,9 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       // check remaining arguments for optional image arguments
       while (iarg < narg) {
         // if next argument is next keyword; exit loop
-        if ((strcmp(arg[iarg], "image") == 0) || (strcmp(arg[iarg], "text") == 0)) break;
+        if ((strcmp(arg[iarg], "image") == 0) || (strcmp(arg[iarg], "text") == 0) ||
+            (strcmp(arg[iarg], "colorscale") == 0))
+          break;
 
         if (strcmp(arg[iarg], "size") == 0) {
           if (iarg + 2 > narg)
@@ -590,12 +597,119 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
         }
       }
       texts.emplace_back(txt);
+    } else if (strcmp(arg[iarg], "colorscale") == 0) {
+      if (iarg + 6 > narg) utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale", error);
+
+      // clang-format off
+      ScaleInfo scale{"", "", {0.0, 0.0, 0.0}, 0, 0, nullptr, {255, 255, 255}, {192, 192, 192},
+                      {192, 192, 192}, {192, 192, 192}, false, true, 48.0, 0.5, 0, 0,
+                      -1, -1, -1, -1, nullptr, nullptr, nullptr, nullptr};
+      // clang-format on
+      scale.dumpid = arg[iarg + 1];
+      scale.text = arg[iarg + 2];
+      if (scale.text.find('$') != std::string::npos) varflag = 1;
+
+      PARSE_VARIABLE(scale.pos[0], scale.xstr, iarg + 3);
+      PARSE_VARIABLE(scale.pos[1], scale.ystr, iarg + 4);
+      PARSE_VARIABLE(scale.pos[2], scale.zstr, iarg + 5);
+      iarg += 6;
+
+      // check remaining arguments for optional image arguments
+      while (iarg < narg) {
+        // if next argument is next keyword; exit loop
+        if ((strcmp(arg[iarg], "image") == 0) || (strcmp(arg[iarg], "text") == 0) ||
+            (strcmp(arg[iarg], "colorscale") == 0))
+          break;
+
+        if (strcmp(arg[iarg], "size") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale size", error);
+          PARSE_VARIABLE(scale.size, scale.sstr, iarg + 1);
+          // for sizes 4 to 64, text is rendered at 2x2 size and scaled down for anti-aliasing.
+          // for larger sizes, the image is rendered at max supported size and scaled as needed.
+          scale.size *= 2.0;
+          if ((scale.size < 8.0) || (scale.size > 1024.0))
+            error->all(FLERR, iarg + 1, "Invalid fix graphics/labels colorscale size value: {}",
+                       scale.size * 0.5);
+          if (scale.size > 128.0) {
+            scale.scale = scale.size / 256.0;
+            scale.size = 128.0;
+          } else {
+            scale.scale = 0.5;
+          }
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "length") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale length", error);
+          scale.length = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "tics") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale tics", error);
+          scale.tics = utils::inumeric(FLERR, arg[iarg + 1], false, lmp);
+          if (scale.tics < 0) error->all(FLERR, iarg + 1, "Invalid tics value");
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "fontcolor") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale fontcolor", error);
+          try {
+            get_color(arg[iarg + 1], scale.fontcolor);
+          } catch (TokenizerException &e) {
+            error->all(FLERR, iarg + 1, "Error parsing RGB font color value {}: {}", arg[iarg + 1],
+                       e.what());
+          }
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "backcolor") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale backcolor", error);
+          try {
+            get_color(arg[iarg + 1], scale.backcolor);
+          } catch (TokenizerException &e) {
+            error->all(FLERR, iarg + 1, "Error parsing RGB font color value {}: {}", arg[iarg + 1],
+                       e.what());
+          }
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "framecolor") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale framecolor", error);
+          try {
+            get_color(arg[iarg + 1], scale.framecolor);
+          } catch (TokenizerException &e) {
+            error->all(FLERR, iarg + 1, "Error parsing RGB font color value {}: {}", arg[iarg + 1],
+                       e.what());
+          }
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "transcolor") == 0) {
+          if (iarg + 2 > narg)
+            utils::missing_cmd_args(FLERR, "fix graphics/labels colorscale transcolor", error);
+          if (strcmp(arg[iarg + 1], "none") == 0) {
+            scale.notrans = true;
+          } else {
+            try {
+              get_color(arg[iarg + 1], scale.transcolor);
+            } catch (TokenizerException &e) {
+              error->all(FLERR, iarg + 1, "Error parsing RGB font color value {}: {}",
+                         arg[iarg + 1], e.what());
+            }
+          }
+          iarg += 2;
+        } else if (strcmp(arg[iarg], "horizontal") == 0) {
+          scale.horizontal = true;
+          ++iarg;
+        } else if (strcmp(arg[iarg], "vertical") == 0) {
+          scale.horizontal = false;
+          ++iarg;
+        } else {
+          error->all(FLERR, iarg, "Unknown fix graphics/labels colorscale keyword: {}", arg[iarg]);
+        }
+      }
+      scales.emplace_back(scale);
     } else {
       error->all(FLERR, iarg, "Unknown fix graphics/labels keyword: {}", arg[iarg]);
     }
   }
 }
-
+#undef PARSE_VARIABLE
 /* ---------------------------------------------------------------------- */
 
 FixGraphicsLabels::~FixGraphicsLabels()
@@ -616,6 +730,14 @@ FixGraphicsLabels::~FixGraphicsLabels()
     delete[] txt.sstr;
   }
 
+  for (auto &scale : scales) {
+    delete[] scale.pixmap;
+    delete[] scale.xstr;
+    delete[] scale.ystr;
+    delete[] scale.zstr;
+    delete[] scale.sstr;
+  }
+
   memory->destroy(imgobjs);
   memory->destroy(imgparms);
 }
@@ -628,96 +750,42 @@ int FixGraphicsLabels::setmask()
 }
 
 /* ---------------------------------------------------------------------- */
+#define CHECK_VARIABLE(index, name)                                                    \
+  if (name) {                                                                          \
+    int ivar = input->variable->find(name);                                            \
+    if (ivar < 0)                                                                      \
+      error->all(FLERR, Error::NOLASTLINE,                                             \
+                 "Variable name {} for fix graphics/labels does not exist", name);     \
+    if (input->variable->equalstyle(ivar) == 0)                                        \
+      error->all(FLERR, Error::NOLASTLINE,                                             \
+                 "Fix graphics/labels variable {} is not equal-style variable", name); \
+    index = ivar;                                                                      \
+  }
 
 void FixGraphicsLabels::init()
 {
   for (auto &pix : pixmaps) {
-    if (pix.xstr) {
-      int ivar = input->variable->find(pix.xstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", pix.xstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", pix.xstr);
-      pix.xvar = ivar;
-    }
-    if (pix.ystr) {
-      int ivar = input->variable->find(pix.ystr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", pix.ystr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", pix.ystr);
-      pix.yvar = ivar;
-    }
-    if (pix.zstr) {
-      int ivar = input->variable->find(pix.zstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", pix.zstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", pix.zstr);
-      pix.zvar = ivar;
-    }
-    if (pix.sstr) {
-      int ivar = input->variable->find(pix.sstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", pix.sstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", pix.sstr);
-      pix.svar = ivar;
-    }
+    CHECK_VARIABLE(pix.xvar, pix.xstr);
+    CHECK_VARIABLE(pix.yvar, pix.ystr);
+    CHECK_VARIABLE(pix.zvar, pix.zstr);
+    CHECK_VARIABLE(pix.svar, pix.sstr);
   }
 
   for (auto &txt : texts) {
-    if (txt.xstr) {
-      int ivar = input->variable->find(txt.xstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", txt.xstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", txt.xstr);
-      txt.xvar = ivar;
-    }
-    if (txt.ystr) {
-      int ivar = input->variable->find(txt.ystr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", txt.ystr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", txt.ystr);
-      txt.yvar = ivar;
-    }
-    if (txt.zstr) {
-      int ivar = input->variable->find(txt.zstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", txt.zstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", txt.zstr);
-      txt.zvar = ivar;
-    }
-    if (txt.sstr) {
-      int ivar = input->variable->find(txt.sstr);
-      if (ivar < 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "Variable name {} for fix graphics/labels does not exist", txt.sstr);
-      if (input->variable->equalstyle(ivar) == 0)
-        error->all(FLERR, Error::NOLASTLINE,
-                   "fix graphics/labels variable {} is not equal-style variable", txt.sstr);
-      txt.svar = ivar;
-    }
+    CHECK_VARIABLE(txt.xvar, txt.xstr);
+    CHECK_VARIABLE(txt.yvar, txt.ystr);
+    CHECK_VARIABLE(txt.zvar, txt.zstr);
+    CHECK_VARIABLE(txt.svar, txt.sstr);
+  }
+
+  for (auto &scale : scales) {
+    CHECK_VARIABLE(scale.xvar, scale.xstr);
+    CHECK_VARIABLE(scale.yvar, scale.ystr);
+    CHECK_VARIABLE(scale.zvar, scale.zstr);
+    CHECK_VARIABLE(scale.svar, scale.sstr);
   }
 }
-
+#undef CHECK_VARIABLE
 /* ---------------------------------------------------------------------- */
 
 void FixGraphicsLabels::setup(int)
@@ -729,7 +797,7 @@ void FixGraphicsLabels::setup(int)
 
 void FixGraphicsLabels::end_of_step()
 {
-  numobjs = pixmaps.size() + texts.size();
+  numobjs = pixmaps.size() + texts.size() + scales.size();
   if (numobjs == 0) return;
 
   if (varflag) modify->clearstep_compute();
@@ -741,6 +809,9 @@ void FixGraphicsLabels::end_of_step()
 
   int n = 0;
   for (auto &pix : pixmaps) {
+
+    // update values from variables
+
     if (pix.xstr) pix.pos[0] = input->variable->compute_equal(pix.xvar);
     if (pix.ystr) pix.pos[1] = input->variable->compute_equal(pix.yvar);
     if (pix.zstr) pix.pos[2] = input->variable->compute_equal(pix.zvar);
@@ -785,10 +856,16 @@ void FixGraphicsLabels::end_of_step()
 
   // initialize font renderer and load in-memory font
 
+  SSFN::ScalableFont renderfont;
+
   try {
-    SSFN::ScalableFont renderfont;
+
+    // process text labels
 
     for (auto &txt : texts) {
+
+      // update values from variables
+
       if (txt.xstr) txt.pos[0] = input->variable->compute_equal(txt.xvar);
       if (txt.ystr) txt.pos[1] = input->variable->compute_equal(txt.yvar);
       if (txt.zstr) txt.pos[2] = input->variable->compute_equal(txt.zvar);
@@ -825,8 +902,8 @@ void FixGraphicsLabels::end_of_step()
         }
 
         delete[] txt.pixmap;
-        txt.pixmap = renderfont.create_pixmap(expanded, txt.width, txt.height, txt.fontcolor,
-                                              txt.framecolor, txt.backcolor, txt.horizontal);
+        txt.pixmap = renderfont.create_label(expanded, txt.width, txt.height, txt.fontcolor,
+                                             txt.framecolor, txt.backcolor, txt.horizontal);
       }
       imgobjs[n] = Graphics::PIXMAP;
       imgparms[n][0] = 1;
@@ -845,6 +922,84 @@ void FixGraphicsLabels::end_of_step()
       }
 
       imgparms[n][10] = txt.scale;
+      ++n;
+    }
+  } catch (const SSFN::SSFNException &e) {
+    error->all(FLERR, Error::NOLASTLINE, "Error during font rendering: {}", e.what());
+  }
+
+  // process color scales
+  try {
+    for (auto &scale : scales) {
+
+      auto *dump = dynamic_cast<DumpImage *>(output->get_dump_by_id(scale.dumpid));
+      if (!dump)
+        error->all(FLERR, "Dump ID {} for colorscale not found or not dump style image",
+                   scale.dumpid);
+      int dim = 0;
+      auto *image = static_cast<Image *>(dump->extract("image", dim));
+      if (!image || (dim != 0))
+        error->all(FLERR, "Could not extract color scale info from dump {}", scale.dumpid);
+
+      // update values from variables
+
+      if (scale.xstr) scale.pos[0] = input->variable->compute_equal(scale.xvar);
+      if (scale.ystr) scale.pos[1] = input->variable->compute_equal(scale.yvar);
+      if (scale.zstr) scale.pos[2] = input->variable->compute_equal(scale.zvar);
+
+      // text is rasterized at twice the size for some anti-aliasing. clamp to avoid crashes.
+      if (scale.sstr) {
+        scale.size = 2.0 * input->variable->compute_equal(scale.svar);
+        if (scale.size > 128.0) {
+          scale.scale = scale.size / 256.0;
+          scale.size = 128.0;
+        } else {
+          scale.size = MAX(scale.size, 8.0);
+          scale.scale = 0.5;
+        }
+      }
+
+      renderfont.select_font(SSFN::FAMILY_SANS, SSFN::STYLE_REGULAR, (int) scale.size);
+
+      // need to render the pixmap if NULL, the size is a variable, or we need to substitute the text
+      if (scale.sstr || !scale.pixmap || (scale.text.find('$') != std::string::npos)) {
+        auto expanded = scale.text;
+
+        // substitute variables in text
+        if (expanded.find('$') != std::string::npos) {
+          int ncopy = expanded.length() + 1;
+          int nwork = ncopy;
+          char *copy = (char *) memory->smalloc(ncopy * sizeof(char), "fix/graphics/labels:copy");
+          char *work = (char *) memory->smalloc(nwork * sizeof(char), "fix/graphics/labels:work");
+          strncpy(copy, expanded.c_str(), ncopy);
+          input->substitute(copy, work, ncopy, nwork, 0);
+          expanded = copy;
+          memory->sfree(copy);
+          memory->sfree(work);
+        }
+
+        delete[] scale.pixmap;
+        scale.pixmap = renderfont.create_colorscale(
+            expanded, scale.width, scale.height, scale.fontcolor, scale.framecolor, scale.backcolor,
+            scale.horizontal, scale.length, image, 0, scale.tics);
+      }
+      imgobjs[n] = Graphics::PIXMAP;
+      imgparms[n][0] = 1;
+      imgparms[n][1] = scale.pos[0];
+      imgparms[n][2] = scale.pos[1];
+      imgparms[n][3] = scale.pos[2];
+      imgparms[n][4] = scale.width;
+      imgparms[n][5] = scale.height;
+      imgparms[n][6] = ubuf((int64_t) scale.pixmap).d;
+      if (scale.notrans) {
+        imgparms[n][7] = imgparms[n][8] = imgparms[n][9] = -1.0;
+      } else {
+        imgparms[n][7] = (double) scale.transcolor[0] / 255.0;
+        imgparms[n][8] = (double) scale.transcolor[1] / 255.0;
+        imgparms[n][9] = (double) scale.transcolor[2] / 255.0;
+      }
+
+      imgparms[n][10] = scale.scale;
       ++n;
     }
   } catch (const SSFN::SSFNException &e) {

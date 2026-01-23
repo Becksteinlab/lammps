@@ -45,6 +45,7 @@
 #include <cstring>
 
 #include "fmt/format.h"
+#include "image.h"
 #include "scalable_font.h"
 
 static constexpr int SSFN_DATA_MAX = 65536;
@@ -1055,9 +1056,9 @@ void ScalableFont::select_font(int family, int style, int size)
   _ssfn_select((ssfn_t *) ctx, family, style, size);
 }
 
-unsigned char *ScalableFont::create_pixmap(const std::string &text, int &width, int &height,
-                                           const unsigned char *font, const unsigned char *frame,
-                                           const unsigned char *back, bool horizontal)
+unsigned char *ScalableFont::create_label(const std::string &text, int &width, int &height,
+                                          const unsigned char *font, const unsigned char *frame,
+                                          const unsigned char *back, bool horizontal)
 {
   auto *ctxptr = (ssfn_t *) ctx;
   ssfn_glyph_t *g;
@@ -1124,6 +1125,166 @@ unsigned char *ScalableFont::create_pixmap(const std::string &text, int &width, 
     g = _ssfn_render(ctxptr, c);
     for (int y = 0; y < g->h; ++y) {
       const int yoffs = (g->h - 1 - y + g->baseline - miny + xspace + xhalf / 2) * width * 3;
+      for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
+        if (m > 0x80) {
+          m = 1;
+          ++i;
+        }
+        const int xoffs = (penx + x) * 3;
+        if (g->data[y * g->pitch + i] & m) {
+          pixmap[yoffs + xoffs] = font[0];
+          pixmap[yoffs + xoffs + 1] = font[1];
+          pixmap[yoffs + xoffs + 2] = font[2];
+        }
+      }
+    }
+    penx += g->adv_x;
+    free(g);
+  }
+
+  // for vertical text copy the rotated pixmap accordingly and swap width and height
+  if (!horizontal) {
+    auto *flipped = new unsigned char[width * height * 3];
+    for (int y = 0; y < height; ++y) {
+      for (int x = 0; x < width; ++x) {
+        for (int i = 0; i < 3; ++i) {
+          flipped[x * 3 * height + 3 * (height - 1 - y) + i] = pixmap[y * 3 * width + 3 * x + i];
+        }
+      }
+    }
+    delete[] pixmap;
+    pixmap = flipped;
+    std::swap(width, height);
+  }
+  return pixmap;
+}
+
+unsigned char *ScalableFont::create_colorscale(const std::string &text, int &width, int &height,
+                                               const unsigned char *font,
+                                               const unsigned char *frame,
+                                               const unsigned char *back, bool horizontal,
+                                               int minwidth, LAMMPS_NS::Image *image, int mapidx,
+                                               int tics)
+{
+  auto *ctxptr = (ssfn_t *) ctx;
+  ssfn_glyph_t *g;
+
+  // get a font size specific spacing for a border
+  g = _ssfn_render(ctxptr, ' ');
+  int xspace = g->adv_x;
+  free(g);
+
+  double lo, hi;
+  image->map_info(mapidx, lo, hi);
+  auto newtext = fmt::format("{:.3} < {} > {:.3}", lo, text, hi);
+
+  // dry run to determine size of pixmap
+  width = 0;
+  int miny = 1073741824;
+  int maxy = 0;
+  for (auto c : newtext + "gll") {    // append these characters for consistent spacing
+    if (c == '_') c = ' ';            // ugly hack to work around font issue
+
+    // render character and apply its width
+    g = _ssfn_render(ctxptr, c);
+    width += g->adv_x;
+
+    // loop over bitmap to find minimum and maximum y position
+    for (int y = 0; y < g->h; ++y) {
+      const int ypos = g->h - 1 - y + g->baseline;
+      for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
+        if (m > 0x80) {
+          m = 1;
+          ++i;
+        }
+        if (g->data[y * g->pitch + i] & m) {
+          miny = std::min(miny, ypos);
+          maxy = std::max(maxy, ypos);
+        }
+      }
+    }
+    free(g);
+  }
+
+  int xhalf = xspace / 2;
+  height = maxy - miny + 1 + 6 * xspace;
+
+  if (minwidth > width) {
+    int wextra = (minwidth - width) / xspace / 4;
+    newtext = fmt::format("{:.3} {:<<{}} {} {:>>{}} {:.3}", lo, '<', wextra, text, '>', wextra, hi);
+    width = minwidth;
+  }
+
+  // re-do dry run to determine size of the pixmap with the padded range string
+  width = 0;
+  miny = 1073741824;
+  maxy = 0;
+  for (auto c : newtext + "gll") {    // append these characters for consistent spacing
+    if (c == '_') c = ' ';            // ugly hack to work around font issue
+
+    // render character and apply its width
+    g = _ssfn_render(ctxptr, c);
+    width += g->adv_x;
+
+    // loop over bitmap to find minimum and maximum y position
+    for (int y = 0; y < g->h; ++y) {
+      const int ypos = g->h - 1 - y + g->baseline;
+      for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
+        if (m > 0x80) {
+          m = 1;
+          ++i;
+        }
+        if (g->data[y * g->pitch + i] & m) {
+          miny = std::min(miny, ypos);
+          maxy = std::max(maxy, ypos);
+        }
+      }
+    }
+    free(g);
+  }
+
+  // allocate and fill pixmap with background and frame color
+
+  auto *pixmap = new unsigned char[width * height * 3];
+  for (int y = 0; y < height; ++y) {
+    int yoffs = 3 * y * width;
+    for (int x = 0; x < width; ++x) {
+      if ((y < xhalf) || (y >= height - xhalf) || (x < xhalf) || (x >= width - xhalf)) {
+        pixmap[yoffs + 3 * x] = frame[0];
+        pixmap[yoffs + 3 * x + 1] = frame[1];
+        pixmap[yoffs + 3 * x + 2] = frame[2];
+      } else {
+        pixmap[yoffs + 3 * x] = back[0];
+        pixmap[yoffs + 3 * x + 1] = back[1];
+        pixmap[yoffs + 3 * x + 2] = back[2];
+      }
+    }
+  }
+
+  // draw colormap if possible
+  double delta = (hi - lo) / (width - 2 * xspace);
+  for (int x = xspace; x < width - xspace; ++x) {
+    for (int y = xspace; y < height - 4 * xspace - xhalf; ++y) {
+      int offs = 3 * y * width + 3 * x;
+      double val = lo + delta * static_cast<double>(x - xspace);
+      auto *color = image->map_value2color(mapidx, val);
+      if (color) {
+        pixmap[offs] = color[0] * 255;
+        pixmap[offs + 1] = color[1] * 255;
+        pixmap[offs + 2] = color[2] * 255;
+      }
+    }
+  }
+
+  // now render each character again and change the pixels in the pixmap accordingly
+  int penx = 2 * xspace;
+  int peny = 3 * xspace + xhalf;
+  for (auto c : newtext) {
+    if (c == '_') c = ' ';    // ugly hack to work around font issue
+
+    g = _ssfn_render(ctxptr, c);
+    for (int y = 0; y < g->h; ++y) {
+      const int yoffs = (g->h - 1 - y + peny + g->baseline - miny + xspace + xhalf / 2) * width * 3;
       for (int x = 0, i = 0, m = 1; x < g->w; ++x, m <<= 1) {
         if (m > 0x80) {
           m = 1;
