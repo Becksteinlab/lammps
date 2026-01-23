@@ -1173,10 +1173,14 @@ unsigned char *ScalableFont::create_colorscale(const std::string &text, int &wid
   g = _ssfn_render(ctxptr, ' ');
   int xspace = g->adv_x;
   free(g);
+  // get a font size specific spacing for a angular bracket
+  g = _ssfn_render(ctxptr, '<');
+  int xfill = g->adv_x;
+  free(g);
 
   double lo, hi;
   image->map_info(mapidx, lo, hi);
-  auto newtext = fmt::format("{:.3} < {} > {:.3}", lo, text, hi);
+  auto newtext = fmt::format("{:3.3}  {}  {:3.3}", lo, text, hi);
 
   // dry run to determine size of pixmap
   width = 0;
@@ -1210,8 +1214,8 @@ unsigned char *ScalableFont::create_colorscale(const std::string &text, int &wid
   height = maxy - miny + 1 + 6 * xspace;
 
   if (minwidth > width) {
-    int wextra = (minwidth - width) / xspace / 4;
-    newtext = fmt::format("{:.3} {:<<{}} {} {:>>{}} {:.3}", lo, '<', wextra, text, '>', wextra, hi);
+    int wextra = (minwidth - width) / xfill / 4;
+    newtext = fmt::format("{:3.3} {:<<{}} {} {:>>{}} {:3.3}", lo, '<', wextra, text, '>', wextra, hi);
     width = minwidth;
   }
 
@@ -1261,17 +1265,30 @@ unsigned char *ScalableFont::create_colorscale(const std::string &text, int &wid
     }
   }
 
-  // draw colormap if possible
+  // draw colormap
   double delta = (hi - lo) / (width - 2 * xspace);
+  int ticinc = tics ? (width - xspace) / tics : 1 << 31;
+  int ticmin = ticinc + xhalf;
+  int ticmax = ticmin + xhalf;
   for (int x = xspace; x < width - xspace; ++x) {
     for (int y = xspace; y < height - 4 * xspace - xhalf; ++y) {
       int offs = 3 * y * width + 3 * x;
       double val = lo + delta * static_cast<double>(x - xspace);
       auto *color = image->map_value2color(mapidx, val);
       if (color) {
-        pixmap[offs] = color[0] * 255;
-        pixmap[offs + 1] = color[1] * 255;
-        pixmap[offs + 2] = color[2] * 255;
+        if ((x > ticmin) && (x < ticmax)) {
+          pixmap[offs] = font[0];
+          pixmap[offs + 1] = font[1];
+          pixmap[offs + 2] = font[2];
+        } else {
+          pixmap[offs] = color[0] * 255;
+          pixmap[offs + 1] = color[1] * 255;
+          pixmap[offs + 2] = color[2] * 255;
+        }
+        if (x == ticmax) {
+          ticmin += ticinc;
+          ticmax += ticinc;
+        }
       }
     }
   }
