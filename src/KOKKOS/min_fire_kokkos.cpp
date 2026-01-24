@@ -87,6 +87,7 @@ int MinFireKokkos::run_iterate(int maxiter) {
 
   alpha_final = 0.0;
   auto l_dt = update->dt;
+  int flagv0 = 0;
 
   if (INTEGRATOR == LEAPFROG) {
     energy_force(0);
