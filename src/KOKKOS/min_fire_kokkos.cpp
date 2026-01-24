@@ -52,7 +52,24 @@ void MinFireKokkos::setup_style() {
   atomKK->sync(Device, V_MASK);
   auto l_v = atomKK->k_v.view_device();
   int nlocal = atom->nlocal;
+  
+  // print the parameters used within fire/abcfire into the log
 
+  const char *integrator_names[] = {"eulerimplicit", "verlet", "leapfrog", "eulerexplicit"};
+  const char *yesno[] = {"no", "yes"};
+
+  if (comm->me == 0)
+    utils::logmesg(lmp,
+                   "  Parameters for {}:\n"
+                   "    {:^5} {:^9} {:^6} {:^8} {:^6} {:^11} {:^4} {:^4} {:^14} {:^12} {:^11}\n"
+                   "    {:^5} {:^9} {:^6} {:^8} {:^6} {:^11} {:^4} {:^4} {:^14} {:^12} {:^11}\n",
+                   update->minimize_style, "dmax", "delaystep", "dtgrow", "dtshrink", "alpha0",
+                   "alphashrink", "tmax", "tmin", "integrator", "halfstepback", "abcfire", dmax,
+                   delaystep, dtgrow, dtshrink, alpha0, alphashrink, tmax, tmin,
+                   integrator_names[integrator], yesno[halfstepback_flag], yesno[abcflag]);
+
+  // initialize the velocities
+  
   Kokkos::parallel_for("min_fire/zero_v", nlocal, LAMMPS_LAMBDA(const int i) {
     l_v(i,0) = l_v(i,1) = l_v(i,2) = 0.0;
   });
