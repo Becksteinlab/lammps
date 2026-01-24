@@ -12,6 +12,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Mitch Murphy (alphataubio at gmail)
+------------------------------------------------------------------------- */
+
 #include "min_fire_kokkos.h"
 #include "atom_kokkos.h"
 #include "atom_masks.h"
