@@ -338,24 +338,43 @@ int MinFireKokkos::run_iterate(int maxiter) {
     }
 
     flagv0 = 0;
-
-    // Criteria checks
+    
+    // -------------------------------------------------
+    // Corrected ETOL Check
+    // -------------------------------------------------
     if (update->etol > 0.0 && ntimestep - last_negative > delaystep) {
-      if (fabs(ecurrent - eprevious) < update->etol * 0.5 * (fabs(ecurrent) + fabs(eprevious) + EPS_ENERGY)) {
-        if (update->multireplica == 0) return ETOL;
-        int flag = 0, flagall;
-        MPI_Allreduce(&flag, &flagall, 1, MPI_INT, MPI_SUM, universe->uworld);
-        if (flagall == 0) return ETOL;
+      bool local_converged = (fabs(ecurrent - eprevious) <
+          update->etol * 0.5 * (fabs(ecurrent) + fabs(eprevious) + EPS_ENERGY));
+
+      if (update->multireplica == 0) {
+        if (local_converged) return ETOL;
+      } else {
+        // MUST communicate regardless of local state
+        int local_flag = local_converged ? 0 : 1;
+        int global_flag;
+        MPI_Allreduce(&local_flag, &global_flag, 1, MPI_INT, MPI_SUM, universe->uworld);
+        
+        // Only return if EVERYONE (sum=0) is converged
+        if (global_flag == 0) return ETOL;
       }
     }
 
+    // -------------------------------------------------
+    // Corrected FTOL Check
+    // -------------------------------------------------
     if (update->ftol > 0.0) {
       KK_FLOAT fdotf = (normstyle == MAX) ? fnorm_max() : (normstyle == INF ? fnorm_inf() : fnorm_sqr());
-      if (fdotf < update->ftol * update->ftol) {
-        if (update->multireplica == 0) return FTOL;
-        int flag = 0, flagall;
-        MPI_Allreduce(&flag, &flagall, 1, MPI_INT, MPI_SUM, universe->uworld);
-        if (flagall == 0) return FTOL;
+      bool local_converged = (fdotf < update->ftol * update->ftol);
+
+      if (update->multireplica == 0) {
+        if (local_converged) return FTOL;
+      } else {
+        // MUST communicate regardless of local state
+        int local_flag = local_converged ? 0 : 1;
+        int global_flag;
+        MPI_Allreduce(&local_flag, &global_flag, 1, MPI_INT, MPI_SUM, universe->uworld);
+        
+        if (global_flag == 0) return FTOL;
       }
     }
 
