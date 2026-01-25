@@ -111,26 +111,6 @@ int MinFireKokkos::run_iterate(int maxiter) {
 
   alpha_final = 0.0;
   int flagv0 = 1;
-
-  if constexpr (INTEGRATOR == LEAPFROG) {
-    energy_force(0);
-    neval++;
-    atomKK->sync(Device, V_MASK | F_MASK);
-    auto l_v = atomKK->k_v.view_device();
-    auto l_f = atomKK->k_f.view_device();
-    auto l_rmass = atomKK->k_rmass.view_device();
-    auto l_mass = atomKK->k_mass.view_device();
-    auto l_type = atomKK->k_type.view_device();
-    double dtf = -0.5 * dt * force->ftm2v;
-
-    Kokkos::parallel_for("min_fire/leapfrog_init", atom->nlocal, LAMMPS_LAMBDA(const int i) {
-      KK_FLOAT dtfm = dtf / (l_rmass.data() ? l_rmass(i) : l_mass(l_type(i)));
-      l_v(i,0) = dtfm * l_f(i,0);
-      l_v(i,1) = dtfm * l_f(i,1);
-      l_v(i,2) = dtfm * l_f(i,2);
-    });
-    atomKK->modified(Device, V_MASK);
-  }
   
   atomKK->sync(Device, X_MASK | V_MASK | F_MASK | RMASS_MASK | TYPE_MASK);
   auto l_x = atomKK->k_x.view_device();
@@ -140,6 +120,18 @@ int MinFireKokkos::run_iterate(int maxiter) {
   auto l_mass = atomKK->k_mass.view_device();
   auto l_type = atomKK->k_type.view_device();
   int nlocal = atom->nlocal;
+
+  if constexpr (INTEGRATOR == LEAPFROG) {
+    energy_force(0);
+    neval++;
+    double dtf = -0.5 * dt * force->ftm2v;
+    Kokkos::parallel_for("min_fire/leapfrog_init", atom->nlocal, LAMMPS_LAMBDA(const int i) {
+      KK_FLOAT dtfm = dtf / (l_rmass.data() ? l_rmass(i) : l_mass(l_type(i)));
+      l_v(i,0) = dtfm * l_f(i,0);
+      l_v(i,1) = dtfm * l_f(i,1);
+      l_v(i,2) = dtfm * l_f(i,2);
+    });
+  }
 
   for (int iter = 0; iter < maxiter; iter++) {
     if (timer->check_timeout(niter)) return TIMEOUT;
@@ -218,7 +210,6 @@ int MinFireKokkos::run_iterate(int maxiter) {
         }
         l_v(i,0) = l_v(i,1) = l_v(i,2) = 0.0;
       });
-      atomKK->modified(Device, X_MASK | V_MASK);
       flagv0 = 1;
     }
 
@@ -233,7 +224,6 @@ int MinFireKokkos::run_iterate(int maxiter) {
         l_v(i,1) = dtfm * l_f(i,1);
         l_v(i,2) = dtfm * l_f(i,2);
       });
-      atomKK->modified(Device, V_MASK);
     }
 
     double dtvone = dt;
@@ -368,5 +358,7 @@ int MinFireKokkos::run_iterate(int maxiter) {
     }
     
   }
+  
+  atomKK->modified(Device, X_MASK | V_MASK | F_MASK);
   return MAXITER;
 }
