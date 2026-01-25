@@ -2324,6 +2324,8 @@ int DumpImage::modify_param(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify bcolor", error);
     if (atom->nbondtypes == 0)
       error->all(FLERR,"Dump modify bcolor not allowed with no bond types");
+    // ignore if bonds are not displayed
+    if (bondflag == NO) return 3;
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->nbondtypes,nlo,nhi,lmp,Atom::BOND);
 
@@ -2347,6 +2349,8 @@ int DumpImage::modify_param(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify bdiam", error);
     if (atom->nbondtypes == 0)
       error->all(FLERR, argoff, "Dump modify bdiam not allowed with no bond types");
+    // ignore if bonds are not displayed
+    if (bondflag == NO) return 3;
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->nbondtypes,nlo,nhi,lmp,Atom::BOND);
     double diam = utils::numeric(FLERR,arg[2],false,lmp);
@@ -2360,6 +2364,8 @@ int DumpImage::modify_param(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "dump_modify btrans", error);
     if (atom->nbondtypes == 0)
       error->all(FLERR,"Dump modify btrans not allowed with no bond types");
+    // ignore if bonds are not displayed
+    if (bondflag == NO) return 3;
     int nlo,nhi;
     utils::bounds_typelabel(FLERR,arg[1],1,atom->nbondtypes,nlo,nhi,lmp,Atom::BOND);
     double opacity = utils::numeric(FLERR,arg[2],false,lmp);
