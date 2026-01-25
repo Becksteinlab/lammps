@@ -607,6 +607,7 @@ FixGraphicsLabels::FixGraphicsLabels(LAMMPS *lmp, int narg, char **arg) :
       // clang-format on
       scale.dumpid = arg[iarg + 1];
       scale.text = arg[iarg + 2];
+
       // we always need to trigger computes in case of dynamic color scales
       varflag = 1;
 
@@ -786,6 +787,23 @@ void FixGraphicsLabels::init()
     CHECK_VARIABLE(scale.yvar, scale.ystr);
     CHECK_VARIABLE(scale.zvar, scale.zstr);
     CHECK_VARIABLE(scale.svar, scale.sstr);
+
+    // check if dump exists and if the color map is dynamic
+    auto *dump = dynamic_cast<DumpImage *>(output->get_dump_by_id(scale.dumpid));
+    if (!dump)
+      error->all(FLERR, Error::NOLASTLINE,
+                 "Dump ID {} for colorscale not found or not dump style image", scale.dumpid);
+    int dim = 0;
+    auto *image = static_cast<Image *>(dump->extract("image", dim));
+    if (!image || (dim != 0))
+      error->all(FLERR, Error::NOLASTLINE, "Could not extract color scale info from dump {}",
+                 scale.dumpid);
+    double lo, hi;
+    if (image->map_info(0, lo, hi) && (comm->me == 0))
+      error->warning(FLERR,
+                     "Dump {} uses a dynamic color map. "
+                     "Color scale can only use data from previous dump output\n",
+                     scale.dumpid);
   }
 }
 #undef CHECK_VARIABLE
