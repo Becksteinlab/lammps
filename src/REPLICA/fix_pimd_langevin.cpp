@@ -266,12 +266,12 @@ FixPIMDLangevin::FixPIMDLangevin(LAMMPS *lmp, int narg, char **arg) :
   global_freq = 1;
   vector_flag = 1;
   if (!pstat_flag) {
-    size_vector = 11;
+    size_vector = 10;
   } else if (pstat_flag) {
     if (pstyle == ISO) {
-      size_vector = 16;
+      size_vector = 15;
     } else if (pstyle == ANISO) {
-      size_vector = 18;
+      size_vector = 17;
     }
   }
   extvector = 1;
@@ -1333,7 +1333,6 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
   int nlocal = atom->nlocal;
   tagint *tag = atom->tag;
   int i, m;
-  nmiss = 0;
 
   // communicate values from the other beads
   if (cmode == SINGLE_PROC) {
@@ -1348,16 +1347,6 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
     MPI_Allgatherv(bufsorted[0], 3 * m, MPI_DOUBLE, bufsortedall[0], counts, displacements,
                    MPI_DOUBLE, universe->uworld);
   } else if (cmode == MULTI_PROC) {
-    // copy local values
-    for (i = 0; i < nlocal; i++) {
-      bufbeads[ireplica][3 * i + 0] = ptr[i][0];
-      bufbeads[ireplica][3 * i + 1] = ptr[i][1];
-      bufbeads[ireplica][3 * i + 2] = ptr[i][2];
-    }
-
-    int nmiss_bead;
-    const int nlocal = atom->nlocal;
-
     // Ensure receive buffer sized for my local atoms (3*nlocal doubles)
     if (nlocal > maxlocal) {
       maxlocal = nlocal + 200;
@@ -1371,9 +1360,12 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
       }
     }
 
-    // Optionally cache "my own bead" (like your reference does):
-    // bufbeads[universe->iworld] holds my current ptr for local atoms
-    memcpy(bufbeads[universe->iworld], &ptr[0][0], sizeof(double) * 3 * nlocal);
+    // copy local values
+    for (i = 0; i < nlocal; i++) {
+      bufbeads[ireplica][3 * i + 0] = ptr[i][0];
+      bufbeads[ireplica][3 * i + 1] = ptr[i][1];
+      bufbeads[ireplica][3 * i + 2] = ptr[i][2];
+    }
 
     // Loop over replica comm plans
     for (int iplan = 0; iplan < sizeplan; iplan++) {
@@ -1423,10 +1415,6 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
         }
       }
 
-      int nmiss_local = static_cast<int>(miss_tag.size());
-      MPI_Allreduce(&nmiss_local, &nmiss_bead, 1, MPI_INT, MPI_SUM, world);
-      nmiss += nmiss_bead;
-
       // 5) repair missing tags within this world (local-only claiming)
       if (!miss_tag.empty()) {
         // Optional safeguard: if too many missing, fall back / error
@@ -1471,7 +1459,6 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
       // 6) store received x/f for this plan into bufbeads[modeindex[iplan]]
       memcpy(bufbeads[modeindex[iplan]], bufrecv, sizeof(double) * 3 * nlocal);
     }
-    nmiss /= sizeplan;
   }
 }
 
@@ -1897,7 +1884,6 @@ void FixPIMDLangevin::restart(char *buf)
 
 double FixPIMDLangevin::compute_vector(int n)
 {
-  int imiss;
   if (n == 0) return ke_bead;
   if (n == 1) return se_bead;
   if (n == 2) return pe_bead;
@@ -1908,7 +1894,6 @@ double FixPIMDLangevin::compute_vector(int n)
   if (n == 7) return p_prim;
   if (n == 8) return p_md;
   if (n == 9) return p_cv;
-  imiss = 10;
 
   if (pstat_flag) {
     double volume = domain->xprd * domain->yprd * domain->zprd;
@@ -1922,7 +1907,6 @@ double FixPIMDLangevin::compute_vector(int n)
       if (n == 12) { return np * Pext * volume / force->nktv2p; }
       if (n == 13) { return -Vcoeff * np * kt * log(volume); }
       if (n == 14) return totenthalpy;
-      imiss = 15;
     } else if (pstyle == ANISO) {
       if (n == 10) return vw[0];
       if (n == 11) return vw[1];
@@ -1934,10 +1918,7 @@ double FixPIMDLangevin::compute_vector(int n)
         return -Vcoeff * np * kt * log(volume);
       }
       if (n == 16) return totenthalpy;
-      imiss = 17;
     }
   }
-  if (n == imiss) return nmiss;
-
   return 0.0;
 }
