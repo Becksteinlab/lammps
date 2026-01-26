@@ -6,7 +6,7 @@ AMBER to LAMMPS Tutorial
 `AMBER2LAMMPS <amber2lammps_>`_ is a Python utility that converts AMBER topology (``.prmtop``),
 force-field (``.frcmod``), and coordinate/charge (``.mol2``) files into
 LAMMPS data and parameter files. It provides both a command-line interface
-and a Python API with built-in validation. This document provides a detailed workflow with examples using the 
+and a Python API with built-in validation. This document provides a detailed workflow with examples using the
 `AMBER2LAMMPS <amber2lammps_>`_ python utility. The legacy scripts
 previously distributed in ``tools/amber2lmp`` have been removed due to
 their reliance on Python 2 and lack of maintenance.
@@ -134,8 +134,8 @@ Command Reference
      - Required?
      - Description
    * - **Input Files**
-     - 
-     - 
+     -
+     -
    * - ``topology``
      - yes
      - AMBER topology file (``.prmtop``)
@@ -146,8 +146,8 @@ Command Reference
      - yes
      - AMBER force-field parameter file
    * - **Output Files**
-     - 
-     - 
+     -
+     -
    * - ``data_file``
      - yes
      - Output LAMMPS data filename
@@ -155,8 +155,8 @@ Command Reference
      - yes
      - Output LAMMPS parameter filename
    * - **Options**
-     - 
-     - 
+     -
+     -
    * - ``-b, --buffer``
      - optional
      - Vacuum padding (Å) for the simulation box. Default: ``3.8``.
