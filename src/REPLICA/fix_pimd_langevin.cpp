@@ -64,6 +64,18 @@ std::map<int, std::string> Ensembles{{FixPIMDLangevin::NVE, "NVE"},
                                      {FixPIMDLangevin::NPT, "NPT"}};
 }    // namespace
 
+namespace {
+constexpr int TAG_INTER_REPLICA_COUNT = 10;
+constexpr int TAG_INTER_REPLICA_TAGS  = 11;
+constexpr int TAG_INTER_REPLICA_VALS  = 12;
+
+constexpr int TAG_RING_MISS_COUNT = 400;
+constexpr int TAG_RING_MISS_TAGS  = 401;
+constexpr int TAG_RING_REP_COUNT  = 402;
+constexpr int TAG_RING_REP_TAGS   = 403;
+constexpr int TAG_RING_REP_VALS   = 404;
+} // namespace
+
 /* ---------------------------------------------------------------------- */
 
 FixPIMDLangevin::FixPIMDLangevin(LAMMPS *lmp, int narg, char **arg) :
@@ -1376,9 +1388,9 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
       // 1) exchange local counts between the paired ranks in universe->uworld
       int nsend = 0;
       MPI_Sendrecv((void*)&nlocal, 1, MPI_INT,
-                  plansend[iplan], 10,
+                  plansend[iplan], TAG_INTER_REPLICA_COUNT,
                   (void*)&nsend, 1, MPI_INT,
-                  planrecv[iplan], 10,
+                  planrecv[iplan], TAG_INTER_REPLICA_COUNT,
                   universe->uworld, MPI_STATUS_IGNORE);
 
       // 2) ensure buffers sized for nsend
@@ -1394,9 +1406,9 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
       //    send my local tags (atom->tag[0..nlocal-1])
       //    receive remote rank's local tags into tagsend[0..nsend-1]
       MPI_Sendrecv((void*)atom->tag, nlocal, MPI_LMP_TAGINT,
-                  plansend[iplan], 11,
+                  plansend[iplan], TAG_INTER_REPLICA_TAGS,
                   (void*)tagsend, nsend, MPI_LMP_TAGINT,
-                  planrecv[iplan], 11,
+                  planrecv[iplan], TAG_INTER_REPLICA_TAGS,
                   universe->uworld, MPI_STATUS_IGNORE);
 
       // 4) pack ptr for the tags the remote rank needs from me
@@ -1451,9 +1463,9 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
       //
       // This mirrors your reference's direction choices.
       MPI_Sendrecv((void*)bufsend, 3*nsend, MPI_DOUBLE,
-                  planrecv[iplan], 12,
+                  planrecv[iplan], TAG_INTER_REPLICA_VALS,
                   (void*)bufrecv, 3*nlocal, MPI_DOUBLE,
-                  plansend[iplan], 12,
+                  plansend[iplan], TAG_INTER_REPLICA_VALS,
                   universe->uworld, MPI_STATUS_IGNORE);
 
       // 6) store received x/f for this plan into bufbeads[modeindex[iplan]]
@@ -1494,12 +1506,12 @@ void FixPIMDLangevin::ring_collect(const std::vector<tagint> &miss_tag,
     int sf = (int) tok_found_tags.size();
     int rm = 0, rf = 0;
 
-    MPI_Sendrecv(&sm, 1, MPI_INT, next, 400,
-                 &rm, 1, MPI_INT, prev, 400,
+    MPI_Sendrecv(&sm, 1, MPI_INT, next, TAG_RING_MISS_COUNT,
+                 &rm, 1, MPI_INT, prev, TAG_RING_MISS_COUNT,
                  world, MPI_STATUS_IGNORE);
 
-    MPI_Sendrecv(&sf, 1, MPI_INT, next, 401,
-                 &rf, 1, MPI_INT, prev, 401,
+    MPI_Sendrecv(&sf, 1, MPI_INT, next, TAG_RING_MISS_TAGS,
+                 &rf, 1, MPI_INT, prev, TAG_RING_MISS_TAGS,
                  world, MPI_STATUS_IGNORE);
 
     // 2) prepare recv buffers
@@ -1508,16 +1520,16 @@ void FixPIMDLangevin::ring_collect(const std::vector<tagint> &miss_tag,
     std::vector<double> in_found_vals(3 * (size_t)rf);
 
     // 3) exchange payloads
-    MPI_Sendrecv(tok_missing.data(), sm, MPI_LMP_TAGINT, next, 402,
-                 in_missing.data(), rm, MPI_LMP_TAGINT, prev, 402,
+    MPI_Sendrecv(tok_missing.data(), sm, MPI_LMP_TAGINT, next, TAG_RING_REP_COUNT,
+                 in_missing.data(), rm, MPI_LMP_TAGINT, prev, TAG_RING_REP_COUNT,
                  world, MPI_STATUS_IGNORE);
 
-    MPI_Sendrecv(tok_found_tags.data(), sf, MPI_LMP_TAGINT, next, 403,
-                 in_found_tags.data(), rf, MPI_LMP_TAGINT, prev, 403,
+    MPI_Sendrecv(tok_found_tags.data(), sf, MPI_LMP_TAGINT, next, TAG_RING_REP_TAGS,
+                 in_found_tags.data(), rf, MPI_LMP_TAGINT, prev, TAG_RING_REP_TAGS,
                  world, MPI_STATUS_IGNORE);
 
-    MPI_Sendrecv(tok_found_vals.data(), 3*sf, MPI_DOUBLE, next, 404,
-                 in_found_vals.data(), 3*rf, MPI_DOUBLE, prev, 404,
+    MPI_Sendrecv(tok_found_vals.data(), 3*sf, MPI_DOUBLE, next, TAG_RING_REP_VALS,
+                 in_found_vals.data(), 3*rf, MPI_DOUBLE, prev, TAG_RING_REP_VALS,
                  world, MPI_STATUS_IGNORE);
 
     // 4) process received token: claim only if local owner
