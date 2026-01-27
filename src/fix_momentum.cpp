@@ -61,7 +61,6 @@ FixMomentum::FixMomentum(LAMMPS *lmp, int narg, char **arg) :
   if (linear == 0 && angular == 0)
     error->all(FLERR,"Fix momentum command requires 'linear' or 'angular' keyword", Error::NOLASTLINE);
 
-
   if (linear)
     if (xflag < 0 || xflag > 1 || yflag < 0 || yflag > 1 ||
         zflag < 0 || zflag > 1)
