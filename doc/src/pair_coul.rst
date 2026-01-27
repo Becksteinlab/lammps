@@ -312,14 +312,16 @@ See the examples/streitz directory for an example input script that
 uses the Streitz-Mintmire potential.  The potentials directory has the
 AlO.eam.alloy and AlO.streitz potential files used by the example.
 
-In older versions of LAMMPS, the real-space summations of Coulomb interactions were done by replacing *1/r* using a damped potential *erfc(alpha*r)/r* with the parameter *alpha* controlling the rate of decay. However, any finite value of *alpha* leads to a jump at the cutoff, which interferes with equilibration if atoms move across the cutoff. The charge-neutralized potential of :ref:`(Wolf et al.) <Wolf1>` (*wolf*) and its extension by :ref:`(Fennell and Gezelter) <Fennell1>` (*dsf*) solve this problem. An extension was implemented to specify the width of taper (see :ref:`(Mei et al.) <Mei1>`) to smoothly terminate the Coulomb integrals at the cutoff. This is done by specifying the optional arguments *wolf* and *dsf* with the value representing the width of taper that smoothly terminates the Coulomb integrals. For example, if the cutoff is 8 A and the taper width is 2 A, the Coulomb integrals are smoothly rescaled from their actual value at r=6 A to zero at r=8 A. For backward compatibility, the default taper width is zero.
-
 Note that the Streitz-Mintmire potential is generally used for oxides,
 but there is no conceptual problem with extending it to nitrides and
 carbides (such as SiC, TiN).  Pair coul/streitz used by itself or with
 any other pair style such as EAM, MEAM, Tersoff, or LJ in
 hybrid/overlay mode.  To do this, you would need to provide a
 Streitz-Mintmire parameterization for the material being modeled.
+
+.. versionchanged:: TBD
+
+In previous versions of LAMMPS, the real-space summations of Coulomb interactions were done by replacing *1/r* using a damped potential *erfc(alpha*r)/r* with the parameter *alpha* controlling the rate of decay. However, any finite value of *alpha* leads to a jump at the cutoff, which interferes with equilibration if atoms move across the cutoff. The charge-neutralized potential of :ref:`(Wolf et al.) <Wolf1>` (*wolf*) and its extension by :ref:`(Fennell and Gezelter) <Fennell1>` (*dsf*) solve this problem. An extension was implemented to specify the width of taper (see :ref:`(Mei et al.) <Mei1>`) to smoothly terminate the Coulomb integrals at the cutoff. This is done by specifying the optional arguments *wolf* and *dsf* with the value representing the width of taper that smoothly terminates the Coulomb integrals. For example, if the cutoff is 8 A and the taper width is 2 A, the Coulomb integrals are smoothly rescaled from their actual value at r=6 A to zero at r=8 A. For backward compatibility, the default taper width is zero.
 
 An implementation of the Streitz-Mintmire potential for GaN due to :ref:`(Groger and Fikar) <Groger1>` can be found in the examples/streitz directory. The electrostatic parameters of Ga and N are stored in file GaN.streitz and the short-range tersoff/mod potential in the file GaN.streitz+tersoff.mod. The total potential must be specified as:
 
