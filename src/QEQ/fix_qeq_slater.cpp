@@ -76,7 +76,6 @@ FixQEqSlater::FixQEqSlater(LAMMPS *lmp, int narg, char **arg) : FixQEq(lmp, narg
       iarg += 2;
     } else {
       error->all(FLERR, "Unknown fix qeq/slater keyword: {}", arg[iarg]);
-      continue;
     }
   }
 
