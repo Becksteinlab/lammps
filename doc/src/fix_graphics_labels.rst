@@ -93,6 +93,7 @@ Syntax
              *none* = disables transparency
              *r/g/b* = provide three integers in the range 0 to 255
           *size* value = set the size of the characters (default 24), can be a variable (see below)
+          *length* value = approximate minimal length of the colorscale label
           *horizontal* = create horizontal text label
           *vertical* = create vertical text label
 
@@ -119,11 +120,20 @@ be useful to augment images with additional graphics or text directly
 and without having to post-process the images.  The positions can be
 either interpreted as coordinates in the simulation box or as
 coordinates in the coordinate system of the image.  The selection is
-made by setting a flag in the :doc:`dump image fix <dump_image>` command
-(see below).  When the positioning uses the coordinate system of the
-simulation the distance of the graphics objects from the camera is
-determined and atoms or other graphics objects in the "scene" can be
-located in front of or behind any text or image label.
+made by setting the *fflag1* keyword in the :doc:`dump image fix
+<dump_image>` command (see the "Dump image info" section below).  When
+the positioning uses the coordinate system of the simulation the
+distance of the graphics objects from the camera is determined from the
+given z-coordinate and atoms or other graphics objects in the "scene"
+can be located in front of or behind any *image*, *text* or *colorscale*
+label.  The label is *always* parallel to the image plane.
+
+When the image coordinate system is used, the labels are *always* on
+top, and if two labels are overlapping, the label that is added to the
+image *first* will be on top of the other.  That order cannot be changed
+within the same fix, but you can use multiple fix commands and then the
+order of the *fix* keywords in the *dump image"* command line determines
+the order and thus which label is drawn on top of the other.
 
 The *group-id* is ignored by this fix.
 
@@ -140,11 +150,12 @@ will try to read a file in JPEG, PNG, TGA, or PPM format.  If the suffix
 is ".jpg" or ".jpeg", then LAMMPS attempts to read the image in `JPEG
 format <jpeg_format_>`_, if the suffix is ".png", then LAMMPS attempts
 to read the image in `PNG format <png_format_>`_, and if the suffix is
-".tga" then LAMMPS will read the file in `TGA format <tga_format_>`_.  Otherwise LAMMPS
-will try to read the image in `ppm (aka netpbm) format <ppm_format_>`_.
-Not all variants of those file formats are compatible with image reader
-code in LAMMPS.  If LAMMPS encounters an incompatible or unrecognizable
-file format or a corrupted file, it will stop with an error.
+".tga" then LAMMPS will read the file in `TGA format <tga_format_>`_.
+Otherwise LAMMPS will try to read the image in `ppm (aka netpbm) format
+<ppm_format_>`_.  Not all variants of those file formats are compatible
+with image reader code in LAMMPS.  If LAMMPS encounters an incompatible
+or unrecognizable file format or a corrupted file, it will stop with an
+error.
 
 If LAMMPS detects during a run that the file has been changed, it will
 re-read it.  This allows for instance to create a plot using internal
@@ -252,8 +263,13 @@ may be added:
 
   The *size* value determines the size of the letters in the text in
   pixels (approximately) and values between 4 and 512 are accepted.  The
-  default value is 24. The size of the colorbar follows the size of the
-  text.
+  default value is 24. The size (height and width) of the colorbar
+  follows the size of the text.
+
+  The *length* value allows to set a minimal length of the colorscale
+  label.  For technical reasons, this is not exactly enforced, but
+  rather a rough approximation that is used to determine the amount of
+  padding in the text.
 
   The *tics* value determines how many "tics" or lines separating the
   colors are drawn.  This can simplify determining which value a
