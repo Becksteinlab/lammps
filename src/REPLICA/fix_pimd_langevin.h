@@ -103,7 +103,7 @@ class FixPIMDLangevin : public Fix {
   void comm_init();
   virtual void prepare_coordinates();
   void inter_replica_comm(double **ptr);
-  void ring_repair(const std::vector<tagint> &miss_tag,
+  void ring_collect(const std::vector<tagint> &miss_tag,
                                             double **ptr,
                                             std::vector<tagint> &rep_tag,
                                             std::vector<double> &rep_val);

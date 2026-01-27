@@ -1410,22 +1410,19 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
           bufsend[3*i + 1] = ptr[idx][1];
           bufsend[3*i + 2] = ptr[idx][2];
         } else {
-          miss_idx.push_back(i);   // remember which slot in bufsend needs repair
+          miss_idx.push_back(i);   // remember which slot in bufsend needs collect
           miss_tag.push_back(tagsend[i]);   // remember which tag that slot corresponds to
         }
       }
 
-      // 5) repair missing tags within this world (local-only claiming)
+      // 5) collect missing tags within this world (local-only claiming)
       if (!miss_tag.empty()) {
-        // Optional safeguard: if too many missing, fall back / error
-        // if ((int)miss_tag.size() > 2000) { ... }
-
         std::vector<tagint> rep_tag;
         std::vector<double> rep_val;
-        ring_repair(miss_tag, ptr, rep_tag, rep_val);
+        ring_collect(miss_tag, ptr, rep_tag, rep_val);
 
         // fill missing slots in bufsend by tag lookup (missing is small)
-        // Use O(m^2) to avoid unordered_map overhead in hot path
+        // Use a simple O(N^2) search since missing tags expected to be few
         for (int k = 0; k < (int)miss_tag.size(); k++) {
           const tagint t = miss_tag[k];
           int pos = -1;
@@ -1433,7 +1430,7 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
             if (rep_tag[j] == t) { pos = j; break; }
           }
           if (pos < 0) {
-            auto mesg = fmt::format("Repair failed: tag {} not returned on world [{}] rank [{}]\n",
+            auto mesg = fmt::format("collect failed: tag {} not returned on world [{}] rank [{}]\n",
                                     (int)t, universe->iworld, comm->me);
             error->universe_one(FLERR, mesg);
           }
@@ -1445,7 +1442,7 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
         }
       }
 
-      // 5) exchange packed x/f buffers:
+      // 6) exchange packed x/f buffers:
       //    - send bufsend (3*nsend) to planrecv[iplan]
       //    - receive bufrecv (3*nlocal) from plansend[iplan]
       //
@@ -1464,7 +1461,7 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
 
 /* ---------------------------------------------------------------------- */
 
-void FixPIMDLangevin::ring_repair(const std::vector<tagint> &miss_tag,
+void FixPIMDLangevin::ring_collect(const std::vector<tagint> &miss_tag,
                                             double **ptr,
                                             std::vector<tagint> &rep_tag,
                                             std::vector<double> &rep_val)
@@ -1552,7 +1549,7 @@ void FixPIMDLangevin::ring_repair(const std::vector<tagint> &miss_tag,
     // Print a small sample to help debug
     const tagint t0 = tok_missing[0];
     auto mesg = fmt::format(
-      "ring_repair: unresolved {} tags after {} hops on world [{}] rank [{}]. "
+      "ring_collect: unresolved {} tags after {} hops on world [{}] rank [{}]. "
       "Example tag = {}.\n",
       (int)tok_missing.size(), P, universe->iworld, me, (int)t0);
     error->universe_one(FLERR, mesg);
