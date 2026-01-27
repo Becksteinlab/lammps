@@ -269,7 +269,10 @@ int AtomVecKokkos::pack_comm_kokkos(const int &n,
     }
   }
 
-  if (bonus_flag) pack_comm_bonus_kokkos(n, list, buf);
+  if (bonus_flag) {
+    bool vel_flag = false;
+    pack_comm_bonus_kokkos(n, list, buf, vel_flag);
+  }
 
   return n*size_forward;
 }
@@ -371,7 +374,11 @@ void AtomVecKokkos::unpack_comm_kokkos(const int &n, const int &first,
     }
     atomKK->modified(Device,datamask_comm);
   }
-  if (bonus_flag) unpack_comm_bonus_kokkos(n, first, buf);
+
+  if (bonus_flag) {
+    bool vel_flag = false;
+    unpack_comm_bonus_kokkos(n, first, buf, vel_flag);
+  }
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1042,6 +1049,11 @@ int AtomVecKokkos::pack_comm_vel_kokkos(
     }
   }
 
+  if (bonus_flag) {
+    bool vel_flag = true;
+    pack_comm_bonus_kokkos(n, list, buf, vel_flag);
+  }
+
   return n*(size_forward + size_velocity);
 }
 
@@ -1167,6 +1179,11 @@ void AtomVecKokkos::unpack_comm_vel_kokkos(const int &n, const int &first,
       Kokkos::parallel_for(n,f);
     }
     atomKK->modified(Device,datamask_comm_vel);
+  }
+
+  if (bonus_flag) {
+    bool vel_flag = true;
+    unpack_comm_bonus_kokkos(n, first, buf, vel_flag);
   }
 }
 

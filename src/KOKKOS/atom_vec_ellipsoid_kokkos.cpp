@@ -234,9 +234,14 @@ struct AtomVecEllipsoidKokkos_PackCommBonus {
 /* ------------------------------------------------------------------------- */
 
 void AtomVecEllipsoidKokkos::pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
-                                                    const DAT::tdual_double_2d_lr &buf)
+                                                    const DAT::tdual_double_2d_lr &buf, bool vel_flag)
 {
-  int offset = size_forward - size_forward_bonus;
+  int offset;
+  if (!vel_flag)
+    offset = size_forward - size_forward_bonus;
+  else {
+    offset = size_forward + size_velocity - size_forward_bonus;
+  }
 
   if (lmp->kokkos->forward_comm_on_host) {
     atomKK->sync(HostKK,datamask_bonus);
@@ -293,9 +298,14 @@ struct AtomVecEllipsoidKokkos_UnpackCommBonus {
 /* ---------------------------------------------------------------------- */
 
 void AtomVecEllipsoidKokkos::unpack_comm_bonus_kokkos(const int &n, const int &first,
-                                                      const DAT::tdual_double_2d_lr &buf)
+                                                      const DAT::tdual_double_2d_lr &buf, bool vel_flag)
 {
-  int offset = size_forward - size_forward_bonus;
+  int offset;
+  if (!vel_flag) {
+    offset = size_forward - size_forward_bonus;
+  } else {
+    offset = size_forward + size_velocity - size_forward_bonus;
+  }
 
   if (lmp->kokkos->forward_comm_on_host) {
     atomKK->sync(HostKK,datamask_bonus);

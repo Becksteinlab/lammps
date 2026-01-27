@@ -39,10 +39,10 @@ class AtomVecHybridKokkos : public AtomVecKokkos, public AtomVecHybrid {
   void sort_kokkos(Kokkos::BinSort<KeyViewType, BinOp> &Sorter) override;
 
   void pack_comm_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
-                              const DAT::tdual_double_2d_lr &buf) override;
+                              const DAT::tdual_double_2d_lr &buf, bool vel_flag) override;
 
   void unpack_comm_bonus_kokkos(const int &n, const int &nfirst,
-                                const DAT::tdual_double_2d_lr &buf) override;
+                                const DAT::tdual_double_2d_lr &buf, bool vel_flag) override;
 
   void pack_comm_self_bonus_kokkos(const int &n, const DAT::tdual_int_1d &list,
                                    const int nfirst) override;
