@@ -26,6 +26,7 @@
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
+#include "math_const.h"
 #include "modify.h"
 #include "pair.h"
 
@@ -33,17 +34,21 @@
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
+using namespace MathConst;
 
 /* ---------------------------------------------------------------------- */
 
 FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
-    Fix(lmp, narg, arg), ngh_pairs(nullptr), list(nullptr), distsq(nullptr), nearest(nullptr), fixstore(nullptr), f_lambda(nullptr)
+    Fix(lmp, narg, arg), ngh_pairs(nullptr), list(nullptr), distsq(nullptr),
+    nearest(nullptr), fixstore(nullptr), f_lambda(nullptr),
+    prefactor1(nullptr), prefactor2(nullptr)
 {
   comm_reverse = 2;
   comm_forward = 2;
+  comm_forward_flag = FORWARD_INP_LAMBDA;
   restart_global = 1;
 
-  ngh_pairs_size = 0;
+  prefactor1_size = prefactor2_size = ngh_pairs_size = 0;
   maxneigh = 0;
 
   peratom_flag = 1;
@@ -55,6 +60,7 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   threshold_lo = threshold_hi = -1;
   lambda_non_group = 1; // fast
   const_ngh_flag = true;
+  calculate_forces_flag = true;
 
   tags_stored = false;
   counter_changed_csp_nghs = 0;
@@ -88,6 +94,9 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
       else
         error->all(FLERR, "expected dynamic or static instead of {}", arg[i+1]);
       i++;
+    } else if (strcmp(arg[i], "forces") == 0) {
+      calculate_forces_flag = utils::logical(FLERR, arg[i+1], false, lmp);
+      i++;
     } else if (strcmp(arg[i], "lambda_non_group") == 0) {
       if (strcmp(arg[i+1], "fast") == 0)
         lambda_non_group = 1;
@@ -106,6 +115,10 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   if (threshold_lo > threshold_hi || threshold_lo < 0) error->all(FLERR, "0 <= threshold_lo <= threshold_hi required");
   if (lambda_non_group < 0 || lambda_non_group > 1) error->all(FLERR, "0 <= lambda_non_group <= 1 required");
   if (!const_ngh_flag) { scalar_flag = 1; extscalar = 1; }
+
+  if (calculate_forces_flag) {
+    virial_global_flag = virial_peratom_flag = thermo_virial = 1;
+  }
 
 
   if (!atom->apip_lambda_flag) { error->all(FLERR, "fix lambda/la/csp/apip requires atomic style with lambda."); }
@@ -128,6 +141,8 @@ FixLambdaLACSPAPIP::~FixLambdaLACSPAPIP()
   memory->destroy(f_lambda);
   memory->destroy(distsq);
   memory->destroy(nearest);
+  memory->destroy(prefactor1);
+  memory->destroy(prefactor2);
   if (fixstore && modify->nfix) modify->delete_fix(fixstore->id);
   fixstore = nullptr;
 }
@@ -169,6 +184,7 @@ int FixLambdaLACSPAPIP::setmask()
   int mask = 0;
   mask |= PRE_FORCE;
   mask |= POST_NEIGHBOR;
+  if (calculate_forces_flag) mask |= PRE_REVERSE;
   return mask;
 }
 
@@ -189,10 +205,6 @@ void FixLambdaLACSPAPIP::init()
     if (strcmp(modify->fix[i]->style, "lambda/la/csp/apip") == 0) count++;
   }
   if (count > 1) error->all(FLERR, "More than one fix lambda/la/csp/apip.");
-
-  Pair *pair_tmp;
-  pair_tmp = force->pair_match("la/csp/apip", 0);
-  if (!pair_tmp) error->warning(FLERR, "fix lambda/la/csp/apip requires a `pair la/csp/apip` to apply forces");
 
   if (force->pair->cutforce < cut_hi)
     error->all(FLERR, "cutoff of potential ({}) smaller than cutoff of weighting function ({})", force->pair->cutforce, cut_hi);
@@ -244,6 +256,7 @@ void FixLambdaLACSPAPIP::setup_pre_force(int vflag)
   if (!const_ngh_flag || (const_ngh_flag && !tags_stored)) pre_force_dyn_pairs();
   else pre_force_const_pairs();
 
+  comm_forward_flag = FORWARD_INP_LAMBDA;
   comm->forward_comm(this);
 }
 
@@ -641,6 +654,180 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
   }
 }
 
+/* --------------------------------------------------------------------- */
+
+void FixLambdaLACSPAPIP::setup_pre_reverse(int eflag, int vflag)
+{
+  pre_reverse(eflag, vflag);
+}
+
+/**
+  * Calculate derivative of the switching parameter for the forces.
+  */
+
+void FixLambdaLACSPAPIP::pre_reverse(int /*eflag*/, int vflag)
+{
+  int i, j, ii, jj, inum, jnum, k, i_pair, i1, i2, i3;
+  int *ilist, *jlist, *numneigh, **firstneigh, *mask;
+  double **x, **f, *lambda, *csp, *csp_avg, *csp_norm, *e_fast, *e_precise;
+  double xtmp, ytmp, ztmp, lambdatmp, fpair, delx, dely, delz, r, rsq, cspavgtmp, prefactortmp, delx1, dely1, delz1, delx2, dely2, delz2, tmp, ftmp[3];
+
+  int nlocal = atom->nlocal;
+  int newton_pair = force->newton_pair;
+  int nhalf = nnn / 2;
+
+  v_init(vflag);
+
+  x = atom->x;
+  f = atom->f;
+  lambda = atom->apip_lambda;
+  csp = atom->apip_la_inp;
+  csp_norm = atom->apip_la_norm;
+  csp_avg = atom->apip_la_avg;
+  e_fast = atom->apip_e_fast;
+  e_precise = atom->apip_e_precise;
+  mask = atom->mask;
+
+  inum = list->inum;
+  ilist = list->ilist;
+  numneigh = list->numneigh;
+  firstneigh = list->firstneigh;
+
+
+  if (atom->nmax > prefactor1_size) {
+    memory->destroy(prefactor1);
+    prefactor1_size = atom->nmax;
+    memory->create(prefactor1,prefactor1_size,"pair:la:csp:apip:prefactor1");
+  }
+  if (nlocal > prefactor2_size) {
+    memory->destroy(prefactor2);
+    prefactor2_size = nlocal;
+    memory->create(prefactor2,prefactor2_size,"pair:la:csp:apip:prefactor2");
+  }
+
+
+  // e_fast and e_precise are known only for own atoms
+  for (ii = 0; ii < inum; ii++) {
+    i = ilist[ii];
+    // the derivative must be calculated from the switching function defined in FixLambdaLACSPAPIP::switching_function_poly
+    if (lambda[i] != 0 && lambda [i] != 1 && (mask[i] & groupbit)) {
+      // calculate derviative of lambda
+      tmp = 1 - 2 * (1 + (csp_avg[i] - threshold_hi) / threshold_width);
+      prefactor1[i] = -1.875 / threshold_width * (1 - 2 * tmp * tmp + pow(tmp, 4));
+    } else {
+      prefactor1[i] = 0;
+    }
+
+    // e_fast and e_precise are computed only for lambda in (0,1)
+    // lambda in (0,1) implies that the derivative of the switching function is non-zero
+    if (prefactor1[i] != 0) prefactor1[i] *= (e_fast[i] - e_precise[i]) / csp_norm[i];
+    prefactor2[i] = prefactor1[i] * weighting_function_poly(0);
+  }
+
+  // communicate prefactor1 to neighbouring processors
+  // and get prefactor1 of ghosts
+  comm_forward_flag = FORWARD_PREFACTOR;
+  comm->forward_comm(this);
+
+
+  // store all forces before force computation
+  store_f_lambda_before();
+
+
+  // compute derivative of the radial weight function first
+  for (ii = 0; ii < inum; ii++) {
+    i = ilist[ii];
+
+    lambdatmp = lambda[i];
+
+    prefactortmp = prefactor1[i];
+    xtmp = x[i][0];
+    ytmp = x[i][1];
+    ztmp = x[i][2];
+    cspavgtmp = csp_avg[i];
+
+    jlist = firstneigh[i];
+    jnum = numneigh[i];
+
+    for (jj = 0; jj < jnum; jj++) {
+      j = jlist[jj];
+      j &= NEIGHMASK;
+
+      delx = xtmp - x[j][0];
+      dely = ytmp - x[j][1];
+      delz = ztmp - x[j][2];
+      rsq = delx * delx + dely * dely + delz * delz;
+
+      if (rsq >= cut_hi_sq) continue;
+
+      r = sqrt(rsq);
+      prefactor2[i] += prefactor1[j] * weighting_function_poly(r);
+      fpair = prefactortmp * (csp[j] - cspavgtmp) * der_weighting_function_poly(r) / r;
+
+      if (fpair == 0) continue;
+
+      f[i][0] -= delx * fpair;
+      f[i][1] -= dely * fpair;
+      f[i][2] -= delz * fpair;
+      f[j][0] += delx * fpair;
+      f[j][1] += dely * fpair;
+      f[j][2] += delz * fpair;
+
+      if (vflag_either) ev_tally2(i, j, fpair, delx, dely, delz);
+    }
+  }
+
+
+  // compute derivative of the CSP
+  for (ii = 0; ii < inum; ii++) {
+    i2 = ilist[ii];
+
+    fpair = -2 * prefactor2[i2];
+
+    if (fpair == 0) continue;
+
+    xtmp = x[i2][0];
+    ytmp = x[i2][1];
+    ztmp = x[i2][2];
+
+
+    for (i_pair = 0; i_pair < nhalf; i_pair++) {
+      i1 = ngh_pairs[i2][i_pair];
+      i3 = ngh_pairs[i2][i_pair + nhalf];
+
+      delx1 = x[i1][0] - xtmp;
+      dely1 = x[i1][1] - ytmp;
+      delz1 = x[i1][2] - ztmp;
+
+      delx2 = x[i3][0] - xtmp;
+      dely2 = x[i3][1] - ytmp;
+      delz2 = x[i3][2] - ztmp;
+
+      ftmp[0] = (delx1 + delx2) * fpair;
+      ftmp[1] = (dely1 + dely2) * fpair;
+      ftmp[2] = (delz1 + delz2) * fpair;
+
+      f[i1][0] += ftmp[0];
+      f[i1][1] += ftmp[1];
+      f[i1][2] += ftmp[2];
+
+      f[i2][0] -= 2 * ftmp[0];
+      f[i2][1] -= 2 * ftmp[1];
+      f[i2][2] -= 2 * ftmp[2];
+
+      f[i3][0] += ftmp[0];
+      f[i3][1] += ftmp[1];
+      f[i3][2] += ftmp[2];
+
+      if (vflag_either) ev_tally3(i1, i2, i3, ftmp, delx1, dely1, delz1, delx2, dely2, delz2);
+
+    }
+  }
+
+  // calculate force due to gradient lambda by comparison with before stored force
+  store_f_lambda_after();
+}
+
 /* ----------------------------------------------------------------------
    select routine from Numerical Recipes (slightly modified)
    find k smallest values in array of length n
@@ -796,40 +983,60 @@ void FixLambdaLACSPAPIP::unpack_reverse_comm(int n, int *list, double *buf)
 }
 
 /**
-  * Send csp to neighbours.
+  * Send lambda/la_inp or prefactor to neighbours.
   */
 
 int FixLambdaLACSPAPIP::pack_forward_comm(int n, int *list, double *buf, int /*pbc_flag*/, int * /*pbc*/)
 {
   int i, j, m;
-  double *la_inp = atom->apip_la_inp;
-  double *lambda = atom->apip_lambda;
   m = 0;
 
-  for (i = 0; i < n; i++) {
-    j = list[i];
-    buf[m++] = la_inp[j];
-    buf[m++] = lambda[j];
+  if (comm_forward_flag == FORWARD_INP_LAMBDA) {
+
+    double *la_inp = atom->apip_la_inp;
+    double *lambda = atom->apip_lambda;
+
+    for (i = 0; i < n; i++) {
+      j = list[i];
+      buf[m++] = la_inp[j];
+      buf[m++] = lambda[j];
+    }
+
+  } else if (comm_forward_flag == FORWARD_PREFACTOR) {
+
+    for (i = 0; i < n; i++) {
+      j = list[i];
+      buf[m++] = prefactor1[j];
+    }
+
   }
 
   return m;
 }
 
 /**
-  * Recv csp from neighbours.
+  * Receive lambda/la_inp or prefactor to neighbours.
   */
 
 void FixLambdaLACSPAPIP::unpack_forward_comm(int n, int first, double *buf)
 {
-  int i, m, last;
-  double *la_inp = atom->apip_la_inp;
-  double *lambda = atom->apip_lambda;
+  int i,m,last;
 
   m = 0;
   last = first + n;
-  for (i = first; i < last; i++) {
-    la_inp[i] = buf[m++];
-    lambda[i] = buf[m++];
+  if (comm_forward_flag == FORWARD_INP_LAMBDA) {
+
+    double *la_inp = atom->apip_la_inp;
+    double *lambda = atom->apip_lambda;
+    for (i = first; i < last; i++) {
+      la_inp[i] = buf[m++];
+      lambda[i] = buf[m++];
+    }
+
+  } else if (comm_forward_flag == FORWARD_PREFACTOR) {
+
+    for (i = first; i < last; i++) prefactor1[i] = buf[m++];
+
   }
 }
 
@@ -939,4 +1146,171 @@ void FixLambdaLACSPAPIP::restart(char *buf)
   if (const_ngh_flag_tmp != const_ngh_flag)
     error->all(FLERR, "fix lambda/la/csp/apip: const_ngh_flag = {} != {} = const_ngh_flag in restart file",
                const_ngh_flag_tmp, const_ngh_flag);
+}
+
+
+/**
+  * compute the virial similar to Pair::ev_tally
+  * There is no potential energy involved.
+  * newton_pair is true since there are no double computations on different processors.
+  */
+
+void FixLambdaLACSPAPIP::ev_tally2(int i, int j, double fpair,
+                    double delx, double dely, double delz)
+{
+  double v[6];
+
+  v[0] = delx*delx*fpair;
+  v[1] = dely*dely*fpair;
+  v[2] = delz*delz*fpair;
+  v[3] = delx*dely*fpair;
+  v[4] = delx*delz*fpair;
+  v[5] = dely*delz*fpair;
+
+  if (vflag_global) {
+    virial[0] += v[0];
+    virial[1] += v[1];
+    virial[2] += v[2];
+    virial[3] += v[3];
+    virial[4] += v[4];
+    virial[5] += v[5];
+  }
+
+  if (vflag_atom) {
+    vatom[i][0] += 0.5*v[0];
+    vatom[i][1] += 0.5*v[1];
+    vatom[i][2] += 0.5*v[2];
+    vatom[i][3] += 0.5*v[3];
+    vatom[i][4] += 0.5*v[4];
+    vatom[i][5] += 0.5*v[5];
+
+    vatom[j][0] += 0.5*v[0];
+    vatom[j][1] += 0.5*v[1];
+    vatom[j][2] += 0.5*v[2];
+    vatom[j][3] += 0.5*v[3];
+    vatom[j][4] += 0.5*v[4];
+    vatom[j][5] += 0.5*v[5];
+  }
+}
+
+/**
+  * compute the virial similar to Angle::ev_tally
+  * Differences:
+  * 1. There is no potential energy involved.
+  * 2. newton_bond is true since there are no double computations
+  *    on different processors.
+  * 3. f1 = f3
+  */
+
+void FixLambdaLACSPAPIP::ev_tally3(int i, int j, int k, double *f,
+                     double delx1, double dely1, double delz1, double delx2,
+                     double dely2, double delz2)
+{
+  double v[6];
+
+  v[0] = (delx1 + delx2) * f[0];
+  v[1] = (dely1 + dely2) * f[1];
+  v[2] = (delz1 + delz2) * f[2];
+  v[3] = (delx1 + delx2) * f[1];
+  v[4] = (delx1 + delx2) * f[2];
+  v[5] = (dely1 + dely2) * f[2];
+
+  if (vflag_global) {
+    virial[0] += v[0];
+    virial[1] += v[1];
+    virial[2] += v[2];
+    virial[3] += v[3];
+    virial[4] += v[4];
+    virial[5] += v[5];
+  }
+
+  if (vflag_atom) {
+    vatom[i][0] += THIRD * v[0];
+    vatom[i][1] += THIRD * v[1];
+    vatom[i][2] += THIRD * v[2];
+    vatom[i][3] += THIRD * v[3];
+    vatom[i][4] += THIRD * v[4];
+    vatom[i][5] += THIRD * v[5];
+
+    vatom[j][0] += THIRD * v[0];
+    vatom[j][1] += THIRD * v[1];
+    vatom[j][2] += THIRD * v[2];
+    vatom[j][3] += THIRD * v[3];
+    vatom[j][4] += THIRD * v[4];
+    vatom[j][5] += THIRD * v[5];
+
+    vatom[k][0] += THIRD * v[0];
+    vatom[k][1] += THIRD * v[1];
+    vatom[k][2] += THIRD * v[2];
+    vatom[k][3] += THIRD * v[3];
+    vatom[k][4] += THIRD * v[4];
+    vatom[k][5] += THIRD * v[5];
+  }
+
+  // per-atom centroid virial
+
+  if (cvflag_atom) {
+
+    // r0 = (r1+r2+r3)/3
+    // rij = ri-rj
+    // total virial = r10*f1 + r20*f2 + r30*f3
+    // del1: r12
+    // del2: r32
+
+    double a1[3];
+
+    // a1 = r10 = (2*r12 -   r32)/3
+    a1[0] = THIRD * (2 * delx1 - delx2);
+    a1[1] = THIRD * (2 * dely1 - dely2);
+    a1[2] = THIRD * (2 * delz1 - delz2);
+
+    cvatom[i][0] += a1[0] * f[0];
+    cvatom[i][1] += a1[1] * f[1];
+    cvatom[i][2] += a1[2] * f[2];
+    cvatom[i][3] += a1[0] * f[1];
+    cvatom[i][4] += a1[0] * f[2];
+    cvatom[i][5] += a1[1] * f[2];
+    cvatom[i][6] += a1[1] * f[0];
+    cvatom[i][7] += a1[2] * f[0];
+    cvatom[i][8] += a1[2] * f[1];
+
+    double a2[3];
+    double f2[3];
+
+    // a2 = r20 = ( -r12 -   r32)/3
+    a2[0] = THIRD * (-delx1 - delx2);
+    a2[1] = THIRD * (-dely1 - dely2);
+    a2[2] = THIRD * (-delz1 - delz2);
+
+    f2[0] = -2 * f[0];
+    f2[1] = -2 * f[1];
+    f2[2] = -2 * f[2];
+
+    cvatom[j][0] += a2[0] * f2[0];
+    cvatom[j][1] += a2[1] * f2[1];
+    cvatom[j][2] += a2[2] * f2[2];
+    cvatom[j][3] += a2[0] * f2[1];
+    cvatom[j][4] += a2[0] * f2[2];
+    cvatom[j][5] += a2[1] * f2[2];
+    cvatom[j][6] += a2[1] * f2[0];
+    cvatom[j][7] += a2[2] * f2[0];
+    cvatom[j][8] += a2[2] * f2[1];
+
+    double a3[3];
+
+    // a3 = r30 = ( -r12 + 2*r32)/3
+    a3[0] = THIRD * (-delx1 + 2 * delx2);
+    a3[1] = THIRD * (-dely1 + 2 * dely2);
+    a3[2] = THIRD * (-delz1 + 2 * delz2);
+
+    cvatom[k][0] += a3[0] * f[0];
+    cvatom[k][1] += a3[1] * f[1];
+    cvatom[k][2] += a3[2] * f[2];
+    cvatom[k][3] += a3[0] * f[1];
+    cvatom[k][4] += a3[0] * f[2];
+    cvatom[k][5] += a3[1] * f[2];
+    cvatom[k][6] += a3[1] * f[0];
+    cvatom[k][7] += a3[2] * f[0];
+    cvatom[k][8] += a3[2] * f[1];
+  }
 }

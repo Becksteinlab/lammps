@@ -73,6 +73,8 @@ class FixLambdaLACSPAPIP : public Fix {
   double compute_scalar();
   void write_restart(FILE *) override;
   void restart(char *) override;
+  void setup_pre_reverse(int, int) override;
+  void pre_reverse(int, int) override;
 
  private:
 
@@ -104,6 +106,15 @@ class FixLambdaLACSPAPIP : public Fix {
   bool tags_stored;
   int counter_changed_csp_nghs;
   bool const_ngh_flag;
+  bool calculate_forces_flag;
+
+  enum { FORWARD_INP_LAMBDA, FORWARD_PREFACTOR };
+  int comm_forward_flag;    // flag that determines which variables are communicated in comm forward
+
+  double * prefactor1; // per atom array for the force calculation
+  int prefactor1_size; // own + ghosts
+  double * prefactor2; // per atom array for the force calculation
+  int prefactor2_size; // own
 
   void store_f_lambda_before();
   void store_f_lambda_after();
@@ -114,6 +125,8 @@ class FixLambdaLACSPAPIP : public Fix {
   double weighting_function_poly(double);
   double der_weighting_function_poly(double);
   void select2(int, int, double *, int *);
+  void ev_tally2(int, int, double, double, double, double);
+  void ev_tally3(int, int, int, double *, double, double, double, double, double, double);
 };
 
 }    // namespace LAMMPS_NS

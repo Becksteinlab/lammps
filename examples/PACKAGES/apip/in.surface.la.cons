@@ -36,19 +36,18 @@ read_data	data.surface.la
 
 fix		nve all nve
 
-fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} # for a conservative potential
-
-pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
+fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
+pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi}
 pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
 pair_coeff	* * pace/apip ${ace_file} Cu
 pair_coeff	* * zero
-pair_coeff	* * la/csp/apip
 
-#
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} forces no
 #pair_style	hybrid/overlay eam/fs zero ${cspavg_r_hi}
 #pair_coeff	* * eam/fs ${eamfs_file} Cu
 #pair_coeff	* * zero
 
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} forces no
 #pair_style	hybrid/overlay pace zero ${cspavg_r_hi}
 #pair_coeff	* * pace ${ace_file} Cu
 #pair_coeff	* * zero
@@ -69,7 +68,7 @@ compute		lambda_types all reduce sum v_flag_simple v_flag_switch v_flag_complex
 thermo_style	custom step temp etotal c_lambda_types[*] fnorm fmax
 thermo		1
 
-#dump		1 all custom 10 dump.surface.la.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
+#dump		1 all custom 10 dump.surface.la.cons.* id type x y z c_lambda c_csp c_csp_norm c_csp_avg proc
 
 
 run		100
@@ -84,11 +83,10 @@ run		100
 #clear
 #read_restart	restart.surface.la.cons
 #fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
-#pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi} la/csp/apip
+#pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi}
 #pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
 #pair_coeff	* * pace/apip ${ace_file} Cu
 #pair_coeff	* * zero
-#pair_coeff	* * la/csp/apip
 #fix		nve all nve
 #thermo_style	custom step temp etotal fnorm fmax
 #thermo		1
