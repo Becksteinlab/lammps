@@ -181,13 +181,13 @@ void PairZBL::allocate()
 
 void PairZBL::settings(int narg, char **arg)
 {
-  if (narg != 2) error->all(FLERR,"Pair style zbl requires 2 arguments", Error::NOLASTLINE);
+  if (narg != 2) error->all(FLERR, "Pair style zbl requires 2 arguments", Error::NOLASTLINE);
 
   cut_inner = utils::numeric(FLERR, arg[0], false, lmp);
   cut_global = utils::numeric(FLERR, arg[1], false, lmp);
 
-  if (cut_inner <= 0.0) error->all(FLERR,"Pair style zbl inner cutoff must be > 0.0", Error::NOLASTLINE);
-  if (cut_inner > cut_global) error->all(FLERR,"Pair style zbl inner cutoff must be <= global cutoff", Error::NOLASTLINE);
+  if (cut_inner <= 0.0) error->all(FLERR, "Pair style zbl inner cutoff must be > 0.0", Error::NOLASTLINE);
+  if (cut_inner > cut_global) error->all(FLERR, "Pair style zbl inner cutoff must be <= global cutoff", Error::NOLASTLINE);
 }
 
 /* ----------------------------------------------------------------------
