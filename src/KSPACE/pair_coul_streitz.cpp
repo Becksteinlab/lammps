@@ -50,6 +50,7 @@ PairCoulStreitz::PairCoulStreitz(LAMMPS *lmp) : Pair(lmp)
   one_coeff = 1;
   nmax = 0;
   drtap = 0.0;
+  dsfflag = 0;
 
   params = nullptr;
 }
