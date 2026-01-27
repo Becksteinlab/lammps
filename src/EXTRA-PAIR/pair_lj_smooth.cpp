@@ -191,13 +191,13 @@ void PairLJSmooth::allocate()
 
 void PairLJSmooth::settings(int narg, char **arg)
 {
-  if (narg != 2) error->all(FLERR,"Illegal pair_style command");
+  if (narg != 2) error->all(FLERR,"Pair style lj/smooth requires 2 arguments", Error::NOLASTLINE);
 
   cut_inner_global = utils::numeric(FLERR,arg[0],false,lmp);
   cut_global = utils::numeric(FLERR,arg[1],false,lmp);
 
   if (cut_inner_global <= 0.0 || cut_inner_global > cut_global)
-    error->all(FLERR,"Illegal pair_style command");
+    error->all(FLERR,"Pair style lj/smooth inner cutoff must be <= global cutoff", Error::NOLASTLINE);
 
   // reset cutoffs that have been explicitly set
 
