@@ -809,6 +809,7 @@ struct BuildExchangeListFunctor {
                 _nsend(nsend.template view<DeviceType>()),
                 _sendlist(sendlist.template view<DeviceType>()) { }
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator() (int i) const {
     if (_x(i,_dim) < _lo || _x(i,_dim) >= _hi) {
@@ -1132,6 +1133,7 @@ struct BuildBorderListFunctor {
     nsend(_nsend.template view<DeviceType>()) {}
 
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator() (typename Kokkos::TeamPolicy<DeviceType>::member_type dev) const {
     const int chunk = ((nlast - nfirst + dev.league_size() - 1 ) /
@@ -1154,7 +1156,7 @@ struct BuildBorderListFunctor {
     }
   }
 
-  size_t shmem_size(const int team_size) const { (void) team_size; return 1000u;}
+  [[nodiscard]] size_t shmem_size(const int team_size) const { (void) team_size; return 1000u;}
 };
 
 /* ---------------------------------------------------------------------- */
