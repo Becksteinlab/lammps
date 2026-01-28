@@ -183,7 +183,7 @@ This pair_style is part of the MBX package.  A pair style is only
 enabled if LAMMPS was built with its corresponding package.
 See the :doc:`Build package <Build_package>` page for more info.
 
-MBX requires the FFTW3 library to be installed. This is needed 
+MBX requires the FFTW3 library to be installed. This is needed
 as part of the internal PME solver used for long-range electrostatics.
 
 All electrostatic interactions are calculated internally in MBX.
