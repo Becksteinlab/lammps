@@ -410,7 +410,7 @@ FSUM FixLangevinKokkos<DeviceType>::post_force_item(int i) const
     if (Tp_RMASS) {
       gamma1 = -rmass[i] / t_period / ftm2v;
       gamma2 = sqrt(rmass[i]) * fran_prop_const / ftm2v;
-      gamma1 *= 1.0/ratio[type[i]];
+      gamma1 *= 1.0/d_ratio[type[i]];
       gamma2 *= 1.0/sqrt(d_ratio[type[i]]) * tsqrt_t;
     } else {
       gamma1 = d_gfactor1[type[i]];
@@ -569,7 +569,7 @@ void FixLangevinKokkos<DeviceType>::angmom_thermostat_item(int i) const
     if (tstyle == ATOM) tsqrt_t = sqrt(d_tforce[i]);
     gamma1 = -ascale / t_period / ftm2v;
     gamma2 = sqrt(ascale*24.0*boltz/t_period/dt/mvv2e) / ftm2v;
-    gamma1 *= 1.0/ratio[type[i]];
+    gamma1 *= 1.0/d_ratio[type[i]];
     gamma2 *= 1.0/sqrt(d_ratio[type[i]]) * tsqrt_t;
     tran[0] = sqrt(inertia[0])*gamma2*(rand_gen.drand()-0.5);
     tran[1] = sqrt(inertia[1])*gamma2*(rand_gen.drand()-0.5);
