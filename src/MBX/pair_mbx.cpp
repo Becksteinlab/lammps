@@ -76,7 +76,7 @@ PairMBX::PairMBX(LAMMPS *lmp) : Pair(lmp)
 
   // energy terms available to pair compute
 
-  nextra = 22;
+  nextra = 10;
   pvector = new double[nextra];
 }
 

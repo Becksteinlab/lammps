@@ -101,7 +101,7 @@ a complete hybrid example.
 
 If you have questions not answered by this documentation, please
 reference the MBX website
-`mbxsimulations.com <https://mbxsimulations.com>`_ or reach out to us at
+`mbxsimulations.com <https://mbxsimulations.com>`_ or reach out to the MBX team at
 `https://groups.google.com/g/mbx-users <https://groups.google.com/g/mbx-users>`_
 
 
