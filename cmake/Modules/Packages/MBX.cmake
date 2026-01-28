@@ -13,9 +13,11 @@ mark_as_advanced(MBX_SUFFIX)
 set(MBX_CONFIG_CC  ${CMAKE_C_COMPILER})
 set(MBX_CONFIG_CXX  ${CMAKE_CXX_COMPILER})
 if(BUILD_MPI)
-  set(MBX_CONFIG_MPI "--enable-mpi")
+  set(MBX_CONFIG_FLAGS "--enable-mpi")
+  set(MBX_CONFIG_CC  ${MPI_C_COMPILER})
+  set(MBX_CONFIG_CXX  ${MPI_CXX_COMPILER})
 else()
-  set(MBX_CONFIG_MPI "--disable-mpi")
+  set(MBX_CONFIG_FLAGS "--disable-mpi")
 endif()
 
 
@@ -45,10 +47,9 @@ if(DOWNLOAD_MBX)
   message(STATUS "MBX download requested - we will build our own")
   set(MBX_BUILD_BYPRODUCTS "<INSTALL_DIR>/lib/${CMAKE_STATIC_LIBRARY_PREFIX}mbx${CMAKE_STATIC_LIBRARY_SUFFIX}")
 
-  # MBX perform autoreconf -fi
-
-  message(STATUS "MBX_CONFIG_MPI: ${MBX_CONFIG_MPI}")
+  message(STATUS "MBX_CONFIG_CC: ${MBX_CONFIG_CC}")
   message(STATUS "MBX_CONFIG_CXX: ${MBX_CONFIG_CXX}")
+  message(STATUS "MBX_CONFIG_FLAGS: ${MBX_CONFIG_FLAGS}")
 
   include(ExternalProject)
   ExternalProject_Add(mbx_build
@@ -56,7 +57,7 @@ if(DOWNLOAD_MBX)
     URL_HASH SHA256=${MBX_SHA256}
     CONFIGURE_COMMAND <SOURCE_DIR>/configure
                       --prefix=<INSTALL_DIR>
-                      ${MBX_CONFIG_MPI}
+                      ${MBX_CONFIG_FLAGS}
                       CXX=${MBX_CONFIG_CXX}
                       CC=${MBX_CONFIG_CC}
                       CPPFLAGS=-I${FFTW3_INCLUDE_DIRS}
