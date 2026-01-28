@@ -262,7 +262,7 @@ void PairLJRelRes::allocate()
 
 void PairLJRelRes::settings(int narg, char **arg)
 {
-  if (narg != 4) error->all(FLERR,"Pair style lj/relres requires 4 arguments", Error::NOLASTLINE);
+  if (narg != 4) error->all(FLERR,"Pair style lj/relres requires 4 arguments");
 
   cutf_inner_global = utils::numeric(FLERR,arg[0],false,lmp);
   cutf_global = utils::numeric(FLERR,arg[1],false,lmp);
