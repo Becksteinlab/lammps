@@ -183,6 +183,9 @@ This pair_style is part of the MBX package.  A pair style is only
 enabled if LAMMPS was built with its corresponding package.
 See the :doc:`Build package <Build_package>` page for more info.
 
+MBX requires the FFTW3 library to be installed. This is needed 
+as part of the internal PME solver used for long-range electrostatics.
+
 All electrostatic interactions are calculated internally in MBX.
 Therefore one should never calculate coulombic interactions in
 LAMMPS such as using `coul/cut` or `coul/long` when also using MBX.
@@ -190,8 +193,8 @@ See the warning above for more details.
 
 MBX currently only supports :doc:`processors <processors>` mapping style `xyz`.
 
-MBX is primarily tested to work with `units real`. If you encounter
-issues with other unit styles, please contact the MBX developers.
+MBX is primarily tested to work with `units real` and `atom_style full`. If you encounter
+issues with other unit or atom styles, please contact the MBX developers.
 
 Related commands
 """"""""""""""""
