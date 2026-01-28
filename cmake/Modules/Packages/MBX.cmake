@@ -34,8 +34,6 @@ endif()
 find_package(FFTW3 REQUIRED)
 if(FFTW3_FOUND)
   list(APPEND MBX_LINK_LIBS FFTW3::FFTW3)
-else()
-  message(FATAL_ERROR, "Must compile LAMMPS with FFTW3 with MBX package")
 endif()
 
 find_package(PkgConfig QUIET)
