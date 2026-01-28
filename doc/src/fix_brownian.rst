@@ -221,6 +221,8 @@ is used. If the keyword is used with the *projection* value, the linearized,
 projection-based scheme (:ref:`(Ilie) <Ilie1>`) is used. Only
 compatible with *brownian/sphere*.
 
+Note: *rotation_style projection* reproduces the legacy behavior (the former default).
+
 If the *rotation_temp* keyword is used, then the rotational diffusion
 will occur at this prescribed temperature instead of *temp*. Only
 compatible with *brownian/sphere* and *brownian/asphere*.
