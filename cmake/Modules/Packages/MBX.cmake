@@ -20,6 +20,15 @@ else()
   set(MBX_CONFIG_FLAGS "--disable-mpi")
 endif()
 
+if(BUILD_OMP)
+  list(APPEND MBX_CONFIG_FLAGS --enable-openmp)
+else()
+  list(APPEND MBX_CONFIG_FLAGS --disable-openmp)
+endif()
+
+if(CONFIGURE_REQUEST_PIC)
+  list(APPEND MBX_CONFIG_FLAGS ${CONFIGURE_REQUEST_PIC})
+endif()
 
 set(MBX_URL "https://github.com/paesanilab/MBX/releases/download/v1.3.3/mbx-1.3.3.tar.gz" CACHE STRING "URL for MBX tarball")
 set(MBX_SHA256 "6aea6e7b797edfc06e81de856d6d63f03e1886ca02d25c937e81df825fe4bfb9" CACHE STRING "SHA256 checksum of MBX tarball")
