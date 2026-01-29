@@ -33,7 +33,7 @@ ImbalanceStore::~ImbalanceStore()
 
 int ImbalanceStore::options(int narg, char **arg)
 {
-  if (narg < 1) utils::missing_cmd_args(FLERR, "balance weight", error);
+  if (narg < 1) utils::missing_cmd_args(FLERR, "balance weight store", error);
   name = utils::strdup(arg[0]);
 
   return 1;
