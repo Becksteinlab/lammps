@@ -5,7 +5,6 @@
 variable	eamfs_file string "Cu_300K_Immel_2023.eam.fs"
 variable	ace_file string "../../../potentials/Cu-PBE-core-rep.ace"
 variable	cspavg_lattice string "fcc"
-variable	cspavg_cutoff equal 8.0
 # Thresholds between which the switching parameter changes from 1 to 0 based on the locally averaged (la) CSP.
 variable	cspavg_csp_lo equal 0.7
 variable	cspavg_csp_hi equal 2.0
@@ -36,7 +35,7 @@ region		descriptor block INF INF INF INF ${cspavg_r_hi} INF units box
 group		group_descriptor region descriptor
 
 
-fix		lambda_cspavg group_descriptor lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} lambda_non_group fast
+fix		lambda_cspavg group_descriptor lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} lambda_non_group fast
 pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi}
 pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
 pair_coeff	* * pace/apip ${ace_file} Cu

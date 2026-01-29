@@ -6,7 +6,6 @@ variable	eamfs_file string "Cu_300K_Immel_2023.eam.fs"
 variable	ace_file string "../../../potentials/Cu-PBE-core-rep.ace"
 # The csp is used as detection mechanism for atoms of interest.
 variable	cspavg_lattice string "fcc"
-variable	cspavg_cutoff equal 8.0
 # Thresholds between which the switching parameter changes from 1 to 0 based on the locally averaged (la) CSP.
 variable	cspavg_csp_lo equal 0.7
 variable	cspavg_csp_hi equal 2.0
@@ -36,18 +35,18 @@ read_data	data.surface.la
 
 fix		nve all nve
 
-fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
+fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice}
 pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi}
 pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
 pair_coeff	* * pace/apip ${ace_file} Cu
 pair_coeff	* * zero
 
-#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} forces no
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} forces no
 #pair_style	hybrid/overlay eam/fs zero ${cspavg_r_hi}
 #pair_coeff	* * eam/fs ${eamfs_file} Cu
 #pair_coeff	* * zero
 
-#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff} forces no
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} forces no
 #pair_style	hybrid/overlay pace zero ${cspavg_r_hi}
 #pair_coeff	* * pace ${ace_file} Cu
 #pair_coeff	* * zero
@@ -82,7 +81,7 @@ run		100
 #write_restart	restart.surface.la.cons
 #clear
 #read_restart	restart.surface.la.cons
-#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice} ${cspavg_cutoff}
+#fix		lambda_cspavg all lambda/la/csp/apip ${cspavg_csp_lo} ${cspavg_csp_hi} ${cspavg_r_lo} ${cspavg_r_hi} ${cspavg_lattice}
 #pair_style	hybrid/overlay eam/fs/apip pace/apip zero ${cspavg_r_hi}
 #pair_coeff	* * eam/fs/apip ${eamfs_file} Cu
 #pair_coeff	* * pace/apip ${ace_file} Cu

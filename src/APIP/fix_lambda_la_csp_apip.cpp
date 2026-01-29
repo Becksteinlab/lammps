@@ -61,11 +61,12 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   lambda_non_group = 1; // fast
   const_ngh_flag = true;
   calculate_forces_flag = true;
+  csp_cutsq = 25;
 
   tags_stored = false;
   counter_changed_csp_nghs = 0;
 
-  if (narg < 9) error->all(FLERR, "fix lambda/la/csp/apip requires six arguments");
+  if (narg < 8) error->all(FLERR, "fix lambda/la/csp/apip requires five arguments");
 
   threshold_lo = utils::numeric(FLERR, arg[3], false, lmp);
   threshold_hi = utils::numeric(FLERR, arg[4], false, lmp);
@@ -82,11 +83,10 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
     nnn = 14;
   else
     nnn = utils::inumeric(FLERR, arg[7], false, lmp);
-  csp_cutsq = pow(utils::numeric(FLERR, arg[8], false, lmp), 2);
-  cutsq_combined = csp_cutsq > cut_hi_sq ? csp_cutsq : cut_hi_sq;
 
-  for (int i = 9; i < narg; i++) {
+  for (int i = 8; i < narg; i++) {
     if (strcmp(arg[i], "csp_mode") == 0) {
+      if (i+1 == narg) error->all(FLERR, "the csp_mode option of fix lambda/la/csp/apip requires an additional argument");
       if (strcmp(arg[i+1], "dynamic") == 0)
         const_ngh_flag = false;
       else if (strcmp(arg[i+1], "static") == 0)
@@ -94,10 +94,16 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
       else
         error->all(FLERR, "expected dynamic or static instead of {}", arg[i+1]);
       i++;
+    } else if (strcmp(arg[i], "csp_cut") == 0) {
+      if (i+1 == narg) error->all(FLERR, "the csp_cut option of fix lambda/la/csp/apip requires an additional argument");
+      csp_cutsq = pow(utils::numeric(FLERR, arg[i+1], false, lmp), 2);
+      i++;
     } else if (strcmp(arg[i], "forces") == 0) {
+      if (i+1 == narg) error->all(FLERR, "the forces option of fix lambda/la/csp/apip requires an additional argument");
       calculate_forces_flag = utils::logical(FLERR, arg[i+1], false, lmp);
       i++;
     } else if (strcmp(arg[i], "lambda_non_group") == 0) {
+      if (i+1 == narg) error->all(FLERR, "the lambda_non_group option of fix lambda/la/csp/apip requires an additional argument");
       if (strcmp(arg[i+1], "fast") == 0)
         lambda_non_group = 1;
       else if (strcmp(arg[i+1], "precise") == 0)
@@ -115,6 +121,8 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   if (threshold_lo > threshold_hi || threshold_lo < 0) error->all(FLERR, "0 <= threshold_lo <= threshold_hi required");
   if (lambda_non_group < 0 || lambda_non_group > 1) error->all(FLERR, "0 <= lambda_non_group <= 1 required");
   if (!const_ngh_flag) { scalar_flag = 1; extscalar = 1; }
+
+  cutsq_combined = csp_cutsq > cut_hi_sq ? csp_cutsq : cut_hi_sq;
 
   if (calculate_forces_flag) {
     virial_global_flag = virial_peratom_flag = thermo_virial = 1;
@@ -209,7 +217,7 @@ void FixLambdaLACSPAPIP::init()
   if (force->pair->cutforce < cut_hi)
     error->all(FLERR, "cutoff of potential ({}) smaller than cutoff of weighting function ({})", force->pair->cutforce, cut_hi);
   if (force->pair->cutforce*force->pair->cutforce < csp_cutsq)
-    error->all(FLERR, "cutoff of CSP ({}) smaller than cutoff of weighting function ({})", force->pair->cutforce, sqrt(csp_cutsq));
+    error->all(FLERR, "cutoff of potential ({}) smaller than cutoff of the CSP ({})", force->pair->cutforce, sqrt(csp_cutsq));
 
   if (strcmp(atom->atom_style, "apip/la")) error->all(FLERR, "fix lambda/la/csp/apip requires atom style apip/la");
 }
