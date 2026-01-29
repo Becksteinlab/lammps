@@ -47,6 +47,7 @@
 #include "colvarproxy_lammps.h"
 #include "colvars_memstream.h"
 #include "colvarscript.h"
+#include "colvar.h"
 
 #include <cstring>
 
@@ -90,12 +91,13 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   ++instances;
 
   scalar_flag = 1;
+  extscalar = 1;
   vector_flag = 1;
-  size_vector = 1;
+  size_vector_variable = 1;
+  //size_vector = 0; // size_vector will be known after setup
   extvector = 0; // dont scale colvars values by number of atoms
   global_freq = 1;
   nevery = 1;
-  extscalar = 1;
   restart_global = 1;
   energy_global_flag = 1;
 
@@ -277,7 +279,9 @@ void FixColvars::init()
       proxy->set_replicas_mpi_communicator(root2root);
     }
   }
-#endif
+#endif // defined(COLVARS_MPI)
+
+
 }
 
 
@@ -460,6 +464,10 @@ void FixColvars::setup(int vflag)
     setup_io();
     proxy->parse_module_config();
   }
+
+  proxy->parse_module_config();
+  size_vector = proxy->colvars->num_variables();
+  utils::logmesg(lmp, "*** constructor size_vector {}\n", size_vector);
 
   init_taglist();
 
@@ -928,7 +936,8 @@ double FixColvars::compute_scalar()
 
 double FixColvars::compute_vector(int i)
 {
-  return 99.0;
+  auto *variables = proxy->colvars->variables();
+  return (*variables)[i]->value();
 }
 
 /* ---------------------------------------------------------------------- */
