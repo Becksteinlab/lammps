@@ -463,11 +463,11 @@ void FixColvars::setup(int vflag)
   if (me == 0) {
     setup_io();
     proxy->parse_module_config();
+    size_vector = proxy->colvars->num_variables();
   }
-
-  proxy->parse_module_config();
-  size_vector = proxy->colvars->num_variables();
-  utils::logmesg(lmp, "*** constructor size_vector {}\n", size_vector);
+  
+  MPI_Bcast(&size_vector, 1, MPI_INT, 0, world);
+  utils::logmesg(lmp, "*** [rank {}] size_vector {}\n", me, size_vector);
 
   init_taglist();
 
@@ -936,8 +936,13 @@ double FixColvars::compute_scalar()
 
 double FixColvars::compute_vector(int i)
 {
-  auto *variables = proxy->colvars->variables();
-  return (*variables)[i]->value();
+  double value;
+  if (comm->me == 0) {
+    auto *variables = proxy->colvars->variables();
+    value = (*variables)[i]->value();
+  }
+  MPI_Bcast(&value, 1, MPI_DOUBLE, 0, world);
+  return value;
 }
 
 /* ---------------------------------------------------------------------- */
