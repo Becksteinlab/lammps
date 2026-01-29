@@ -29,9 +29,12 @@ FixStyle(bond/react,FixBondReact);
 #include <array>
 #include <deque>
 #include <map>
+#include <memory>
 #include <set>
 
 namespace LAMMPS_NS {
+
+struct json_metadata;                                      // forward declaration. full declaration in json_metadata.h
 
 class FixBondReact : public Fix {
  public:
@@ -50,6 +53,7 @@ class FixBondReact : public Fix {
   int pack_reverse_comm(int, int, double *) override;
   void unpack_reverse_comm(int, int *, double *) override;
   double compute_vector(int) override;
+  std::string get_thermo_colname(int) override;
   double memory_usage() override;
 
  private:
@@ -67,6 +71,10 @@ class FixBondReact : public Fix {
   int newton_bond;
   FILE *fp;
   tagint lastcheck;
+  FILE *fpout;
+  bool outflag;
+  int json_init;
+  std::unique_ptr<json_metadata> rxn_metadata;
   int stabilization_flag;
   Reset_Mol_IDs molid_mode;
   int custom_exclude_flag;
@@ -78,7 +86,7 @@ class FixBondReact : public Fix {
   Status status;
 
   struct Reaction {
-    int ID;
+    int ID;                                                // indexed from 0
     class Molecule *reactant;                              // pre-reacted molecule template
     class Molecule *product;                               // post-reacted molecule template
     std::string name, constraintstr;
@@ -107,6 +115,7 @@ class FixBondReact : public Fix {
     struct ReactionAtomFlags {
       int edge;                                            // true if atom in molecule template has incorrect valency
       int landlocked;                                      // true if atom is at least three bonds away from edge atoms
+      bool wildcard;                                       // true if atom type contains a wildcard
       int recharged;                                       // true if atom whose charge should be updated
       int deleted;                                         // true if atom in pre-reacted template to delete
       int created;                                         // true if atom in post-reacted template to create
@@ -202,6 +211,7 @@ class FixBondReact : public Fix {
   void CreateAtoms(char *, Reaction &, int);
   void CustomCharges(int, Reaction &);
   void ChiralCenters(char *, Reaction &, int);
+  void ReadWildcards(char *, Reaction &, int);
   void ReadConstraints(char *, Reaction &);
   void readID(char *, Reaction::Constraint &, Reaction &, int);
 
@@ -211,6 +221,7 @@ class FixBondReact : public Fix {
   void check_a_neighbor(Superimpose &, Reaction &);
   void crosscheck_the_neighbor(Superimpose &, Reaction &);
   void inner_crosscheck_loop(Superimpose &, Reaction &);
+  bool compare_atomtype(int, Reaction &, int);
   int ring_check(Reaction &, std::vector<tagint> &);
   int check_constraints(Reaction &, std::vector<tagint> &);
   void get_IDcoords(Reaction::Constraint::IDType, int, double *, Molecule *, std::vector<tagint> &);
