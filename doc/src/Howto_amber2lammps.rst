@@ -224,7 +224,7 @@ In this tutorial, we will use AM1-BCC charges.
 - For neutral molecules, run with ``--charge 0`` so AMBER2LAMMPS applies a uniform offset that removes the residual charge; this prevents the error from scaling up when the system is replicated in LAMMPS.
 - For intentionally charged species (e.g., protonated or deprotonated), add counterions in tleap/packmol before conversion. AMBER2LAMMPS never adds ions; it only shifts existing charges to your requested total.
 - How the flag works:
-  - ``--charge 0`` (default): uniform shift makes the summed charge 0 within 1e-6.
+  - ``--charge 0``: uniform shift makes the summed charge 0 within 1e-6.
   - ``--charge +1`` (or any integer): uniform shift makes the total that integer within 1e-6.
   - The same constant is added to every atom, so relative charge differences are preserved.
 
