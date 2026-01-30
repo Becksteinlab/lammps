@@ -93,13 +93,13 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
 
   scalar_flag = 1;
   extscalar = 1;
-  
+
   vector_flag = 1;
   size_vector = 0;
   size_vector_variable = 1;
   extvector = 0; // dont scale colvars values by number of atoms
   thermo_modify_colname = 1;
-  
+
   global_freq = 1;
   nevery = 1;
   restart_global = 1;
@@ -955,7 +955,7 @@ double FixColvars::compute_vector(int i)
 
 std::string FixColvars::get_thermo_colname(int i)
 {
-  if (i==-1) return "CV(Energy)";
+  if (i == -1) return "CV(Energy)";
   std::string name;
   int name_length;
   if (comm->me == 0) {
@@ -967,7 +967,6 @@ std::string FixColvars::get_thermo_colname(int i)
       name = "";
       name_length = 0;
     }
-
   }
   MPI_Bcast(&name_length, 1, MPI_INT, 0, world);
   if (comm->me > 0) name.resize(name_length);
