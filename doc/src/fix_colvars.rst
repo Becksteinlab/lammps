@@ -173,7 +173,7 @@ reason, the "output" keyword is required for fix colvars.
 This fix computes a global vector of the current values of each colvar. This
 fix supports automatically generated thermo column names when using
 :doc:`thermo_modify colname auto <thermo_modify>`. The thermo column names
-are “f_”, followed by the fix ID, followed by a colon, followed by the colvar
+are "f_", followed by the fix ID, followed by a colon, followed by the colvar
 name as defined by the Colvars configuration, followed by the global vector index.
 
 
