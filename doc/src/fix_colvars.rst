@@ -171,13 +171,13 @@ reason, the "output" keyword is required for fix colvars.
 .. versionadded:: TBD
 
 This fix computes a global array of the current values of each collective variable,
-with `f_id[I][1]` for a scalar-valued collective variable and `f_id[I][1], ..., f_id[I][N]`
+with `f_ID[I][1]` for a scalar-valued collective variable and `f_ID[I][1], ..., f_ID[I][N]`
 for a vector-valued collective variable. The number of rows of the global array is equal
 to the number of collective variables.
 
 This fix supports automatically generated thermo column names when using
 :doc:`thermo_modify colname auto <thermo_modify>`. The thermo column names
-are "f_", followed by the fix ID, followed by a colon, followed by the collective
+are "f\_", followed by the fix ID, followed by a colon, followed by the collective
 variable name as defined by the Colvars configuration, followed by the global
 array row and column indices.
 
