@@ -969,8 +969,8 @@ std::string FixColvars::get_thermo_colname(int i)
 
   }
   MPI_Bcast(&name_length, 1, MPI_INT, 0, world);
+  if (comm->me > 0) name.resize(name_length);
   MPI_Bcast(name.data(), name_length, MPI_CHAR, 0, world);
-  //utils::logmesg(lmp, "*** [rank {}] get_thermo_colname({}) {} {}\n", comm->me, i, name, name_length);
   return name;
 }
 
