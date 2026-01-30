@@ -1,4 +1,6 @@
-LAMMPS (22 Jul 2025 - Development - )
+LAMMPS (10 Dec 2025 - Development - 1b56d059aa)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread.
+  using 1 OpenMP thread(s) per MPI task
 Reading data file ...
   orthogonal box = (0 0 -1.1656272) to (36.15 36.15 362.81506)
   1 by 1 by 4 MPI processor grid
@@ -6,7 +8,7 @@ Reading data file ...
   40200 atoms
   reading velocities ...
   40200 velocities
-  read_data CPU = 0.131 seconds
+  read_data CPU = 0.134 seconds
 39199 atoms in group group_descriptor
 ACE version: 2023.11.25
 Recursive evaluator is used by ACE
@@ -52,45 +54,45 @@ Setting up Verlet run ...
   Time step     : 0.001
   eam/apip      : compute potential energies for local-averaging forces
   pace/apip     : compute potential energies for local-averaging forces
-Per MPI rank memory allocation (min/avg/max) = 58.86 | 59.76 | 60.48 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 59.01 | 60.08 | 61.35 Mbytes
    Step     f_weight_atom[1] f_weight_atom[2]     S/CPU     
          0   0              0              0            
-        10   2.1866785e-06  0.0001994222   2.7247361    
-        20   2.5783834e-06  0.00022419154  3.0305807    
-        30   2.9428404e-06  0.00025702231  2.7953405    
-        40   3.01517e-06    0.00025816307  2.7839783    
-        50   3.0383391e-06  0.00025805458  2.7713603    
-        60   3.0805567e-06  0.00025992869  2.765186     
-        70   3.1137625e-06  0.00026061575  2.7523441    
-        80   3.1550416e-06  0.0002625587   2.7375966    
-        90   3.1629928e-06  0.00026239364  2.7151397    
-       100   3.197326e-06   0.00026378399  2.6936652    
-Loop time of 36.0455 on 4 procs for 100 steps with 40200 atoms
+        10   2.1609636e-06  0.0002015004   2.6243464    
+        20   2.4768128e-06  0.00023606227  2.2460949    
+        30   2.6503539e-06  0.0002454166   2.1640705    
+        40   2.5859861e-06  0.00024633214  2.1907221    
+        50   2.5952606e-06  0.00024785624  2.1858718    
+        60   2.6066395e-06  0.00024761007  2.1836337    
+        70   2.6155858e-06  0.00024844061  2.1766852    
+        80   2.6580321e-06  0.00025144907  2.1304074    
+        90   2.6374009e-06  0.0002539978   2.1313453    
+       100   2.6382123e-06  0.00025099512  2.1535974    
+Loop time of 45.226 on 4 procs for 100 steps with 40200 atoms
 
-Performance: 0.240 ns/day, 100.126 hours/ns, 2.774 timesteps/s, 111.526 katom-step/s
-99.7% CPU use with 4 MPI tasks x no OpenMP threads
+Performance: 0.191 ns/day, 125.628 hours/ns, 2.211 timesteps/s, 88.887 katom-step/s
+99.8% CPU use with 4 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 7.6373     | 8.0021     | 9.0695     |  21.8 | 22.20
-Neigh   | 1.6103     | 1.6245     | 1.641      |   0.9 |  4.51
-Comm    | 1.1993     | 3.9434     | 4.9215     |  79.9 | 10.94
-Output  | 0.00022995 | 0.00037735 | 0.00049271 |   0.0 |  0.00
-Modify  | 20.408     | 22.456     | 25.552     |  40.0 | 62.30
-Other   |            | 0.01891    |            |       |  0.05
+Pair    | 2.5398     | 7.4582     | 22.009     | 307.6 | 16.49
+Neigh   | 1.4777     | 1.5121     | 1.5522     |   2.6 |  3.34
+Comm    | 0.13342    | 5.494      | 20.022     | 358.1 | 12.15
+Output  | 0.00022339 | 0.00033158 | 0.00045911 |   0.0 |  0.00
+Modify  | 20.676     | 30.735     | 40.862     | 177.5 | 67.96
+Other   |            | 0.02603    |            |       |  0.06
 
-Nlocal:          10050 ave       10545 max        9755 min
-Histogram: 2 0 0 0 1 0 0 0 0 1
-Nghost:          34271 ave       34566 max       33776 min
-Histogram: 1 0 0 0 0 1 0 0 0 2
-Neighs:    1.77282e+06 ave 1.86085e+06 max 1.72103e+06 min
-Histogram: 2 0 0 0 1 0 0 0 0 1
-FullNghs:  3.54563e+06 ave 3.72029e+06 max  3.4406e+06 min
-Histogram: 2 0 0 0 1 0 0 0 0 1
+Nlocal:          10050 ave       10169 max       10000 min
+Histogram: 2 1 0 0 0 0 0 0 0 1
+Nghost:          18059 ave       19279 max       16908 min
+Histogram: 2 0 0 0 0 0 0 0 0 2
+Neighs:    1.77282e+06 ave 1.82762e+06 max 1.69559e+06 min
+Histogram: 1 0 0 0 0 1 0 1 0 1
+FullNghs:  3.54563e+06 ave 3.65319e+06 max 3.46439e+06 min
+Histogram: 2 0 0 0 0 0 0 1 0 1
 
-Total # of neighbors = 14182530
-Ave neighs/atom = 352.79925
+Total # of neighbors = 14182536
+Ave neighs/atom = 352.7994
 Neighbor list builds = 10
 Dangerous builds = 0
-Total wall time: 0:00:36
+Total wall time: 0:00:45

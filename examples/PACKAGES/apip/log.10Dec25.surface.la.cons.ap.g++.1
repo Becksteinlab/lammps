@@ -1,4 +1,6 @@
-LAMMPS (22 Jul 2025 - Development - )
+LAMMPS (10 Dec 2025 - Development - 1b56d059aa)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread.
+  using 1 OpenMP thread(s) per MPI task
 Reading data file ...
   orthogonal box = (0 0 0) to (36.15 36.15 90.375)
   1 by 1 by 1 MPI processor grid
@@ -6,7 +8,7 @@ Reading data file ...
   7800 atoms
   reading velocities ...
   7800 velocities
-  read_data CPU = 0.026 seconds
+  read_data CPU = 0.025 seconds
 ACE version: 2023.11.25
 Recursive evaluator is used by ACE
 Loading ../../../potentials/Cu-PBE-core-rep.ace
@@ -46,7 +48,7 @@ Setting up Verlet run ...
   Time step     : 0.001
   eam/apip      : compute potential energies for local-averaging forces
   pace/apip     : compute potential energies for local-averaging forces
-Per MPI rank memory allocation (min/avg/max) = 48.43 | 48.43 | 48.43 Mbytes
+Per MPI rank memory allocation (min/avg/max) = 48.68 | 48.68 | 48.68 Mbytes
    Step          Temp          TotEng     c_lambda_types[1] c_lambda_types[2] c_lambda_types[3]     Fnorm           Fmax     
          0   300           -27986.578      6200           400            1200           78.274475      1.8980813    
          1   300.25293     -27986.578      6200           400            1200           78.238783      1.8831771    
@@ -149,20 +151,20 @@ Per MPI rank memory allocation (min/avg/max) = 48.43 | 48.43 | 48.43 Mbytes
         98   316.99118     -27986.599      6200           400            1200           65.689271      1.9096966    
         99   318.3662      -27986.599      6200           400            1200           65.427067      1.8884814    
        100   319.58737     -27986.6        6200           400            1200           65.197033      1.8627854    
-Loop time of 41.9881 on 1 procs for 100 steps with 7800 atoms
+Loop time of 41.9933 on 1 procs for 100 steps with 7800 atoms
 
-Performance: 0.206 ns/day, 116.634 hours/ns, 2.382 timesteps/s, 18.577 katom-step/s
-99.9% CPU use with 1 MPI tasks x no OpenMP threads
+Performance: 0.206 ns/day, 116.648 hours/ns, 2.381 timesteps/s, 18.574 katom-step/s
+99.9% CPU use with 1 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 30.461     | 30.461     | 30.461     |   0.0 | 72.55
+Pair    | 30.283     | 30.283     | 30.283     |   0.0 | 72.11
 Neigh   | 0          | 0          | 0          |   0.0 |  0.00
-Comm    | 0.018281   | 0.018281   | 0.018281   |   0.0 |  0.04
-Output  | 0.031647   | 0.031647   | 0.031647   |   0.0 |  0.08
-Modify  | 11.474     | 11.474     | 11.474     |   0.0 | 27.33
-Other   |            | 0.003618   |            |       |  0.01
+Comm    | 0.018613   | 0.018613   | 0.018613   |   0.0 |  0.04
+Output  | 0.034844   | 0.034844   | 0.034844   |   0.0 |  0.08
+Modify  | 11.654     | 11.654     | 11.654     |   0.0 | 27.75
+Other   |            | 0.00356    |            |       |  0.01
 
 Nlocal:           7800 ave        7800 max        7800 min
 Histogram: 1 0 0 0 0 0 0 0 0 0
