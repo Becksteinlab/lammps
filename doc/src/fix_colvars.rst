@@ -168,7 +168,7 @@ Aside from the state information in a ".colvars.state" file, other
 are produced by Colvars depending on the type of simulation.  For this
 reason, the "output" keyword is required for fix colvars.
 
-.. versionadded:: ???
+.. versionadded:: TBD
 
 This fix computes a global vector of the current values of each colvar. This
 fix supports automatically generated thermo column names when using
