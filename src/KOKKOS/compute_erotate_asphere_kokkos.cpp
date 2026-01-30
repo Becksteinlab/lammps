@@ -100,7 +100,7 @@ double ComputeERotateAsphereKokkos<DeviceType>::compute_scalar()
           inertia[2] = l_rmass(i) * ( (shape[0]*shape[0] + shape[1]*shape[1])/5.0 );
 
           // wbody = angular velocity in body frame
-          
+
           MathExtraKokkos::quat_to_mat(quat,rot);
           KK_FLOAT angmom_vec[3] = {l_angmom(i,0), l_angmom(i,1), l_angmom(i,2)};
           MathExtraKokkos::transpose_matvec(rot,angmom_vec,wbody);

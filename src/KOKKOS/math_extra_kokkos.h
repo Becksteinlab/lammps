@@ -21,7 +21,7 @@
 
 // NOTE: 'double' is still used in various quaternion related functions below.
 // This is temporary to support current atom_vec_ellipsoid_kokkos bonus struct
-// which still uses double for shape and quat and doesn't (yet) support KK_FLOAT. 
+// which still uses double for shape and quat and doesn't (yet) support KK_FLOAT.
 
 namespace MathExtraKokkos {
 

@@ -45,7 +45,7 @@ void AtomVecHybridKokkos::init()
 void AtomVecHybridKokkos::process_args(int narg, char **arg)
 {
   AtomVecHybrid::process_args(narg,arg);
-  
+
   // Seems process_args is first to be called, so set up stylesKK here
   stylesKK = new AtomVecKokkos*[nstyles];
   for (int k = 0; k < nstyles; k++) {
@@ -59,7 +59,7 @@ void AtomVecHybridKokkos::grow(int n)
 {
   for (int k = 0; k < nstyles; k++) styles[k]->grow(n);
   nmax = atomKK->k_x.view_host().extent(0);
- 
+
   // ptrs for atom_vec.cpp
   tag = atom->tag;
   type = atom->type;
