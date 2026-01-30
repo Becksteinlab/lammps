@@ -45,7 +45,7 @@ development).
    :local:
 
 ----------------
-   
+
 What the AMBER2LAMMPS tool does
 -------------------------------
 
@@ -85,7 +85,7 @@ Download its source code from its GitHub project page or clone its repository fr
    curl -L -o AMBER2LAMMPS-main.tar.gz https://github.com/askforarun/AMBER2LAMMPS/archive/refs/heads/main.tar.gz
    tar -xzvvf AMBER2LAMMPS-main.tar.gz
    cd AMBER2LAMMPS-main
-   
+
    # clone repository
    git clone https://github.com/askforarun/AMBER2LAMMPS.git
    cd AMBER2LAMMPS
@@ -284,7 +284,7 @@ In this tutorial, we will use AM1-BCC charges.
  ``--charge 0``, each atom's charge will be reduced by ``(0.003 /
  number_of_atoms)`` to reach neutrality.
 
--------------       
+-------------
 
 Workflow Examples
 -----------------
@@ -340,7 +340,7 @@ Assuming ``ethanol.pdb`` is your structure:
 
 
 -------------
-       
+
 Basic conversion workflow
 -------------------------
 
