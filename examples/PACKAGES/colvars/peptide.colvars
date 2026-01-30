@@ -29,6 +29,19 @@ colvar {
   }
 }
 
+colvar {
+  name three
+
+  distanceVec {
+    group1 {
+      atomNumbers 80 82 83 84
+    }
+    group2 {
+      atomNumbers 37
+    }
+  }
+}
+
 harmonic {
   name h_pot
   colvars one two
