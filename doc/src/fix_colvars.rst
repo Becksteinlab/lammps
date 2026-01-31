@@ -170,8 +170,7 @@ reason, the "output" keyword is required for fix colvars.
 
 .. versionadded:: TBD
 
-This fix computes a global array of the current values of each collective variable with the number of rows equal
-to the number of collective variables and:
+This fix accesses a global array of the current values of each collective variable computed in the Colvars module. The number of rows of the global array is equal to the number of collective variables and the columns are:
 
 * `f_ID[I][1]` for a scalar-valued collective variable
 * `f_ID[I][1], ..., f_ID[I][N]` for a vector-valued collective variable
@@ -188,11 +187,15 @@ Almost all collective variables are scalars:
 
 with the exception of:
 
-* 3-dimensional vectors (`distanceVec <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceVec>`_ and `distanceDir <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceDir>`_)
+* 3-dimensional vector (`distanceVec <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceVec>`_ and `distanceDir <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceDir>`_)
 
 * 4-dimensional unit quaternion (`orientation <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_orientation>`_)
 
-This fix supports automatically generated thermo column names when using
+* flat vector of :math:`~3 \!\times\! N` coordinates (`cartesian <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_cartesian>`_)
+
+* flat vector of :math:`N_1 \!\times\! N_2` distances (`distancePairs <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distancePairs>`_)
+
+This fix also supports automatically generated thermo column names when using
 :doc:`thermo_modify colname auto <thermo_modify>`. The thermo column names
 are "f\_", followed by the fix ID, followed by a colon, followed by the collective
 variable name as defined by the Colvars configuration, followed by the global
