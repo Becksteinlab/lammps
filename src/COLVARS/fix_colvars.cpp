@@ -22,8 +22,9 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author:  Axel Kohlmeyer (Temple U)
-   Currently maintained by:  Giacomo Fiorin (NIH)
+   Contributing author:           Axel Kohlmeyer (Temple U)
+   Currently maintained by:       Giacomo Fiorin (NIH)
+   Global array of colvar values: Mitch Murphy (alphataubio at gmail)
 ------------------------------------------------------------------------- */
 
 #include "fix_colvars.h"
@@ -87,7 +88,6 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   if (narg < 4) error->all(FLERR,"Illegal fix colvars command: too few arguments");
   if (instances > 0) error->all(FLERR,"Only one colvars fix can be active at a time");
   ++instances;
-
   scalar_flag = 1;
   extscalar = 1;
   array_flag = 1;
@@ -99,21 +99,17 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   nevery = 1;
   restart_global = 1;
   energy_global_flag = 1;
-
   root2root = MPI_COMM_NULL;
   proxy = nullptr;
-
   if (strcmp(arg[3], "none") == 0) conf_file = nullptr;
   else conf_file = utils::strdup(arg[3]);
-
   rng_seed = 1966;
   unwrap_flag = 1;
-
   inp_name = nullptr;
   out_name = nullptr;
   tfix_name = nullptr;
 
-  /* initialize various state variables. */
+  // initialize various state variables
   energy = 0.0;
   nlevels_respa = 0;
   init_flag = 0;
@@ -121,11 +117,8 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   comm_buf = nullptr;
   taglist = nullptr;
   force_buf = nullptr;
-
   script_args[0] = reinterpret_cast<unsigned char *>(utils::strdup("fix_modify"));
-
   parse_fix_arguments(narg, arg, true);
-
   if (!out_name) out_name = utils::strdup("out");
 
   if (comm->me == 0) {
@@ -138,7 +131,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
     proxy->set_target_temperature(t_target);
     if (conf_file) proxy->add_config("configfile", conf_file);
   }
-  // storage required to communicate a single coordinate or force.
+  // storage required to communicate a single coordinate or force
   size_one = sizeof(struct commdata);
 }
 
@@ -172,7 +165,6 @@ int FixColvars::parse_fix_arguments(int narg, char **arg, bool fix_constructor)
     }
 
     if (is_fix_keyword) {
-
       // Valid LAMMPS fix keyword: raise error if it has no argument
       if (iarg + 1 == narg) {
         if (fix_constructor)
@@ -180,9 +172,7 @@ int FixColvars::parse_fix_arguments(int narg, char **arg, bool fix_constructor)
         else
           return 0; // Error code consistent with Fix::modify_param()
       }
-
     } else {
-
       if (fix_constructor) {
         error->all(FLERR, "Unrecognized fix colvars argument: please note that "
                    "Colvars script commands are not allowed until after the "
@@ -232,12 +222,6 @@ int FixColvars::setmask()
 
 /* ---------------------------------------------------------------------- */
 
-void FixColvars::post_constructor()
-{
-  //if (comm->me == 0) proxy->parse_module_config();
-  //update_colvars();
-}
-
 void FixColvars::init()
 {
   const auto me = comm->me;
@@ -285,7 +269,6 @@ void FixColvars::init_taglist()
 {
   int new_taglist_size = -1;
   const auto me = comm->me;
-
   if (me == 0) {
     // Number of atoms requested by Colvars
     num_coords = static_cast<int>(proxy->modify_atom_positions()->size());
@@ -294,10 +277,8 @@ void FixColvars::init_taglist()
       proxy->reset_modified_atom_list();
     } else new_taglist_size = -1;
   }
-
   // Broadcast number of colvar atoms; negative means no updates
   MPI_Bcast(&new_taglist_size, 1, MPI_INT, 0, world);
-
   if (new_taglist_size < 0) return;
   num_coords = new_taglist_size;
   if (taglist) {
@@ -306,7 +287,6 @@ void FixColvars::init_taglist()
   }
   memory->create(taglist, num_coords, "colvars:taglist");
   memory->create(force_buf, 3*num_coords, "colvars:force_buf");
-
   if (me == 0) {
     // Initialize and build hashtable on MPI rank 0
     std::vector<int> const &tl = *(proxy->get_atom_ids());
@@ -317,7 +297,6 @@ void FixColvars::init_taglist()
       idmap[tl[i]] = i;
     }
   }
-
   // Broadcast colvar atom ID list
   MPI_Bcast(taglist, num_coords, MPI_LMP_TAGINT, 0, world);
 }
@@ -362,8 +341,8 @@ int FixColvars::modify_param(int narg, char **arg)
     // free allocated memory
     for (int i = 0; i < narg; i++) memory->sfree(script_args[i+1]);
     return (error_code == COLVARSCRIPT_OK) ? narg : 0;
-  } else {
-    update_colvars();
+  } else { // me != 0
+    update_colvars(); // communicate colvars changes to mpi ranks > 0
     // Return without error, don't block Fix::modify_params()
     return narg;
   }
@@ -494,7 +473,7 @@ void FixColvars::setup(int vflag)
         ++nme;
       }
     }
-    // blocking receive to wait until it is our turn to send data.
+    // blocking receive to wait until it is our turn to send data
     MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
     MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
   }
@@ -517,7 +496,7 @@ void FixColvars::setup(int vflag)
 void FixColvars::post_force(int /*vflag*/)
 {
   const auto me = comm->me;
-  // some housekeeping: update status of the proxy as needed.
+  // some housekeeping: update status of the proxy as needed
   if (me == 0)
     if (proxy->want_exit())
       error->one(FLERR,"Run aborted on request from colvars module.\n");
@@ -533,7 +512,7 @@ void FixColvars::post_force(int /*vflag*/)
   const double xz = domain->xz;
   const double yz = domain->yz;
   const int nlocal = atom->nlocal;
-  // check and potentially grow local communication buffers.
+  // check and potentially grow local communication buffers
   int i,nmax_new,nme=0;
   for (i=0; i < num_coords; ++i) {
     const tagint k = atom->map(taglist[i]);
@@ -608,13 +587,13 @@ void FixColvars::post_force(int /*vflag*/)
         ++nme;
       }
     }
-    // blocking receive to wait until it is our turn to send data.
+    // blocking receive to wait until it is our turn to send data
     MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
     MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
   }
 
   ////////////////////////////////////////////////////////////////////////
-  // call our workhorse and retrieve additional information.
+  // call our workhorse and retrieve additional information
   if (me == 0) {
     energy = proxy->compute();
     store_forces = proxy->total_forces_enabled();
@@ -655,7 +634,7 @@ void FixColvars::min_post_force(int vflag)
 /* ---------------------------------------------------------------------- */
 void FixColvars::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
-  // only process colvar forces on the outmost RESPA level.
+  // only process colvar forces on the outmost RESPA level
   if (ilevel == nlevels_respa-1) post_force(vflag);
 }
 
@@ -666,7 +645,7 @@ void FixColvars::end_of_step()
     const tagint * const tag = atom->tag;
     double * const * const f = atom->f;
     const int nlocal = atom->nlocal;
-    // check and potentially grow local communication buffers.
+    // check and potentially grow local communication buffers
     int i,nmax_new,nme=0;
     for (i=0; i < num_coords; ++i) {
       const tagint k = atom->map(taglist[i]);
@@ -727,7 +706,7 @@ void FixColvars::end_of_step()
           ++nme;
         }
       }
-      // blocking receive to wait until it is our turn to send data.
+      // blocking receive to wait until it is our turn to send data
       MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
       MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
     }
@@ -791,9 +770,6 @@ void FixColvars::update_colvars()
     size_array_rows = variables.size();
   }
   MPI_Bcast(&size_array_rows, 1, MPI_INT, 0, world);
-  
-  utils::logmesg(lmp, "*** [rank {}] update_colvars() size_array_rows {} size_array_cols {}\n", comm->me, size_array_rows, size_array_cols);
-    
   output->thermo->colname_auto();
 }
 
