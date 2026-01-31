@@ -191,7 +191,7 @@ with the exception of:
 
 * 4-dimensional unit quaternion (`orientation <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_orientation>`_)
 
-* flat vector of :math:`~3 \!\times\! N` coordinates (`cartesian <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_cartesian>`_)
+* flat vector of :math:`N \!\times\! 3` coordinates (`cartesian <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_cartesian>`_)
 
 * flat vector of :math:`N_1 \!\times\! N_2` distances (`distancePairs <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distancePairs>`_)
 
