@@ -92,6 +92,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   extscalar = 1;
   array_flag = 1;
   size_array_rows_variable = 1;
+  size_array_cols = 4;
   extarray = 0; // dont scale colvars values by number of atoms
   thermo_modify_colname = 1;
   global_freq = 1;
@@ -782,21 +783,11 @@ double FixColvars::compute_scalar()
 
 void FixColvars::update_colvars()
 {
-  int sizes_array[2];
   if (comm->me == 0) {
     const auto& variables = *proxy->colvars->variables();
     size_array_rows = variables.size();
-    size_array_cols = 0;
-    for( int i=0; i<size_array_rows ; i++ ) {
-      const auto& v = variables[i]->value();
-      size_array_cols = std::max(size_array_cols, static_cast<int>(v.size()));
-    }
-    sizes_array[0] = size_array_rows;
-    sizes_array[1] = size_array_cols;
   }
-  MPI_Bcast(sizes_array, 2, MPI_INT, 0, world);
-  size_array_rows = sizes_array[0];
-  size_array_cols = sizes_array[1];
+  MPI_Bcast(&size_array_rows, 1, MPI_INT, 0, world);
   output->thermo->colname_auto();
 }
 
