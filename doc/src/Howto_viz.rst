@@ -1043,7 +1043,7 @@ and the surrounding water molecules in both directions.
                            bond atom 0.3 fsaa yes ssao yes 12384 0.6 shiny 0.1 box no 0.1 &
                            compute hb1 const -0.4 0.3 compute hb2 const -0.4 0.3 fix label const 1 0 fix obj type 0.0 0.0
     dump_modify viz pad 5 boxcolor white backcolor darkgray backcolor2 silver &
-                          element C C O H N C C C O H H S O H ccolor hb1 cyan ccolor hb2 magenta            
+                          element C C O H N C C C O H H S O H ccolor hb1 cyan ccolor hb2 magenta
 
 .. |hbonds1| image:: img/hbonds-water.png
    :width: 49%
