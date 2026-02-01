@@ -135,7 +135,7 @@ thermo output <thermo_style>` includes the number of hydrogen bonds per
 molecule and the distances and angles averaged over the system and then
 over time.
 
-See the :doc:`Howto_viz` for examples of visualizing the computed
+See the :doc:`Howto_viz` page for examples of visualizing the computed
 hydrogen bonds with :doc:`dump image <dump_image>`.
 
 ----------
