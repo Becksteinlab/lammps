@@ -113,7 +113,6 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   // initialize various state variables
   energy = 0.0;
   nlevels_respa = 0;
-  init_flag = 0;
   num_coords = 0;
   comm_buf = nullptr;
   taglist = nullptr;
@@ -132,6 +131,17 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
     proxy->set_target_temperature(t_target);
     if (conf_file) proxy->add_config("configfile", conf_file);
   }
+
+#if defined(COLVARS_MPI)
+  if (universe->nworlds > 1) {
+    // create inter root communicator
+    int color = 1;
+    if (comm->me == 0) color = 0;
+    MPI_Comm_split(universe->uworld, color, universe->iworld, &root2root);
+    if (comm->me == 0) proxy->set_replicas_mpi_communicator(root2root);
+  }
+#endif // defined(COLVARS_MPI)
+
   // storage required to communicate a single coordinate or force
   size_one = sizeof(struct commdata);
 }
@@ -142,9 +152,7 @@ int FixColvars::parse_fix_arguments(int narg, char **arg, bool fix_constructor)
   int const iarg_start = fix_constructor ? 4 : 0;
   int iarg = iarg_start;
   while (iarg < narg) {
-
     bool is_fix_keyword = false;
-
     if (0 == strcmp(arg[iarg], "input")) {
       inp_name = utils::strdup(arg[iarg+1]);
       // input prefix is set in FixColvars::setup()
@@ -164,7 +172,6 @@ int FixColvars::parse_fix_arguments(int narg, char **arg, bool fix_constructor)
       if (comm->me == 0) set_thermostat_temperature();
       is_fix_keyword = true;
     }
-
     if (is_fix_keyword) {
       // Valid LAMMPS fix keyword: raise error if it has no argument
       if (iarg + 1 == narg) {
@@ -225,27 +232,14 @@ int FixColvars::setmask()
 
 void FixColvars::init()
 {
-  const auto me = comm->me;
   if (atom->tag_enable == 0)
     error->all(FLERR, "Cannot use fix colvars without atom IDs");
   if (atom->map_style == Atom::MAP_NONE)
     error->all(FLERR, "Fix colvars requires an atom map, see atom_modify");
-  if ((me == 0) && (update->whichflag == 2))
+  if ((comm->me == 0) && (update->whichflag == 2))
     error->warning(FLERR, "Using fix colvars with minimization");
   if (utils::strmatch(update->integrate_style, "^respa"))
     nlevels_respa = ((Respa *) update->integrate)->nlevels;
-  if (init_flag) return;
-  init_flag = 1;
-
-#if defined(COLVARS_MPI)
-  if (universe->nworlds > 1) {
-    // create inter root communicator
-    int color = 1;
-    if (me == 0) color = 0;
-    MPI_Comm_split(universe->uworld, color, universe->iworld, &root2root);
-    if (me == 0) proxy->set_replicas_mpi_communicator(root2root);
-  }
-#endif // defined(COLVARS_MPI)
 }
 
 void FixColvars::set_thermostat_temperature()
