@@ -14,7 +14,6 @@
 #include "compute_hbond_local.h"
 
 #include "atom.h"
-#include "atom_vec.h"
 #include "comm.h"
 #include "domain.h"
 #include "error.h"
@@ -24,7 +23,6 @@
 #include "math_const.h"
 #include "math_extra.h"
 #include "memory.h"
-#include "molecule.h"
 #include "neigh_list.h"
 #include "neigh_request.h"
 #include "neighbor.h"
@@ -51,7 +49,7 @@ ComputeHBondLocal::ComputeHBondLocal(LAMMPS *lmp, int narg, char **arg) :
     Compute(lmp, narg, arg), list(nullptr), alocal(nullptr), imgobjs(nullptr), imgparms(nullptr)
 {
   if (atom->molecular == Atom::ATOMIC)
-    error->all(FLERR, "Cannot (yet) use compute hbond/local with non-molecular system");
+    error->all(FLERR, "Cannot (yet) use compute hbond/local with non-molecular systems");
   if (atom->map_style == Atom::MAP_NONE)
     error->all(FLERR, "Compute hbond/local requires an atom map, see atom_modify");
 
@@ -245,44 +243,28 @@ int ComputeHBondLocal::compute_hbonds(int flag)
   const auto *const tag = atom->tag;
   const auto *const type = atom->type;
   const auto *const mask = atom->mask;
-  const auto *const num_bond = atom->num_bond;
-  const auto *const *const bond_atom = atom->bond_atom;
+  const auto *const *const special = atom->special;
+  const auto *const *const nspecial = atom->nspecial;
   const auto nlocal = atom->nlocal;
-  const auto molecular = atom->molecular;
-  const auto *const molindex = atom->molindex;
-  const auto *const molatom = atom->molatom;
-  const auto *const *const onemols = atom->avec->onemols;
 
-  // loop over donors, then acceptors, then hydrogens attached to donor
+  // to find hydrogen bonds, we use the following strategy:
+  // - first loop over potential donors from neighbor list outer loop and apply group selections
+  // - then loop over special 1-2 neighbors for find hydrogens attached to donor and within groups
+  // - then loop over neighbors of donors and apply group selections
+  // - finally compute distance and angle and apply cutoffs and compute requested values
+  // since we use a full neighbor list, each non-bonded pair will be tried for donor - acceptor and acceptor - donor
+  // hydrogen bonds are considered local when the donor atom is local
 
   for (int ii = 0; ii < inum; ++ii) {
     int i = ilist[ii];
     if ((mask[i] & groupbit) && (mask[i] & donormask)) {
-      int numbonds = 0;
-      int imol = -1;
-      int iatom = -1;
-      // TODO: find bonded hydrogens for atomic systems from neighbor list
-      if (molecular == Atom::MOLECULAR) {
-        numbonds = num_bond[i];
-      } else {
-        if (molindex[i] >= 0) {
-          imol = molindex[i];
-          iatom = molatom[i];
-          numbonds = onemols[imol]->num_bond[iatom];
-        }
-      }
+      int numbonds = nspecial[i][0];
       if (numbonds == 0) continue;
 
-      // loop over hydrogens in group.
+      // loop over special 1-2 neighbors
 
       for (int kk = 0; kk < numbonds; ++kk) {
-        int k = -1;
-        if (molecular == Atom::MOLECULAR) {
-          k = atom->map(bond_atom[i][kk]);
-        } else {
-          auto tagprev = tag[i] - iatom - 1;
-          k = atom->map(onemols[imol]->bond_atom[iatom][kk] + tagprev);
-        }
+        int k = atom->map(special[i][kk]);
         k = domain->closest_image(i, k);
         if ((k < 0) || !((mask[k] & groupbit) && (mask[k] & hydrogenmask))) continue;
 
