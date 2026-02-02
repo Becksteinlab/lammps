@@ -51,11 +51,15 @@ AtomVecApip::AtomVecApip(LAMMPS *lmp) : AtomVec(lmp)
 void AtomVecApip::process_args(int narg, char **arg)
 {
 
-  if (narg > 1) error->all(FLERR, "Invalid atom_style apip command");
+  if (narg > 1)
+    error->all(FLERR, "Invalid atom_style apip command");
   else if (narg == 1) {
-    if (strcmp(arg[0], "thermostat") == 0) mode_flag = MODE_THERMOSTAT;
-    else if (strcmp(arg[0], "conservative") == 0) mode_flag = MODE_CONS;
-    else error->all(FLERR, "unknown argument {}", arg[0]);
+    if (strcmp(arg[0], "thermostat") == 0)
+      mode_flag = MODE_THERMOSTAT;
+    else if (strcmp(arg[0], "conservative") == 0)
+      mode_flag = MODE_CONS;
+    else
+      error->all(FLERR, "unknown argument {}", arg[0]);
   }
 
   if (mode_flag == MODE_THERMOSTAT) {
@@ -66,8 +70,8 @@ void AtomVecApip::process_args(int narg, char **arg)
     atom->apip_f_dyn_lambda_flag = 1;
 
     // The full list of fields is in atom_vec.cpp
-    fields_copy = {"apip_lambda", "apip_lambda_required", "apip_lambda_input", "apip_lambda_input_ta",
-                   "apip_lambda_const"};
+    fields_copy = {"apip_lambda", "apip_lambda_required", "apip_lambda_input",
+                   "apip_lambda_input_ta", "apip_lambda_const"};
     fields_comm = {"apip_lambda", "apip_lambda_required", "apip_lambda_input_ta",
                    "apip_lambda_const"};
     fields_border = {"apip_lambda", "apip_lambda_required", "apip_lambda_input_ta",
