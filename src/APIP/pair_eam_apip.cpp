@@ -600,7 +600,7 @@ void PairEAMAPIP::setup()
                  "thermostat.");
     if (!atom->apip_f_dyn_lambda_flag)
       error->all(FLERR,
-                 "Pair style eam/apip requires an atom style with f_const_lambda for a local "
+                 "Pair style eam/apip requires an atom style with f_dyn_lambda for a local "
                  "thermostat.");
     if (comm->me == 0)
       utils::logmesg(lmp, "  eam/apip      : compute quantities for fix lambda_thermostat/apip\n");
