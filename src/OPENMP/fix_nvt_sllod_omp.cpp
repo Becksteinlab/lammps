@@ -110,16 +110,16 @@ void FixNVTSllodOMP::init()
     error->all(FLERR,"Temperature for fix {} does not have a bias", style);
 
   nondeformbias = 0;
-  if (strcmp(temperature->style,"temp/deform") != 0) {
+  if (!utils::strmatch(temperature->style,"^temp/deform")) {
     if (integrator == LEGACY) {
       nondeformbias = 1;
       if (kick_flag)
         error->all(FLERR, "fix {} with peculiar=no and kick=yes requires temperature bias "
                    "to be calculated by compute temp/deform", style);
     } else if (!peculiar_flag) {
-      error->all(FLERR,"Fix nvt/sllod used with lab-frame velocity and non-deform "
+      error->all(FLERR,"Fix {} used with lab-frame velocity and non-deform "
                      "temperature bias. For non-deform biases, either set peculiar = yes"
-                     "or pass an explicit temp/deform with an extra bias");
+                     "or pass an explicit temp/deform with an extra bias", style);
     }
   }
 
@@ -133,65 +133,6 @@ void FixNVTSllodOMP::init()
     if ((peculiar_flag && f->remapflag != Domain::NO_REMAP) ||
         (!peculiar_flag && f->remapflag != Domain::V_REMAP))
       error->all(FLERR,"Using fix {} with inconsistent fix {} remap option", style, f->style);
-
-    if (integrator == REVERSIBLE && comm->me == 0) {
-
-      // warn about flows which may produce a non-constant flow tensor
-
-      for (int j = 0; j < 3; ++j) {
-        if (f->set[j].style && f->set[j].style != FixDeform::TRATE)
-          error->warning(FLERR,"Using non-constant strain rate with fix {}. "
-                         "The Sllod algorithm expects the trate style for x/y/z deformation", style);
-      }
-
-      for (int j = 3; j < 6; ++j) {
-        if (f->set[j].style && (f->set[j].style == FixDeform::TRATE ||
-                                f->set[j].style == FixDeform::WIGGLE ||
-                                f->set[j].style == FixDeform::VARIABLE ||
-                                f->set[j].style == FixDeform::PRESSURE)
-        )
-          error->warning(FLERR,"Using non-constant shear rate with fix {}. "
-                         "The Sllod algorithm expects the shear rate to be constant", style);
-      }
-
-      bool xy_shear_yz_tilt = (f->set[5].style && (f->set[3].style || domain->yz != 0.0));
-      if (xy_shear_yz_tilt && f->set[4].style != FixDeform::ERATERS) {
-        error->warning(FLERR,"fix {} only handles shearing xy with a yz tilt correctly "
-            "if fix {} uses the erate/rescale style for xz.", style, f->style);
-      }
-
-      // warn when not using fix deform couple yes in situations where it is
-      // needed for constant flow tensor:
-      //  - xy shear with a possible yz tilt
-      //  - elongation of x or y with xy shear
-      //  - elongation of x or z with xz shear
-      //  - elongation of y or z with yz shear
-      //  - elongation of x with possible xy or xz tilt
-      //  - elongation of y with possible yz tilt
-      if (f->set[0].style) {
-        if (f->set[4].style && f->set[4].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for xz when x is changing", style);
-        if (f->set[5].style && f->set[5].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for xy when x is changing", style);
-      }
-      if (f->set[1].style) {
-        if (f->set[3].style && f->set[3].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for yz when y is changing", style);
-        if (f->set[5].style && f->set[5].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for xy when y is changing", style);
-      }
-      if (f->set[2].style) {
-        if (f->set[3].style && f->set[3].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for yz when z is changing", style);
-        if (f->set[4].style && f->set[4].style != FixDeform::ERATERS)
-          error->warning(FLERR,"fix {} expects the erate/rescale style for xz when z is changing", style);
-      }
-
-      if (f->end_flag)
-        error->warning(FLERR,"fix {} requires box deformation to occur with "
-            "position updates to be strictly correct. Set the N parameter of "
-            "fix {} to 0 to enable this.", style, f->style);
-    }
 
     if (kick_flag) {
       // apply initial kick if velocity stored in lab frame

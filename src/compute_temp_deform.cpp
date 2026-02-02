@@ -111,12 +111,12 @@ void ComputeTempDeform::init()
   if (temperature->tempbias) which = FixNH::BIAS;
   else which = FixNH::NOBIAS;
 
-  vector = temperature->vector;
-
   // make sure internal temperature compute is called first
 
   temperature->init();
   temperature->setup();
+
+  vector = temperature->vector;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -159,6 +159,7 @@ void ComputeTempDeform::compute_vector()
 
   remove_deform_bias_all();
   temperature->compute_vector();
+  vector = temperature->vector;
   if (dynamic) dof = temperature->dof;
   restore_deform_bias_all();
 }

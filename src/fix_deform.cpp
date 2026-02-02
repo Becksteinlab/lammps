@@ -687,11 +687,73 @@ void FixDeform::init()
 
   // detect if any rigid fixes exist so rigid bodies can be rescaled
   // rfix[] = vector with pointers to each fix rigid
+  // also check if nvt/sllod is being used, and issue warnings if necessary
 
   rfix.clear();
 
   for (const auto &ifix : modify->get_fix_list())
     if (ifix->rigid_flag) rfix.push_back(ifix);
+
+  auto fix_sllod = modify->get_fix_by_style("nvt/sllod");
+  if (fix_sllod.size() > 0) {
+    const auto ifix = fix_sllod[0];
+
+    // warn about flows which may produce a non-constant flow tensor
+
+    if (comm->me == 0) {
+      for (int j = 0; j < 3; ++j) {
+        if (set[j].style && set[j].style != TRATE)
+          error->warning(FLERR,"Fix {} using non-constant strain rate with fix {}. "
+                         "The SLLOD algorithm expects the trate style for x/y/z deformation", style, ifix->style);
+      }
+
+      for (int j = 3; j < 6; ++j) {
+        if (set[j].style && (set[j].style == TRATE || set[j].style == WIGGLE ||
+                                set[j].style == VARIABLE || set[j].style == PRESSURE)
+        )
+          error->warning(FLERR,"fix {} using non-constant strain rate with fix {}. "
+                         "The SLLOD algorithm expects the erate or erate/rescale style for xy/xz/yz deformation", style, ifix->style);
+      }
+
+      bool xy_shear_yz_tilt = (set[5].style && (set[3].style || domain->yz != 0.0));
+      if (xy_shear_yz_tilt && set[4].style != ERATERS) {
+        error->warning(FLERR,"fix {} only handles shearing xy with a yz tilt correctly "
+            "if fix {} uses the erate/rescale style for xz.", ifix->style, style);
+      }
+
+      // warn when not using xy/xz/yz erate/rescale style in situations where it is
+      // needed by fix nvt/sllod for a constant flow tensor:
+      //  - xy shear with a possible yz tilt
+      //  - elongation of x or y with xy shear
+      //  - elongation of x or z with xz shear
+      //  - elongation of y or z with yz shear
+      //  - elongation of x with possible xy or xz tilt
+      //  - elongation of y with possible yz tilt
+      if (set[0].style) {
+        if (set[4].style && set[4].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for xz when x is changing", ifix->style, style);
+        if (set[5].style && set[5].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for xy when x is changing", ifix->style, style);
+      }
+      if (set[1].style) {
+        if (set[3].style && set[3].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for yz when y is changing", ifix->style, style);
+        if (set[5].style && set[5].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for xy when y is changing", ifix->style, style);
+      }
+      if (set[2].style) {
+        if (set[3].style && set[3].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for yz when z is changing", ifix->style, style);
+        if (set[4].style && set[4].style != FixDeform::ERATERS)
+          error->warning(FLERR,"fix {} expects fix {} to use the erate/rescale style for xz when z is changing", ifix->style, style);
+      }
+
+      if (end_flag)
+        error->warning(FLERR,"fix {} expects unit cell deformation to occur with "
+            "position updates for accurate numerical integration. "
+            "Set the N parameter of fix {} to 0 to enable this.", ifix->style, style);
+    }
+  }
 
   if (!end_flag && utils::strmatch(update->integrate_style,"^respa")) {
     auto respa = dynamic_cast<Respa*>(update->integrate);

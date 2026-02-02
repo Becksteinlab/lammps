@@ -87,10 +87,6 @@ class FixDeform : public Fix {
   void virtual apply_volume();
   void apply_strain();
   void update_domain();
-
-  // allow fix nvt/sllod to check deform parameters for correctness
-  friend class FixNVTSllod;
-  friend class FixNVTSllodOMP;
 };
 
 }    // namespace LAMMPS_NS
