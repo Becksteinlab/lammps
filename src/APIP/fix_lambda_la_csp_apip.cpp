@@ -144,7 +144,8 @@ FixLambdaLACSPAPIP::FixLambdaLACSPAPIP(LAMMPS *lmp, int narg, char **arg) :
   }
   if (!atom->apip_la_inp_flag || !atom->apip_la_avg_flag || !atom->apip_la_norm_flag) {
     error->all(FLERR,
-               "fix lambda/la/csp/apip requires atomic style with apip_la_inp, apip_la_avg and apip_la_norm.");
+               "fix lambda/la/csp/apip requires atomic style with apip_la_inp, apip_la_avg and "
+               "apip_la_norm.");
   }
 
   size_f_lambda = atom->nlocal;
@@ -237,7 +238,7 @@ void FixLambdaLACSPAPIP::init()
 
   if (strcmp(atom->atom_style, "apip"))
     error->all(FLERR, "fix lambda/la/csp/apip requires atom style apip");
-  if (! (atom->apip_la_inp_flag && atom->apip_la_norm_flag && atom->apip_la_avg_flag))
+  if (!(atom->apip_la_inp_flag && atom->apip_la_norm_flag && atom->apip_la_avg_flag))
     error->all(FLERR, "fix lambda/la/csp/apip requires atom style apip conservative");
 }
 
@@ -578,19 +579,9 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
           jj = atom->sametag[jj];
         }
       }
-      if (jj == -1) {
-        printf("own atom i % x %f %f %f\n", i, xtmp, ytmp, ztmp);
-        printf("nlocal %i nghost %i nall %i\n", atom->nlocal, atom->nghost,
-               atom->nlocal + atom->nghost);
-        for (jj = atom->map((tagint) stored_tags[i][j]); jj >= 0; jj = atom->sametag[jj])
-          printf("possible pair ngh jj %i x %f %f %f\n", jj, x[jj][0], x[jj][1], x[jj][2]);
-        for (jj = atom->nlocal; jj < atom->nlocal + atom->nghost; jj++) {
-          if (atom->tag[jj] == (tagint) stored_tags[i][j])
-            printf("atom with same tag jj %i x %f %f %f\n", jj, x[jj][0], x[jj][1], x[jj][2]);
-        }
+      if (jj == -1)
         error->one(FLERR, "atom ID {} no correct image of csp neighbour with ID {} found",
                    atom->tag[i], stored_tags[i][j]);
-      }
       ngh_pairs[i][j] = jj;
 
       kk = atom->map((tagint) stored_tags[i][j + nhalf]);
@@ -612,19 +603,9 @@ void FixLambdaLACSPAPIP::pre_force_const_pairs()
           kk = atom->sametag[kk];
         }
       }
-      if (kk == -1) {
-        printf("own atom i %i x %f %f %f\n", i, xtmp, ytmp, ztmp);
-        printf("nlocal %i nghost %i nall %i\n", atom->nlocal, atom->nghost,
-               atom->nlocal + atom->nghost);
-        for (kk = atom->map((tagint) stored_tags[i][j + nhalf]); kk >= 0; kk = atom->sametag[kk])
-          printf("possible pair ngh kk %i x %f %f %f\n", kk, x[kk][0], x[kk][1], x[kk][2]);
-        for (kk = atom->nlocal; kk < atom->nlocal + atom->nghost; kk++) {
-          if (atom->tag[kk] == (tagint) stored_tags[i][j + nhalf])
-            printf("atom with same tag kk %i x %f %f %f\n", kk, x[kk][0], x[kk][1], x[kk][2]);
-        }
+      if (kk == -1)
         error->one(FLERR, "atom ID {} no correct image of csp neighbour with ID {} found",
                    atom->tag[i], stored_tags[i][j + nhalf]);
-      }
       ngh_pairs[i][j + nhalf] = kk;
 
       delx = delx_j + delx_k;
