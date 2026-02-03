@@ -867,7 +867,7 @@ The *fflag2* setting allows you to set the radius of the added
 spheres, since the radius is set to zero internally.
 
 The following commands can be added to the
-``examples/PACKAGES/reaction/tiny_nylon/in.tiny_nylon.stablized`` input
+``examples/PACKAGES/reaction/tiny_nylon/in.tiny_nylon.stabilized`` input
 to highlight the reacting atoms with transparent yellow spheres and will
 create images like those shown below:
 
@@ -879,7 +879,7 @@ create images like those shown below:
         "Step: $(step:%03.0f)  Reaction 1: $(f_myrxns[1]:%02.0f)   Reaction 2: $(f_myrxns[2]:%02.0f)" &
         300 24 0 transcolor none backcolor silver fontcolor black framecolor black
    # output highlighted atoms for 10 dumps
-   fix_modify myxns vizsteps $(10*v_ndump)
+   fix_modify myrxns vizsteps $(10*v_ndump)
    dump viz all image ${ndump} nylon-*.png element element size 600 600 center s 0.6 0.55 0.6 &
               shiny 0.1 fsaa yes ssao yes 231541 0.6 zoom 6.0 view 70 -10 box no 0.1 &
               fix myrxns const 0.0 1.0 fix labels const 1 0

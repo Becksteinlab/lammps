@@ -4986,8 +4986,8 @@ int FixBondReact::image(int *&objs, double **&parms)
   int numobjs = vizatoms.size();
   int n = 0;
   if (numobjs > 0) {
-    memory->create(imgobjs, numobjs, "fix_indent:imgobjs");
-    memory->create(imgparms, numobjs, 5, "fix_indent:imgparms");
+    memory->create(imgobjs, numobjs, "bond/react:imgobjs");
+    memory->create(imgparms, numobjs, 5, "bond/react:imgparms");
 
     int idx;
     const auto *const type = atom->type;
