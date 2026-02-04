@@ -39,7 +39,7 @@ class FixMolSwap : public Fix {
   double compute_vector(int) override;
   void write_restart(FILE *) override;
   void restart(char *) override;
-  int modify_param(int, char **);
+  int modify_param(int, char **) override;
 
   int image(int *&, double **&) override;
 

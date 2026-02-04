@@ -135,7 +135,7 @@ FixMolSwap::~FixMolSwap()
 int FixMolSwap::modify_param(int narg, char **arg)
 {
   if (strcmp(arg[0],"vizsteps") == 0) {
-    if (narg < 2) utils::missing_cmd_args(FLERR, "fix_modify bond/break", error);
+    if (narg < 2) utils::missing_cmd_args(FLERR, "fix_modify mol/swap", error);
     vizsteps = utils::inumeric(FLERR, arg[1], false, lmp);
     return 2;
   }
