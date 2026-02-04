@@ -414,6 +414,7 @@ void FixBondBreak::post_integrate()
     }
     for (const auto &key : eraseme) vizatoms.erase(key);
   }
+
   // DEBUG
   // print_bb();
 }
