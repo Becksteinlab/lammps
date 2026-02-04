@@ -625,8 +625,8 @@ int FixAtomSwap::attempt_swap()
       }
       // record atoms for which the type was swapped and store the old types
       if (vizsteps > 0) {
-        vizatoms[atom->tag[i]] = std::make_pair(vizsteps,jtype);
-        vizatoms[atom->tag[j]] = std::make_pair(vizsteps,itype);
+        vizatoms[atom->tag[i]] = std::make_pair(vizsteps, jtype);
+        vizatoms[atom->tag[j]] = std::make_pair(vizsteps, itype);
       }
     }
     energy_stored = energy_after;
@@ -990,7 +990,7 @@ int FixAtomSwap::image(int *&objs, double **&parms)
       idx = atom->map(key);
       if (idx < 0) continue;
       imgobjs[n] = Graphics::SPHERE;
-      imgparms[n][0] = data.second; // use stored old atom type
+      imgparms[n][0] = data.second; // use stored pre-swap atom type
       imgparms[n][1] = x[idx][0];
       imgparms[n][2] = x[idx][1];
       imgparms[n][3] = x[idx][2];
