@@ -18,15 +18,22 @@ Syntax
 * agroup-ID = group-ID of the hydrogen bond acceptor atoms
 * hgroup-ID = group-ID of the hydrogen bond hydrogen atoms
 
-* one or more values may be appended
+* zero or more values may be appended to select which additional properties to compute and provide
 * value = *dist* or *angle* or *hdist* or *ehb*
 
-.. parsed-literal::
+   .. parsed-literal::
 
-     *dist* = distance between hydrogen bond donor and acceptor atoms (distance units)
-     *angle* = hydrogen - donor - acceptor angle (degrees)
-     *hdist* = distance between hydrogen bond hydrogen and acceptor atoms (distance units)
-     *ehb* = hydrogen bond strength (energy units)
+      *dist* = distance between hydrogen bond donor and acceptor atoms (distance units)
+      *angle* = hydrogen - donor - acceptor angle (degrees)
+      *hdist* = distance between hydrogen bond hydrogen and acceptor atoms (distance units)
+      *ehb* = hydrogen bond strength (energy units)
+
+* zero or more keyword/value pair may be appended
+* keyword = *ecut*
+
+   .. parsed-literal::
+
+      *ecut* value = minimum hydrogen bond strength cutoff (energy units)
 
 Examples
 """"""""
@@ -68,7 +75,27 @@ The following values can be computed and output.
   and hydrogen bond acceptor atom in distance units
 - The *ehb* value is the hydrogen bond strength computed as the sum of
   the pairwise potential energy between a) the donor atom and the
-  acceptor atom, and b) the hydrogen atom and the acceptor atom
+  acceptor atom, and b) the hydrogen atom and the acceptor atom.  This
+  is typically a positive value for an attractive interaction.
+
+If the *ecut* keyword is used, and additional energy cutoff is applied.
+The computed hydrogen bond strength must be larger than the *ecut* value
+or else the potential hydrogen bond is not counted as such.  The energy
+cutoff is not applied for a negative value of *ecut*, which is the
+default setting.
+
+.. admonition:: Restrictions for computing *ehb* and applying *ecut*
+   :class: note
+
+   Computing the hydrogen bond strength and applying an energy cutoff
+   for hydrogen bonds requires that the :doc:`pair_style <pair_style>`
+   used is capable of computing pair-wise energies.  This is usually
+   available for *lj/cut/coul/cut* or similar.
+
+   If a :doc:`kspace solver <kspace_style>` is used, this energy *only*
+   contains the real-space contributions.  But since the distances
+   between the atoms are small, the missing long-range contribution
+   should be small, too.
 
 Output info
 """""""""""
@@ -160,10 +187,7 @@ timestep to the next.
 
 The output for *dist* and *hdist* will be in distance :doc:`units
 <units>`.  The output for *angle* will be in degrees.  The output for
-*strength* will be in energy :doc:`units <units>`.  If a :doc:`kspace
-solver <kspace_style>` is used, this energy *only* contains the
-real-space contributions. But since the distances are small, the
-missing contribution should be very small.
+*strength* will be in energy :doc:`units <units>`.
 
 -----------
 
@@ -204,9 +228,10 @@ This compute requires that the hydrogen atom of a hydrogen bond is bound
 to the donor atom with an explicit bond.  It cannot be used with pair
 styles like :doc:`reaxff <pair_reaxff>` where bonds are implicit.
 
-To compute the hydrogen bond strength the :doc:`pair style <pair_style>`
-must support computation of pair-wise forces and energies, which is
-generally not available for many-body and machine learning potentials.
+To compute the hydrogen bond strength, the :doc:`pair style
+<pair_style>` must support computation of pair-wise forces and energies,
+which is generally not available for many-body and machine learning
+potentials.
 
 Related commands
 """"""""""""""""
@@ -218,4 +243,5 @@ Related commands
 Default
 """""""
 
-none
+*ecut* = -1.0, default outputs are the atom-IDs (in this order) for
+hydrogen bond hydrogen atom, donor atom, and acceptor atom.

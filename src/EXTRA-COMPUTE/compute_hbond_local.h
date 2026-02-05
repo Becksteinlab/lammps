@@ -36,7 +36,7 @@ class ComputeHBondLocal : public Compute {
   double memory_usage() override;
 
  private:
-  double distcutoff, anglecutoff, distcutoffsq;
+  double distcutoff, anglecutoff, distcutoffsq, ehbcutoff;
   int ncount;
   int singleflag, hdistflag;
   int hydrogenmask, donormask, acceptormask;    // group bitmask for groups of atoms

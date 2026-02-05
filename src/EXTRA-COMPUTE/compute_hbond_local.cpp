@@ -60,6 +60,7 @@ ComputeHBondLocal::ComputeHBondLocal(LAMMPS *lmp, int narg, char **arg) :
 
   ncount = singleflag = hdistflag = numobjs = 0;
   hydrogenmask = donormask = acceptormask = 0;
+  ehbcutoff = -1.0;
 
   distcutoff = utils::numeric(FLERR, arg[3], false, lmp);
   if (distcutoff <= 0.0) error->all(FLERR, 3, "Compute hbond/local distance cutoff must be > 0.0");
@@ -80,24 +81,42 @@ ComputeHBondLocal::ComputeHBondLocal(LAMMPS *lmp, int narg, char **arg) :
   vflag[ACCEPTOR] = ACCEPTOR;
 
   int nvalues = 3;    // always store 3 atom IDs
-  for (int iarg = 8; iarg < narg; iarg++) {
+  int iarg = 8;
+  while (iarg < narg) {
     if (strcmp(arg[iarg], "dist") == 0) {
       vflag[nvalues++] = DIST;
+      ++iarg;
     } else if (strcmp(arg[iarg], "angle") == 0) {
       vflag[nvalues++] = ANGLE;
+      ++iarg;
     } else if (strcmp(arg[iarg], "hdist") == 0) {
       hdistflag = 1;
       vflag[nvalues++] = HDIST;
+      ++iarg;
     } else if (strcmp(arg[iarg], "ehb") == 0) {
       hdistflag = 1;
       singleflag = 1;
       vflag[nvalues++] = ENGPOT;
+      ++iarg;
     } else {
-      error->all(FLERR, iarg, "Unknown compute hbond/local property {}", arg[iarg]);
+      // unknown property. Now check for optional keywords
+      break;
     }
   }
   // reset to actual size
   vflag.resize(nvalues);
+
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "ecut") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute hbond/local ecut", error);
+      ehbcutoff = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      hdistflag = 1;
+      singleflag = 1;
+      iarg += 2;
+    } else {
+      error->all(FLERR, iarg, "Unknown compute hbond/local keyword {}", arg[iarg]);
+    }
+  }
 
   if (singleflag && (!force->pair || !force->pair->single_enable))
     error->all(FLERR, "Computation of hydrogen bond energy not supported by pair style");
@@ -289,57 +308,59 @@ int ComputeHBondLocal::compute_hbonds(int flag)
 
               double c = std::clamp((dx1 * dx2 + dy1 * dy2 + dz1 * dz2) / (r1 * r2), -1.0, 1.0);
               double theta = acos(c);
-              if (theta < anglecutoff) {
-                if (flag) {
-                  double fpair = 0.0;
-                  double epot = 0.0;
-                  double hdist = 0.0;
-                  double hdistsq = 0.0;
-                  if (hdistflag) {
-                    double dx = x[k][0] - x[j][0];
-                    double dy = x[k][1] - x[j][1];
-                    double dz = x[k][2] - x[j][2];
-                    hdistsq = dx * dx + dy * dy + dz * dz;
-                    hdist = sqrt(hdistsq);
-                  }
-                  if (singleflag) {
-                    double tmp;
-                    epot = force->pair->single(k, j, type[k], type[j], hdistsq, 1.0, 1.0, tmp);
-                    epot += force->pair->single(i, j, type[i], type[j], distsq, 1.0, 1.0, tmp);
-                  }
 
-                  int m = 0;
-                  for (const auto &val : vflag) {
-                    switch (val) {
-                      case DONOR:
-                        alocal[nhb][m] = tag[i];
-                        break;
-                      case ACCEPTOR:
-                        alocal[nhb][m] = tag[j];
-                        break;
-                      case HYDROGEN:
-                        alocal[nhb][m] = tag[k];
-                        break;
-                      case DIST:
-                        alocal[nhb][m] = r1;
-                        break;
-                      case ANGLE:
-                        alocal[nhb][m] = theta * RAD2DEG;
-                        break;
-                      case HDIST:
-                        alocal[nhb][m] = hdist;
-                        break;
-                      case ENGPOT:
-                        alocal[nhb][m] = epot;
-                        break;
-                      default:
-                        alocal[nhb][m] = 0.0;
-                        break;
-                    }
-                    ++m;
-                  }
+              if (theta <= anglecutoff) {
+                double fpair = 0.0;
+                double epot = 0.0;
+                double hdist = 0.0;
+                double hdistsq = 0.0;
+                if (hdistflag) {
+                  double dx = x[k][0] - x[j][0];
+                  double dy = x[k][1] - x[j][1];
+                  double dz = x[k][2] - x[j][2];
+                  hdistsq = dx * dx + dy * dy + dz * dz;
+                  hdist = sqrt(hdistsq);
                 }
-                ++nhb;
+                if (singleflag) {
+                  double tmp;
+                  epot = -force->pair->single(k, j, type[k], type[j], hdistsq, 1.0, 1.0, tmp);
+                  epot -= force->pair->single(i, j, type[i], type[j], distsq, 1.0, 1.0, tmp);
+                }
+                if ((ehbcutoff < 0.0) || (epot > ehbcutoff)) {
+                  if (flag) {
+                    int m = 0;
+                    for (const auto &val : vflag) {
+                      switch (val) {
+                        case DONOR:
+                          alocal[nhb][m] = tag[i];
+                          break;
+                        case ACCEPTOR:
+                          alocal[nhb][m] = tag[j];
+                          break;
+                        case HYDROGEN:
+                          alocal[nhb][m] = tag[k];
+                          break;
+                        case DIST:
+                          alocal[nhb][m] = r1;
+                          break;
+                        case ANGLE:
+                          alocal[nhb][m] = theta * RAD2DEG;
+                          break;
+                        case HDIST:
+                          alocal[nhb][m] = hdist;
+                          break;
+                        case ENGPOT:
+                          alocal[nhb][m] = epot;
+                          break;
+                        default:
+                          alocal[nhb][m] = 0.0;
+                          break;
+                      }
+                      ++m;
+                    }
+                  }
+                  ++nhb;
+                }
               }
             }
           }
