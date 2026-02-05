@@ -66,7 +66,6 @@ template<class DeviceType>
 double ComputeTempDeformKokkos<DeviceType>::compute_scalar()
 {
   atomKK->sync(execution_space,datamask_read);
-  atomKK->k_mass.sync<DeviceType>();
 
   invoked_scalar = update->ntimestep;
 
@@ -199,6 +198,7 @@ void ComputeTempDeformKokkos<DeviceType>::remove_deform_bias_all_kk()
 }
 
 template<class DeviceType>
+// NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void ComputeTempDeformKokkos<DeviceType>::operator()(TagComputeTempDeformRemoveBias, const int &i) const {
   if (mask[i] & groupbit) {
@@ -225,7 +225,7 @@ void ComputeTempDeformKokkos<DeviceType>::restore_deform_bias_all()
 template<class DeviceType>
 void ComputeTempDeformKokkos<DeviceType>::restore_deform_bias_all_kk()
 {
-  atomKK->sync(execution_space,V_MASK | MASK_MASK);
+  atomKK->sync(execution_space,V_MASK|MASK_MASK);
   v = atomKK->k_v.view<DeviceType>();
   mask = atomKK->k_mask.view<DeviceType>();
   int nlocal = atom->nlocal;
@@ -238,6 +238,7 @@ void ComputeTempDeformKokkos<DeviceType>::restore_deform_bias_all_kk()
 }
 
 template<class DeviceType>
+// NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void ComputeTempDeformKokkos<DeviceType>::operator()(TagComputeTempDeformRestoreBias, const int &i) const {
   if (mask[i] & groupbit) {
@@ -289,6 +290,7 @@ void ComputeTempDeformKokkos<DeviceType>::apply_deform_bias_all_kk(double dtv)
 }
 
 template<class DeviceType>
+// NOLINTNEXTLINE
 KOKKOS_INLINE_FUNCTION
 void ComputeTempDeformKokkos<DeviceType>::operator()(TagComputeTempDeformApplyBias, const int &i) const {
   if (mask[i] & groupbit) {

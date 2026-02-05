@@ -63,12 +63,15 @@ class ComputeTempDeformKokkos: public ComputeTempDeform {
   void apply_deform_bias_all(double dtv = 0.0) override;
   void apply_deform_bias_all_kk(double dtv = 0.0) override;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagComputeTempDeformRemoveBias, const int &i) const;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagComputeTempDeformRestoreBias, const int &i) const;
 
+// NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
   void operator()(TagComputeTempDeformApplyBias, const int &i) const;
 
@@ -84,12 +87,11 @@ class ComputeTempDeformKokkos: public ComputeTempDeform {
   class DomainKokkos *domainKK;
 
   Few<double, 6> h_rate, h_ratelo, d_grad_u;
-  Few<double, 5> d_xref;  // xmid[3], ylo, zlo
+  Few<double, 5> d_xref;  // stores xmid[3], ylo, zlo
 
-  };
+};
 
-}
+}    // namespace LAMMPS_NS
 
 #endif
 #endif
-

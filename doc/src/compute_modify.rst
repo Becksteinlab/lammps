@@ -66,7 +66,7 @@ to change the internal temperature compute.
 
 Restrictions
 """"""""""""
- none
+none
 
 Related commands
 """"""""""""""""
