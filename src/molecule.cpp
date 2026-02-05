@@ -138,11 +138,11 @@ void Molecule::command(int narg, char **arg, int &index)
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "molecule auto", error);
       char *auto_arg = arg[iarg + 1];
       if (strcmp(auto_arg, "angle") == 0) {
-        // set auto angle flag
+        auto_angleflag = 1;
       } else if (strcmp(auto_arg, "dihedral") == 0) {
-        // set auto dihedral flag
+        auto_dihedralflag = 1;
       } else if (strcmp(auto_arg, "improper") == 0) {
-        // set auto improper flag
+        auto_improperflag = 1;
       } else {
         error->all(FLERR, iarg + 1, "Illegal argument '{}' for molecule auto", auto_arg);
       }
@@ -233,6 +233,8 @@ void Molecule::command(int narg, char **arg, int &index)
     if (comm->me == 0) rewind(fp);
     Molecule::read(1);
     if (comm->me == 0) fclose(fp);
+
+    if (auto_angleflag) generate_angles();
   }
   Molecule::stats();
 }
@@ -3526,11 +3528,212 @@ void Molecule::special_read(char *line)
   }
   for (int i = 0; i < natoms; i++) {
     if (count[i] == 0)
-      error->all(FLERR, fileiarg, "Atom {} missing in Special Bonds section of molecule file",x
+      error->all(FLERR, fileiarg, "Atom {} missing in Special Bonds section of molecule file",
                  i + 1);
   }
 }
 
+/* ----------------------------------------------------------------------
+   auto generate angles from bond info
+------------------------------------------------------------------------- */
+
+void Molecule::generate_angles()
+{
+  if (!bondflag)
+    error->all(FLERR, fileiarg, "Cannot generate angles without bonds");
+
+  int newton_bond = force->newton_bond;
+  int itype = 1;
+  tagint m, atom1, atom2, atom3;
+  std::vector<int *> angles_found;
+  int angle[3];
+
+  // initialize
+  memory->create(count, natoms, "molecule:count");
+  for (int i = 0; i < natoms; i++) {
+    count[i] = 0;
+    num_angle[i] = 0;
+  }
+
+  for (atom2 = 0; atom2 < natoms; atom2++) {
+    for (int j = 0; j < num_bond[atom2]; j++) {
+      atom1 = bond_atom[atom2][j] - 1;
+      for (int k = j + 1; k < num_bond[atom2]; k++) {
+        atom3 = bond_atom[atom2][k] - 1;
+        count[atom2]++;
+        nangles++;
+        angle[0] = atom1 + 1;
+        angle[1] = atom2 + 1;
+        angle[2] = atom3 + 1;
+        angles_found.push_back(angle);
+
+        if (newton_bond) {
+          count[atom1]++;
+          count[atom3]++;
+        }
+        printf("found angle %d %d %d\n", (atom1+1), (atom2+1), (atom3+1));
+      }
+    }
+  } 
+
+  for (atom1 = 0; atom1 < natoms; atom1++) {
+    for (int j = 0; j < num_bond[atom1]; j++) {
+      atom2 = bond_atom[atom1][j] - 1;
+      for (int k = 0; k < num_bond[atom2]; k++) {
+        atom3 = bond_atom[atom2][k] - 1;
+        count[atom2]++;
+        nangles++;
+        angle[0] = atom1 + 1;
+        angle[1] = atom2 + 1;
+        angle[2] = atom3 + 1;
+        angles_found.push_back(angle);
+
+        if (newton_bond) {
+          count[atom1]++;
+          count[atom3]++;
+        }
+        printf("found angle %d %d %d\n", (atom1+1), (atom2+1), (atom3+1));
+      }
+    }
+  } 
+
+  for (atom1 = 0; atom1 < natoms; atom1++) {
+    for (int j = 0; j < num_bond[atom1]; j++) {
+      atom2 = bond_atom[atom1][j] - 1;
+
+      for (atom3 = atom1 + 1; atom3 < natoms; atom3++) {
+        for (int k = 0; k < num_bond[atom3]; k++) {
+          if (bond_atom[atom3][k] - 1 == atom2) {
+            count[atom2]++;
+            nangles++;
+            angle[0] = atom1 + 1;
+            angle[1] = atom2 + 1; 
+            angle[2] = atom3 + 1;
+            angles_found.push_back(angle);
+
+            if (newton_bond) {
+              count[atom1]++;
+              count[atom3]++;
+            }
+            printf("found angle %d %d %d\n", (atom1+1), (atom2+1), (atom3+1));
+          }
+        }
+      }
+    }
+  } 
+
+  angle_per_atom = 0;
+  for (int i = 0; i < natoms; i++) angle_per_atom = MAX(angle_per_atom, count[i]);
+
+  memory->create(angle_type, natoms, angle_per_atom, "molecule:angle_type");
+  memory->create(angle_atom1, natoms, angle_per_atom, "molecule:angle_atom1");
+  memory->create(angle_atom2, natoms, angle_per_atom, "molecule:angle_atom2");
+  memory->create(angle_atom3, natoms, angle_per_atom, "molecule:angle_atom3");
+
+  for (int i = 0; i < nangles; i++) {
+    atom1 = angles_found[i][0] + 1;
+    atom2 = angles_found[i][1] + 1;
+    atom3 = angles_found[i][2] + 1;
+
+    m = atom2 - 1;
+    nangletypes = MAX(nangletypes, itype);
+    angle_type[m][num_angle[m]] = itype;
+    angle_atom1[m][num_angle[m]] = atom1;
+    angle_atom2[m][num_angle[m]] = atom2;
+    angle_atom3[m][num_angle[m]] = atom3;
+    num_angle[m]++;
+    if (newton_bond == 0) {
+      m = atom1 - 1;
+      angle_type[m][num_angle[m]] = itype;
+      angle_atom1[m][num_angle[m]] = atom1;
+      angle_atom2[m][num_angle[m]] = atom2;
+      angle_atom3[m][num_angle[m]] = atom3;
+      num_angle[m]++;
+      m = atom3 - 1;
+      angle_type[m][num_angle[m]] = itype;
+      angle_atom1[m][num_angle[m]] = atom1;
+      angle_atom2[m][num_angle[m]] = atom2;
+      angle_atom3[m][num_angle[m]] = atom3;
+      num_angle[m]++;
+    }
+  }
+
+  angleflag = 1;
+}
+
+/* ----------------------------------------------------------------------
+   auto generate dihedrals from bond info
+------------------------------------------------------------------------- */
+
+void Molecule::generate_dihedrals()
+{
+  if (!bondflag)
+    error->all(FLERR, fileiarg, "Cannot generate dihedrals without bonds");
+
+  int newton_bond = force->newton_bond;
+  tagint m, atom1, atom3;
+
+  // initialize
+  for (int i = 0; i < natoms; i++) {
+    count[i] = 0;
+    num_dihedral[i] = 0;
+  }
+
+  for (int atom2 = 0; atom2 < natoms; atom2++) {
+    for (int j = 0; j < num_bond[atom2]; j++) {
+      atom1 = bond_atom[atom2][j] - 1;
+      for (int k = atom2 + 1; k < num_bond[atom2]; k++) {
+        atom3 = bond_atom[atom2][k] - 1;
+        count[atom2]++;
+
+        if (newton_bond) {
+          count[atom1]++;
+          count[atom3]++;
+        }
+      }
+    }
+  } 
+
+  angle_per_atom = 0;
+  for (int i = 0; i < natoms; i++) angle_per_atom = MAX(angle_per_atom, count[i]);
+
+  memory->create(angle_type, natoms, angle_per_atom, "molecule:angle_type");
+  memory->create(angle_atom1, natoms, angle_per_atom, "molecule:angle_atom1");
+  memory->create(angle_atom2, natoms, angle_per_atom, "molecule:angle_atom2");
+  memory->create(angle_atom3, natoms, angle_per_atom, "molecule:angle_atom3");
+
+  for (int atom2 = 0; atom2 < natoms; atom2++) {
+    for (int j = 0; j < num_bond[atom2]; j++) {
+      atom1 = bond_atom[atom2][j];
+      for (int k = atom2 + 1; k < num_bond[atom2]; k++) {
+        atom3 = bond_atom[atom2][k];
+        m = atom2;
+
+        //angle_type[m][num_angle[m]] = itype;
+        angle_atom1[m][num_angle[m]] = atom1;
+        angle_atom2[m][num_angle[m]] = atom2 + 1;
+        angle_atom3[m][num_angle[m]] = atom3;
+        num_angle[m]++;
+        if (newton_bond == 0) {
+          m = atom1 - 1;
+          // angle_type[m][num_angle[m]] = itype;
+          angle_atom1[m][num_angle[m]] = atom1;
+          angle_atom2[m][num_angle[m]] = atom2 + 1;
+          angle_atom3[m][num_angle[m]] = atom3;
+          num_angle[m]++;
+          m = atom3 - 1;
+          // angle_type[m][num_angle[m]] = itype;
+          angle_atom1[m][num_angle[m]] = atom1;
+          angle_atom2[m][num_angle[m]] = atom2 + 1;
+          angle_atom3[m][num_angle[m]] = atom3;
+          num_angle[m]++;
+        }
+      }
+    }
+  }
+
+  angleflag = 1;
+}
 /* ----------------------------------------------------------------------
    auto generate special bond info
 ------------------------------------------------------------------------- */
@@ -3985,6 +4188,7 @@ void Molecule::initialize()
 
   xflag = typeflag = moleculeflag = fragmentflag = qflag = radiusflag = muflag = rmassflag = 0;
   bondflag = angleflag = dihedralflag = improperflag = 0;
+  auto_angleflag = auto_dihedralflag = auto_improperflag = 0;
   nspecialflag = specialflag = 0;
   shakeflag = shakeflagflag = shakeatomflag = shaketypeflag = 0;
   bodyflag = ibodyflag = dbodyflag = 0;
