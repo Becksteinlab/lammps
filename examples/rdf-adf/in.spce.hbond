@@ -39,7 +39,7 @@ group           hgroup type 2
 variable        nmol equal count(ogroup)
 
 # water oxygen atoms are both hydrogen bond donor and acceptor
-compute         hb       all      hbond/local 3.3 30.0 ogroup ogroup hgroup dist hdist angle ehb
+compute         hb       all      hbond/local 3.3 30.0 ogroup ogroup hgroup dist hdist angle ehb # ecut 1.5
 
 # output all hydrogen bonds. each line contains: hydrogen-ID donor-ID acceptor-ID r_DA r_HA theta_HDA e_hb
 #dump            hb       all      local 100 hbonds.dump c_hb[*]
@@ -60,7 +60,7 @@ fix       dhist all ave/histo 100 10 1000 2.3 3.3 30 c_hb[4] file hbond_histo_di
 # get histogram of hydrogen bond angle
 fix       ahist all ave/histo 100 10 1000 0.0 30.0 30 c_hb[6] file hbond_histo_angle.dat mode vector kind local
 # get histogram of hydrogen bond strength
-fix       ahist all ave/histo 100 10 1000 -7.5 1.0 30 c_hb[7] file hbond_histo_eng.dat mode vector kind local
+fix       ahist all ave/histo 100 10 1000 -1.0 7.5 30 c_hb[7] file hbond_histo_eng.dat mode vector kind local beyond extra
 
 # output computed global data as thermo output first for step then averaged
 thermo_style    custom step temp press v_nhb_mol c_avg[*] f_ave[*]
