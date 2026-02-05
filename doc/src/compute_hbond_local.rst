@@ -23,9 +23,9 @@ Syntax
 
    .. parsed-literal::
 
-      *dist* = distance between hydrogen bond donor and acceptor atoms (distance units)
+      *dist* = distance between hydrogen bond donor and acceptor atom (distance units)
       *angle* = hydrogen - donor - acceptor angle (degrees)
-      *hdist* = distance between hydrogen bond hydrogen and acceptor atoms (distance units)
+      *hdist* = distance between hydrogen bond hydrogen and acceptor atom (distance units)
       *ehb* = hydrogen bond strength (energy units)
 
 * zero or more keyword/value pair may be appended
@@ -41,7 +41,7 @@ Examples
 .. code-block:: LAMMPS
 
    compute hb all hbond/local 3.2 30.0 dgroup agroup hgroup
-   compute hb all hbond/local 3.2 30.0 oxygen oxygen hydrogen dist hdist angle ehb
+   compute hb all hbond/local 3.2 30.0 oxygen oxygen hydrogen dist hdist angle ehb ecut 1.5
 
 Description
 """""""""""
