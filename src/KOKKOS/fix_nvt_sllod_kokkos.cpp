@@ -143,7 +143,8 @@ void FixNVTSllodKokkos<DeviceType>::init()
       // make sure fix deform init happens first so h_rate is set
       if (!peculiar_flag) {
         f->init();
-        utils::logmesg(this->lmp, "fix {} applying velocity profile kick.\n", this->style);
+        if (this->comm->me == 0)
+          utils::logmesg(this->lmp, "fix {} applying velocity profile kick.\n", this->style);
         dynamic_cast<ComputeTempDeform*>(this->temperature)->apply_deform_bias_all();
         kick_flag = 0;
       } else if (this->comm->me == 0) {

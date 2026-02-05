@@ -133,7 +133,7 @@ void FixNVTSllodEff::init()
       // make sure fix deform init happens first so h_rate is set
       if (!peculiar_flag) {
         f->init();
-        utils::logmesg(lmp, "fix {} applying velocity profile kick.\n", style);
+        if (comm->me == 0) utils::logmesg(lmp, "fix {} applying velocity profile kick.\n", style);
         dynamic_cast<ComputeTempDeformEff*>(temperature)->apply_deform_bias_all();
         kick_flag = 0;
       } else if (comm->me == 0) {
