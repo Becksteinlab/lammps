@@ -91,7 +91,7 @@ class FixAtomSwap : public Fix {
   // maps atom IDs to number of steps they have been highlighted
   std::unordered_map<tagint, std::pair<int,int>> vizatoms;
   int vizsteps;                    // number of steps to highlight atoms in reactions
-  
+
   void options(int, char **);
   int attempt_semi_grand();
   int attempt_swap();

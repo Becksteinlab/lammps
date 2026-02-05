@@ -46,7 +46,6 @@
 #include <cfloat>
 #include <cmath>
 #include <cstring>
-#include <utility>
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
