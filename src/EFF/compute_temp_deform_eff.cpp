@@ -204,7 +204,7 @@ double ComputeTempDeformEff::compute_scalar()
       if ((mask[i] & groupbit) && abs(spin[i])==1)
         tspin += mefactor*mass[type[i]]*ervel[i]*ervel[i];
 
-    MPI_Allreduce(&tspin_all,&tspin,1,MPI_DOUBLE,MPI_SUM,world);
+    MPI_Allreduce(&tspin,&tspin_all,1,MPI_DOUBLE,MPI_SUM,world);
     scalar += tspin_all * force->mvv2e / (dof * force->boltz);
   }
 
@@ -242,7 +242,7 @@ void ComputeTempDeformEff::compute_vector()
         tspin[2] += mefactor * massone * ervel[i]*ervel[i];
       }
 
-    MPI_Allreduce(tspin_all,tspin,3,MPI_DOUBLE,MPI_SUM,world);
+    MPI_Allreduce(tspin,tspin_all,3,MPI_DOUBLE,MPI_SUM,world);
     for (int i = 0; i < 3; i++) vector[i] += tspin_all[i] * force->mvv2e;
   }
 
