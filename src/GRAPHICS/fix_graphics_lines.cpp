@@ -17,6 +17,7 @@
 #include "comm.h"
 #include "domain.h"
 #include "error.h"
+#include "fix_store_atom.h"
 #include "graphics.h"
 #include "group.h"
 #include "memory.h"
@@ -63,7 +64,10 @@ void FixGraphicsLines::post_constructor()
   fave = modify->add_fix(fmt::format("{0} {1} ave/atom {2} {3} {4} c_{5}[1] c_{5}[2] c_{5}[3]",
                                      id_fave, gname, nave, nrepeat, nevery, id_cprop));
   id_fstore = utils::strdup(id + std::string("_FIX_STORE_ATOM"));
-  fstore = modify->add_fix(fmt::format("{0} {1} STORE/ATOM {2} 0 0 1", id_fstore, gname, nmax));
+  auto cmd = fmt::format("{0} {1} STORE/ATOM {2} 3 0 1", id_fstore, gname, nmax);
+  fstore = dynamic_cast<FixStoreAtom *>(modify->add_fix(cmd));
+  if (!fstore)
+    error->all(FLERR, Error::NOLASTLINE, "Error creating internal storage for fix graphics/line");
 
   // is there a better way to do the following instead of this ugly hack?
   // swap our position with fix ave/atom, so it is executed first and we can access its data
@@ -106,27 +110,75 @@ void FixGraphicsLines::end_of_step()
   memory->destroy(imgobjs);
   memory->destroy(imgparms);
 
-  auto num = group->count(igroup);
-  numobjs = num * nmax;
+  const auto *const *const x = atom->x;
+  const auto *const *const xave = fave->array_atom;
+  auto *const *const *const xstore = fstore->tstore;
+  const auto *const mask = atom->mask;
+  const auto *const type = atom->type;
+  const auto &prd_half = domain->prd_half;
+  const auto nlocal = atom->nlocal;
 
-#if 0
-  for (int n = 0; n < numobjs; ++n) {
-    imgobjs[n] = Graphics::ARROW;
-    imgparms[n][0] = 1;
-    imgparms[n][1] = pdata[n][0];
-    imgparms[n][2] = pdata[n][1];
-    imgparms[n][3] = pdata[n][2];
-    imgparms[n][4] = vdata[n][0];
-    imgparms[n][5] = vdata[n][1];
-    imgparms[n][6] = vdata[n][2];
-    imgparms[n][7] = scale;
-    imgparms[n][8] = 2.0 * radius;
-    imgparms[n][9] = 0.2;
+  // update history data storage
+  int n = 0;
+  for (int i = 0; i < nlocal; ++i) {
+    if (mask[i] & groupbit) {
+      xstore[i][ivalue][0] = xave[i][0];
+      xstore[i][ivalue][1] = xave[i][1];
+      xstore[i][ivalue][2] = xave[i][2];
+      domain->remap(xstore[i][ivalue]);
+      ++n;
+    }
   }
+  if (nvalues < nmax) ++nvalues;
+  ++ivalue;
+  if (ivalue == nmax) ivalue = 0;
 
-  if (varflag || (mode == CHUNK))
-    modify->addstep_compute((update->ntimestep / nevery) * nevery + nevery);
-#endif
+  // allocate storage for graphics
+
+  numobjs = n * nvalues;
+  memory->create(imgobjs, numobjs, "fix_graphics_lines:imgobjs");
+  memory->create(imgparms, numobjs, 8, "fix_graphics_lines:imgparms");
+
+  n = 0;
+  for (int i = 0; i < nlocal; ++i) {
+    if (mask[i] & groupbit) {
+      int j1, j2 = (ivalue - 1 + nvalues) % nvalues;
+
+      if ((fabs(x[i][0] - xstore[i][j2][0]) < prd_half[0]) &&
+          (fabs(x[i][1] - xstore[i][j2][1]) < prd_half[1]) &&
+          (fabs(x[i][2] - xstore[i][j2][2]) < prd_half[2])) {
+        imgobjs[n] = Graphics::CYLINDER;
+        imgparms[n][0] = type[i];
+        imgparms[n][1] = x[i][0];
+        imgparms[n][2] = x[i][1];
+        imgparms[n][3] = x[i][2];
+        imgparms[n][4] = xstore[i][j2][0];
+        imgparms[n][5] = xstore[i][j2][1];
+        imgparms[n][6] = xstore[i][j2][2];
+        imgparms[n][7] = 0.0;
+        ++n;
+      }
+      for (int jj = 1; jj < nvalues; ++jj) {
+        j1 = (ivalue + jj - 1) % nvalues;
+        j2 = (ivalue + jj + 0) % nvalues;
+        if ((fabs(xstore[i][j1][0] - xstore[i][j2][0]) < prd_half[0]) &&
+            (fabs(xstore[i][j1][1] - xstore[i][j2][1]) < prd_half[1]) &&
+            (fabs(xstore[i][j1][2] - xstore[i][j2][2]) < prd_half[2])) {
+          imgobjs[n] = Graphics::CYLINDER;
+          imgparms[n][0] = type[i];
+          imgparms[n][1] = xstore[i][j1][0];
+          imgparms[n][2] = xstore[i][j1][1];
+          imgparms[n][3] = xstore[i][j1][2];
+          imgparms[n][4] = xstore[i][j2][0];
+          imgparms[n][5] = xstore[i][j2][1];
+          imgparms[n][6] = xstore[i][j2][2];
+          imgparms[n][7] = 0.0;
+          ++n;
+        }
+      }
+    }
+  }
+  numobjs = n;
 }
 
 /* ----------------------------------------------------------------------

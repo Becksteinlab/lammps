@@ -24,6 +24,8 @@ FixStyle(graphics/lines,FixGraphicsLines);
 
 namespace LAMMPS_NS {
 class Compute;
+class FixStoreAtom;
+
 class FixGraphicsLines : public Fix {
  public:
   FixGraphicsLines(class LAMMPS *, int, char **);
@@ -44,12 +46,12 @@ class FixGraphicsLines : public Fix {
   int *imgobjs;
   double **imgparms;
 
-  char *id_cprop;     // internal compute property/atom ID
-  Compute *cprop;     // pointer to internal compute property/atom instance
-  char *id_fave;      // internal fix ave/atom ID
-  Fix *fave;          // pointer to internal fix ave/atom instance
-  char *id_fstore;    // internal fix STORE/ATOM ID
-  Fix *fstore;        // pointer to internal fix STORE/ATOM instance
+  char *id_cprop;          // internal compute property/atom ID
+  Compute *cprop;          // pointer to internal compute property/atom instance
+  char *id_fave;           // internal fix ave/atom ID
+  Fix *fave;               // pointer to internal fix ave/atom instance
+  char *id_fstore;         // internal fix STORE/ATOM ID
+  FixStoreAtom *fstore;    // pointer to internal fix STORE/ATOM instance
 };
 }    // namespace LAMMPS_NS
 #endif
