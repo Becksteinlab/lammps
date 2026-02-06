@@ -32,13 +32,17 @@ class FixGraphicsLines : public Fix {
   ~FixGraphicsLines() override;
   void post_constructor() override;
   int setmask() override;
+  void setup(int) override;
   void end_of_step() override;
+
+  void write_restart(FILE *) override;
+  void restart(char *) override;
 
   double compute_scalar() override;
   int image(int *&, double **&) override;
 
  protected:
-  int nave, nrepeat, nmax;
+  int nrepeat, nfreq, nmax;
   int nvalues, ivalue;
 
   // for storing graphics objects

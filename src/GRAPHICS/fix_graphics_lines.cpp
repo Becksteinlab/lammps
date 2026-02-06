@@ -39,15 +39,16 @@ FixGraphicsLines::FixGraphicsLines(LAMMPS *lmp, int narg, char **arg) :
 
   // parse mandatory args
 
-  nave = utils::inumeric(FLERR, arg[3], false, lmp);
+  nevery = utils::inumeric(FLERR, arg[3], false, lmp);
   nrepeat = utils::inumeric(FLERR, arg[4], false, lmp);
-  nevery = utils::inumeric(FLERR, arg[5], false, lmp);
+  nfreq = utils::inumeric(FLERR, arg[5], false, lmp);
   nmax = utils::inumeric(FLERR, arg[6], false, lmp);
 
   // fix settings
   scalar_flag = 1;
   extscalar = 0;
   time_depend = 1;
+  restart_global = 1;
   dynamic_group_allow = 0;    // there is no clean way to use dynamic groups for this
 
   nvalues = ivalue = numobjs = 0;
@@ -62,24 +63,19 @@ void FixGraphicsLines::post_constructor()
   cprop = modify->add_compute(fmt::format("{0} {1} property/atom xu yu zu", id_cprop, gname));
   id_fave = utils::strdup(id + std::string("_FIX_AVE_ATOM"));
   fave = modify->add_fix(fmt::format("{0} {1} ave/atom {2} {3} {4} c_{5}[1] c_{5}[2] c_{5}[3]",
-                                     id_fave, gname, nave, nrepeat, nevery, id_cprop));
+                                     id_fave, gname, nevery, nrepeat, nfreq, id_cprop));
+  if (!fave)
+    error->all(FLERR, Error::NOLASTLINE, "Error creating internal averaging for fix graphics/line");
   id_fstore = utils::strdup(id + std::string("_FIX_STORE_ATOM"));
   auto cmd = fmt::format("{0} {1} STORE/ATOM {2} 3 0 1", id_fstore, gname, nmax);
   fstore = dynamic_cast<FixStoreAtom *>(modify->add_fix(cmd));
   if (!fstore)
     error->all(FLERR, Error::NOLASTLINE, "Error creating internal storage for fix graphics/line");
 
-  // is there a better way to do the following instead of this ugly hack?
-  // swap our position with fix ave/atom, so it is executed first and we can access its data
-  // we don't need to swap fmask since both fixes are END_OF_STEP only ...
+  // turn off automatic end_of_step() processing for fix ave/atom.
+  // We call it manually instead to ensure it is called *before* we access its data
   int ifave = modify->find_fix(id_fave);
-  int ilines = modify->find_fix(id);
-  modify->fix[ifave] = this;
-  modify->fix[ilines] = fave;
-
-  // ... but we also need to change the fix index for fix ave/atom in the Atom::grow() callback list
-  for (int i = 0; i < atom->nextra_grow; ++i)
-    if (atom->extra_grow[i] == ifave) atom->extra_grow[i] = ilines;
+  modify->fmask[ifave] &= ~END_OF_STEP;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -105,11 +101,45 @@ int FixGraphicsLines::setmask()
 
 /* ---------------------------------------------------------------------- */
 
+void FixGraphicsLines::setup(int /*vflag*/)
+{
+  end_of_step();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGraphicsLines::write_restart(FILE *fp)
+{
+  if (comm->me == 0) {
+    int size = 6 * sizeof(double);
+    double list[6];
+    list[0] = nevery;
+    list[1] = nrepeat;
+    list[2] = nfreq;
+    list[3] = nmax;
+    list[4] = nvalues;
+    list[5] = ivalue;
+    fwrite(&size,sizeof(int),1,fp);
+    fwrite(list,sizeof(double),6,fp);
+  }
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGraphicsLines::restart(char *buf)
+{
+  auto *list = (double *) buf;
+  if ((list[0] != nevery) || (list[1] != nrepeat) || (list[2] != nfreq) || (list[3] != nmax))
+    error->all(FLERR, Error::NOLASTLINE, "Cannot restart fix graphics/lines: settings don't match");
+
+  nvalues = list[4];
+  ivalue = list[5];
+}
+
+/* ---------------------------------------------------------------------- */
+
 void FixGraphicsLines::end_of_step()
 {
-  memory->destroy(imgobjs);
-  memory->destroy(imgparms);
-
   const auto *const *const x = atom->x;
   const auto *const *const xave = fave->array_atom;
   auto *const *const *const xstore = fstore->tstore;
@@ -118,23 +148,43 @@ void FixGraphicsLines::end_of_step()
   const auto &prd_half = domain->prd_half;
   const auto nlocal = atom->nlocal;
 
-  // update history data storage
   int n = 0;
-  for (int i = 0; i < nlocal; ++i) {
-    if (mask[i] & groupbit) {
-      xstore[i][ivalue][0] = xave[i][0];
-      xstore[i][ivalue][1] = xave[i][1];
-      xstore[i][ivalue][2] = xave[i][2];
-      domain->remap(xstore[i][ivalue]);
-      ++n;
+
+  if (restart_reset == 0) {
+    // when we are not restarting, we have to call end_of_step() for fix ave/atom explicitly
+    fave->end_of_step();
+    // we only continue when one block of averaging is complete
+    if (update->ntimestep % nfreq) return;
+
+    // update history data storage
+    n = 0;
+    for (int i = 0; i < nlocal; ++i) {
+      if (mask[i] & groupbit) {
+        xstore[i][ivalue][0] = xave[i][0];
+        xstore[i][ivalue][1] = xave[i][1];
+        xstore[i][ivalue][2] = xave[i][2];
+        domain->remap(xstore[i][ivalue]);
+        ++n;
+      }
     }
+    if (nvalues < nmax) ++nvalues;
+    ++ivalue;
+    if (ivalue == nmax) ivalue = 0;
+  } else {
+    // when we are restarting, we also get called from setup()
+    // we only need to know the number of local atoms in the fix group
+    // then we use the restarted data to fill the image data arrays
+    n = 0;
+    for (int i = 0; i < nlocal; ++i) {
+      if (mask[i] & groupbit) ++n;
+    }
+    restart_reset = 0;
   }
-  if (nvalues < nmax) ++nvalues;
-  ++ivalue;
-  if (ivalue == nmax) ivalue = 0;
 
   // allocate storage for the largest possible number of graphics objects
 
+  memory->destroy(imgobjs);
+  memory->destroy(imgparms);
   numobjs = n * nvalues;
   memory->create(imgobjs, numobjs, "fix_graphics_lines:imgobjs");
   memory->create(imgparms, numobjs, 8, "fix_graphics_lines:imgparms");
@@ -151,12 +201,12 @@ void FixGraphicsLines::end_of_step()
           (fabs(x[i][2] - xstore[i][j2][2]) < prd_half[2])) {
         imgobjs[n] = Graphics::CYLINDER;
         imgparms[n][0] = type[i];
-        imgparms[n][1] = x[i][0];
-        imgparms[n][2] = x[i][1];
-        imgparms[n][3] = x[i][2];
-        imgparms[n][4] = xstore[i][j2][0];
-        imgparms[n][5] = xstore[i][j2][1];
-        imgparms[n][6] = xstore[i][j2][2];
+        imgparms[n][1] = xstore[i][j2][0];
+        imgparms[n][2] = xstore[i][j2][1];
+        imgparms[n][3] = xstore[i][j2][2];
+        imgparms[n][4] = x[i][0];
+        imgparms[n][5] = x[i][1];
+        imgparms[n][6] = x[i][2];
         imgparms[n][7] = 0.0;
         ++n;
       }

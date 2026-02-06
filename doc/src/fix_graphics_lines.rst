@@ -81,8 +81,13 @@ The *fflag2* setting determines the diameter of the cylinders.
 Restart, fix_modify, output, run start/stop, minimize info
 ==========================================================
 
-No information about this fix is written to :doc:`binary restart files
-<restart>`.
+This fix writes its current status to :doc:`binary restart files
+<restart>`.  See the :doc:`read_restart <read_restart>` command for info
+on how to re-specify a fix in an input script that reads a restart file,
+so that the fix continues in an uninterrupted fashion.  Upon restarting,
+the fix checks that the *Nevery*, *Nrepeat*, *Nfreq*, and *Nlength*
+settings are the same as when the restart file was written.  Otherwise
+it stops with an error.
 
 None of the :doc:`fix_modify <fix_modify>` options apply to this fix.
 
