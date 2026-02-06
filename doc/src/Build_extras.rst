@@ -491,8 +491,8 @@ Enabling the extra unit tests have some requirements,
   `kim-property installation <https://github.com/openkim/kim-property#installing-kim-property>`_.
 * It is also necessary to install the following KIM models:
 
-  * ``EAM_Dynamo_MendelevAckland_2007v3_Zr__MO_004835508849_000``
-  * ``EAM_Dynamo_ErcolessiAdams_1994_Al__MO_123629422045_005``
+  * ``EAM_Dynamo_MendelevAckland_2007v3_Zr__MO_004835508849_001``
+  * ``EAM_Dynamo_ErcolessiAdams_1994_Al__MO_123629422045_006``
   * ``LennardJones612_UniversalShifted__MO_959249795837_003``
 
   See `Obtaining KIM Models <https://openkim.org/doc/usage/obtaining-models>`_
