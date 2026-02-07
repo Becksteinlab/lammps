@@ -1236,6 +1236,7 @@ Fickian
 fieldname
 figshare
 Fij
+Fikar
 filelink
 filename
 Filename
@@ -1464,6 +1465,7 @@ Grigera
 Grimme
 grmask
 Grmask
+Groger
 gromacs
 Gromacs
 gromos
@@ -3789,10 +3791,8 @@ Straub
 strcmp
 streitz
 Streitz
-Streiz
 strerror
 strided
-strietz
 stringstreams
 strmatch
 strncmp
