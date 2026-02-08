@@ -418,6 +418,7 @@ int LabelMap::infer_bondtype(const std::vector<std::string> &mytypes)
    infer angle type from three atom types
    input/output is numeric types, uses type labels internally
    assumes angle types of the form "a-b-c" for atom types 'a', 'b', 'c'
+   returns negative of numeric type if constituent atoms types in reverse order
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_angletype(int type1, int type2, int type3)
@@ -425,7 +426,7 @@ int LabelMap::infer_angletype(int type1, int type2, int type3)
   // check for out of range input
   if ((type1 < 1) || (type1 > natomtypes) || (type2 < 1) || (type2 > natomtypes) || (type3 < 1) ||
       (type3 > natomtypes))
-    return -1;
+    return 0;
 
   // convert numeric atom types to type label
   std::vector<std::string> mytypes(3);
@@ -433,7 +434,7 @@ int LabelMap::infer_angletype(int type1, int type2, int type3)
   mytypes[1] = typelabel[type2 - 1];
   mytypes[2] = typelabel[type3 - 1];
   for (size_t i = 0; i < 3; i++)
-    if (mytypes[i].empty()) return -1;
+    if (mytypes[i].empty()) return 0;
 
   return infer_angletype(mytypes);
 }
@@ -442,22 +443,24 @@ int LabelMap::infer_angletype(int type1, int type2, int type3)
    infer angle type from three atom types
    input/output is numeric types, uses type labels internally
    assumes angle types of the form "a-b-c" for atom types 'a', 'b', 'c'
+   returns negative of numeric type if constituent atoms types in reverse order
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_angletype(const std::vector<std::string> &mytypes)
 {
   // search for matching angle type label, with symmetry considerations
 
+  int out = 0;
   int status;
   std::vector<std::string> atypes(3);
   for (int i = 0; i < nangletypes; i++) {
     status = parse_typelabel(3, atypelabel[i], atypes);
-    if (status != -1 && mytypes[1] == atypes[1])
-      if ((mytypes[0] == atypes[0] && mytypes[2] == atypes[2]) ||
-          (mytypes[0] == atypes[2] && mytypes[2] == atypes[0]))
-        return i + 1;
+    if (status != -1 && mytypes[1] == atypes[1]) {
+      if (mytypes[0] == atypes[0] && mytypes[2] == atypes[2]) return i + 1;
+      if (mytypes[0] == atypes[2] && mytypes[2] == atypes[0]) out = -(i + 1);
+    }
   }
-  return -1;
+  return out;
 }
 
 /* ----------------------------------------------------------------------

@@ -167,7 +167,9 @@ Currently used when combining data from multiple sources with
    * \param  atype1  First atom type index
    * \param  atype2  Second atom type index (center atom)
    * \param  atype3  Third atom type index
-   * \return         Angle type index, or -1 if not found */
+   * \return         Angle type index if types match in the specified order,
+   *                 negative angle type index if types match in reverse order,
+   *                 0 if there is no match found */
   int infer_angletype(int, int, int);
 
   /*! Infer angle type from three atom type labels
@@ -177,7 +179,9 @@ Currently used when combining data from multiple sources with
    * Look up an angle type from three atom type labels.
    *
    * \param  labels  Vector of three atom type label strings
-   * \return         Angle type index, or -1 if not found */
+   * \return         Angle type index if types match in the specified order,
+   *                 negative angle type index if types match in reverse order,
+   *                 0 if there is no match found */
   int infer_angletype(const std::vector<std::string> &);
 
   /*! Infer dihedral type from four numeric atom types
