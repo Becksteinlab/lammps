@@ -3398,9 +3398,9 @@ void FixBondReact::update_everything()
                 if (rxn.atoms[jj].wildcard || rxn.atoms[ibatom].wildcard) {
                   int blocal = atom->map(btag);
                   if (blocal < 0) error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
-                  int btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
-                  if (btype == -1) error->one(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
-                  bond_type[jjlocal][insert_num] = btype;
+                  int signed_btype = atom->lmap->infer_bondtype(type[jjlocal],type[blocal]);
+                  if (!signed_btype) error->one(FLERR,"Bond/react: Unable to infer bond type from wildcard atoms");
+                  bond_type[jjlocal][insert_num] = std::abs(signed_btype);
                 } else {
                   bond_type[jjlocal][insert_num] = rxn.product->bond_type[j][p];
                 }
@@ -3526,9 +3526,9 @@ void FixBondReact::update_everything()
                       int alocal3 = atom->map(atag3);
                       if (alocal1 < 0 || alocal2 < 0 || alocal3 < 0)
                         error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
-                      int atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
-                      if (atype == -1) error->one(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
-                      angle_type[jjlocal][insert_num] = atype;
+                      int signed_atype = atom->lmap->infer_angletype(type[alocal1],type[alocal2],type[alocal3]);
+                      if (!signed_atype) error->one(FLERR,"Bond/react: Unable to infer angle type from wildcard atoms");
+                      angle_type[jjlocal][insert_num] = std::abs(signed_atype);
                     } else {
                       angle_type[jjlocal][insert_num] = rxn.product->angle_type[j][p];
                     }
@@ -3624,9 +3624,9 @@ void FixBondReact::update_everything()
                     int local4 = atom->map(tag4);
                     if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
                       error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
-                    int dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
-                    if (dtype == -1) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
-                    dihedral_type[jjlocal][p] = dtype;
+                    int signed_dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
+                    if (!signed_dtype) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
+                    dihedral_type[jjlocal][p] = std:abs(signed_dtype);
                   } else {
                     dihedral_type[jjlocal][p] = rxn.product->dihedral_type[j][p];
                   }
@@ -3665,9 +3665,9 @@ void FixBondReact::update_everything()
                       int local4 = atom->map(tag4);
                       if (local1 < 0 || local2 < 0 || local3 < 0 || local4 < 0)
                         error->one(FLERR,"Bond/react: Fix bond/react needs ghost atoms from further away");
-                      int dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
-                      if (dtype == -1) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
-                      dihedral_type[jjlocal][insert_num] = dtype;
+                      int signed_dtype = atom->lmap->infer_dihedraltype(type[local1],type[local2],type[local3],type[local4]);
+                      if (!signed_dtype) error->one(FLERR,"Bond/react: Unable to infer dihedral type from wildcard atoms");
+                      dihedral_type[jjlocal][insert_num] = std::abs(signed_dtype);
                     } else {
                       dihedral_type[jjlocal][insert_num] = rxn.product->dihedral_type[j][p];
                     }
