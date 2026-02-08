@@ -4256,10 +4256,10 @@ void Molecule::check_labels()
             std::string atom2_label = atom->lmap->find_label(type[atom2-1], Atom::ATOM);
             std::string blabel = atom->lmap->find_label(btype, Atom::BOND);
             if (inferred_type == -btype)
-              error->warning(FLERR, "Bond betwen atoms {}, {} has constituent atom types ({}, {}) in reverse order compared "
-                                    "to its bond type label ({})", atom1, atom2, atom1_label, atom2_label, blabel);
-            else error->warning(FLERR, "Bond between atoms {}, {} has constituent atom types ({}, {}) that do not match "
-                                       "its type label ({})", atom1, atom2, atom1_label, atom2_label, blabel);
+              error->warning(FLERR, "In molecule template '{}', the bond between atoms {}, {} has constituent atom types ({}, {}) in reverse "
+                                    "order compared to its bond type label ({})", id, atom1, atom2, atom1_label, atom2_label, blabel);
+            else error->warning(FLERR, "In molecule template '{}', the bond between atoms {}, {} has constituent atom types ({}, {}) that do "
+                                       "not match its type label ({})", id, atom1, atom2, atom1_label, atom2_label, blabel);
           }
         }
       }
@@ -4279,10 +4279,10 @@ void Molecule::check_labels()
             std::string atom3_label = atom->lmap->find_label(type[atom3-1], Atom::ATOM);
             std::string alabel = atom->lmap->find_label(atype, Atom::ANGLE);
             if (inferred_type == -atype)
-              error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) in reverse order compared "
-                                    "to its angle type label ({})", atom1, atom2, atom3, atom1_label, atom2_label, atom3_label, alabel);
-            else error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) that do not match its "
-                                       "type label ({})", atom1, atom2, atom3, atom1_label, atom2_label, atom3_label, alabel);
+              error->warning(FLERR, "In molecule template '{}', the angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) in reverse "
+                                    "order compared to its angle type label ({})", id, atom1, atom2, atom3, atom1_label, atom2_label, atom3_label, alabel);
+            else error->warning(FLERR, "In molecule template '{}', the angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) that do not "
+                                       "match its type label ({})", id, atom1, atom2, atom3, atom1_label, atom2_label, atom3_label, alabel);
           }
         }
       }
@@ -4304,10 +4304,10 @@ void Molecule::check_labels()
             std::string atom4_label = atom->lmap->find_label(type[atom4-1], Atom::ATOM);
             std::string dlabel = atom->lmap->find_label(dtype, Atom::DIHEDRAL);
             if (inferred_type == -dtype)
-              error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in reverse order compared to its "
-                                    "dihedral type label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
-            else error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                       "dihedral label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
+              error->warning(FLERR, "In molecule template '{}', the dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in reverse order "
+                                    "compared to its dihedral type label ({})", id, atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
+            else error->warning(FLERR, "In molecule template '{}', the dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do "
+                                       "not match its dihedral label ({})", id, atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
           }
         }
       }
@@ -4329,10 +4329,10 @@ void Molecule::check_labels()
             std::string atom4_label = atom->lmap->find_label(type[atom4-1], Atom::ATOM);
             std::string ilabel = atom->lmap->find_label(itype, Atom::IMPROPER);
             if (inferred_type == -itype)
-              error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in a different order compared to its "
-                                    "improper type label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
-            else error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                       "improper label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
+              error->warning(FLERR, "In molecule template '{}', the improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in a different order "
+                                    "compared to its improper type label ({})", id, atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
+            else error->warning(FLERR, "In molecule template '{}', the improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do "
+                                       "not match its improper label ({})", id, atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
           }
         }
       }
