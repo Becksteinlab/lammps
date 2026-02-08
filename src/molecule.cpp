@@ -4312,6 +4312,31 @@ void Molecule::check_labels()
         }
       }
     }
+    // some impropers are not symmetric, like class2
+    if (check_which_labels[3]) {
+      for (int i = 0; i < natoms; i++) {
+        for (int j = 0; j < num_improper[i]; j++) {
+          int itype = improper_type[i][j];
+          int atom1 = improper_atom1[i][j];
+          int atom2 = improper_atom2[i][j];
+          int atom3 = improper_atom3[i][j];
+          int atom4 = improper_atom4[i][j];
+          int inferred_type = atom->lmap->infer_impropertype(type[atom1-1], type[atom2-1], type[atom3-1], type[atom4-1]);
+          if (inferred_type != itype) {
+            std::string atom1_label = atom->lmap->find_label(type[atom1-1], Atom::ATOM);
+            std::string atom2_label = atom->lmap->find_label(type[atom2-1], Atom::ATOM);
+            std::string atom3_label = atom->lmap->find_label(type[atom3-1], Atom::ATOM);
+            std::string atom4_label = atom->lmap->find_label(type[atom4-1], Atom::ATOM);
+            std::string ilabel = atom->lmap->find_label(itype, Atom::IMPROPER);
+            if (inferred_type == -itype)
+              error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in a different order compared to its "
+                                    "improper type label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
+            else error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
+                                       "improper label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
+          }
+        }
+      }
+    }
   }
 }
 

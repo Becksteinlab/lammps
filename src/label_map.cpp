@@ -527,7 +527,7 @@ int LabelMap::infer_impropertype(int type1, int type2, int type3, int type4)
   // check for out of range input
   if ((type1 < 1) || (type1 > natomtypes) || (type2 < 1) || (type2 > natomtypes) || (type3 < 1) ||
       (type3 > natomtypes) || (type4 < 1) || (type4 > natomtypes))
-    return -1;
+    return 0;
 
   // convert numeric atom types to type label
   std::vector<std::string> mytypes(4);
@@ -536,7 +536,7 @@ int LabelMap::infer_impropertype(int type1, int type2, int type3, int type4)
   mytypes[2] = typelabel[type3 - 1];
   mytypes[3] = typelabel[type4 - 1];
   for (int i = 0; i < 4; i++)
-    if (mytypes[i].empty()) return -1;
+    if (mytypes[i].empty()) return 0;
 
   return infer_impropertype(mytypes);
 }
@@ -552,6 +552,7 @@ int LabelMap::infer_impropertype(const std::vector<std::string> &mytypes)
 {
   // search for matching improper type label
 
+  int out = 0;
   int status, nlist;
   std::vector<std::string> itypes(4);
   std::vector<std::string> list1(4);
@@ -560,6 +561,8 @@ int LabelMap::infer_impropertype(const std::vector<std::string> &mytypes)
     nlist = 0;
     status = parse_typelabel(4, itypelabel[i], itypes);
     if (status != -1) {
+      if (mytypes[0] == itypes[0] && mytypes[1] == itypes[1] && mytypes[2] == itypes[2] &&
+          mytypes[3] == itypes[3]) return i + 1;
       for (int j = 0; j < 4; j++) {
         if (force->improper && (force->improper->symmatoms[j] == 1)) {
           if (mytypes[j] != itypes[j]) {
@@ -579,10 +582,10 @@ int LabelMap::infer_impropertype(const std::vector<std::string> &mytypes)
           status = -1;
           break;
         }
-      if (status != -1) return i + 1;
+      if (status != -1) out = -(i + 1);
     }
   }
-  return -1;
+  return out;
 }
 
 /* ----------------------------------------------------------------------

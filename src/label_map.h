@@ -219,7 +219,9 @@ Currently used when combining data from multiple sources with
    * \param  atype2  Second atom type index
    * \param  atype3  Third atom type index
    * \param  atype4  Fourth atom type index
-   * \return         Improper type index, or -1 if not found */
+   * \return         Improper type index if types match in the specified order,
+   *                 negative improper type index if types match but different order,
+   *                 0 if there is no match found */
   int infer_impropertype(int, int, int, int);
 
   /*! Infer improper type from atom type labels
@@ -229,7 +231,9 @@ Currently used when combining data from multiple sources with
    * Look up an improper type from four atom type labels.
    *
    * \param  labels  Vector of four atom type label strings
-   * \return         Improper type index, or -1 if not found */
+   * \return         Improper type index if types match in the specified order,
+   *                 negative improper type index if types match but different order,
+   *                 0 if there is no match found */
   int infer_impropertype(const std::vector<std::string> &);
 
   /*! @} */
