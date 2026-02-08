@@ -377,18 +377,19 @@ bool LabelMap::is_complete(int mode) const
    infer bond type from two atom types
    input/output is numeric types, uses type labels internally
    assumes bond type labels are of the form "a-b" for atom types 'a' and 'b'
+   returns negative of numeric type if constituent atoms types in reverse order
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_bondtype(int type1, int type2)
 {
   // check for out of range input
-  if ((type1 < 1) || (type1 > natomtypes) || (type2 < 1) || (type2 > natomtypes)) return -1;
+  if ((type1 < 1) || (type1 > natomtypes) || (type2 < 1) || (type2 > natomtypes)) return 0;
 
   // convert numeric atom types to type label
   std::vector<std::string> mytypes(2);
   mytypes[0] = typelabel[type1 - 1];
   mytypes[1] = typelabel[type2 - 1];
-  if (mytypes[0].empty() || mytypes[1].empty()) return -1;
+  if (mytypes[0].empty() || mytypes[1].empty()) return 0;
 
   return infer_bondtype(mytypes);
 }
@@ -396,6 +397,7 @@ int LabelMap::infer_bondtype(int type1, int type2)
 /* ----------------------------------------------------------------------
    infer numeric type from two atom type labels
    assumes bond types are of the form "a-b" for atom types 'a' and 'b'
+   returns negative of numeric type if constituent atoms types in reverse order
 ------------------------------------------------------------------------- */
 
 int LabelMap::infer_bondtype(const std::vector<std::string> &mytypes)
@@ -404,12 +406,12 @@ int LabelMap::infer_bondtype(const std::vector<std::string> &mytypes)
   std::vector<std::string> btypes(2);
   for (int i = 0; i < nbondtypes; i++) {
     int status = parse_typelabel(2, btypelabel[i], btypes);
-    if ((status != -1) && (btypes.size() == 2))
-      if ((mytypes[0] == btypes[0] && mytypes[1] == btypes[1]) ||
-          (mytypes[0] == btypes[1] && mytypes[1] == btypes[0]))
-        return i + 1;
+    if ((status != -1) && (btypes.size() == 2)) {
+      if (mytypes[0] == btypes[0] && mytypes[1] == btypes[1]) return i + 1;
+      if (mytypes[0] == btypes[1] && mytypes[1] == btypes[0]) return -(i + 1);
+    }
   }
-  return -1;
+  return 0;
 }
 
 /* ----------------------------------------------------------------------

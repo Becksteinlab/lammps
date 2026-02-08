@@ -142,7 +142,9 @@ Currently used when combining data from multiple sources with
    *
    * \param  atype1  First atom type index
    * \param  atype2  Second atom type index
-   * \return         Bond type index, or -1 if not found */
+   * \return         Bond type index if types match in the specified order,
+   *                 negative bond type index if types match in reverse order,
+   *                 0 if there is no match found */
   int infer_bondtype(int, int);
 
   /*! Infer bond type from atom type labels
@@ -152,7 +154,9 @@ Currently used when combining data from multiple sources with
    * Look up a bond type from two atom type labels.
    *
    * \param  labels  Vector of two atom type label strings
-   * \return         Bond type index, or -1 if not found */
+   * \return         Bond type index if types match in the specified order,
+   *                 negative bond type index if types match in reverse order,
+   *                 0 if there is no match found */
   int infer_bondtype(const std::vector<std::string> &);
 
   /*! Infer angle type from three numeric atom types
