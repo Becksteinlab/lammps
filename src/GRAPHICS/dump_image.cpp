@@ -2118,21 +2118,36 @@ void DumpImage::create_image()
       axes[1][0] -= offset; axes[1][1] -= offset; axes[1][2] -= offset;
       axes[2][0] -= offset; axes[2][1] -= offset; axes[2][2] -= offset;
       axes[3][0] -= offset; axes[3][1] -= offset; axes[3][2] -= offset;
-    } else if (axesflag == LOWERRIGHT) {
+    } else if ((domain->dimension == 3) && (axesflag == LOWERRIGHT)) {
       axes[0][0] -= offset; axes[0][1] += 8.0*offset; axes[0][2] -= offset;
       axes[1][0] -= offset; axes[1][1] += 8.0*offset; axes[1][2] -= offset;
       axes[2][0] -= offset; axes[2][1] += 8.0*offset; axes[2][2] -= offset;
       axes[3][0] -= offset; axes[3][1] += 8.0*offset; axes[3][2] -= offset;
-    } else if (axesflag == UPPERLEFT) {
+    } else if  ((domain->dimension == 3) && (axesflag == UPPERLEFT)) {
       axes[0][0] -= offset; axes[0][1] -= offset; axes[0][2] += 8.0*offset;
       axes[1][0] -= offset; axes[1][1] -= offset; axes[1][2] += 8.0*offset;
       axes[2][0] -= offset; axes[2][1] -= offset; axes[2][2] += 8.0*offset;
       axes[3][0] -= offset; axes[3][1] -= offset; axes[3][2] += 8.0*offset;
-    } else if (axesflag == UPPERRIGHT) {
+    } else if  ((domain->dimension == 3) && (axesflag == UPPERRIGHT)) {
       axes[0][0] -= offset; axes[0][1] += 8.0*offset; axes[0][2] += 8.0*offset;
       axes[1][0] -= offset; axes[1][1] += 8.0*offset; axes[1][2] += 8.0*offset;
       axes[2][0] -= offset; axes[2][1] += 8.0*offset; axes[2][2] += 8.0*offset;
       axes[3][0] -= offset; axes[3][1] += 8.0*offset; axes[3][2] += 8.0*offset;
+    } else if ((domain->dimension == 2) && (axesflag == LOWERRIGHT)) {
+      axes[0][0] += 8.0*offset; axes[0][1] -= offset; axes[0][2] -= offset;
+      axes[1][0] += 8.0*offset; axes[1][1] -= offset; axes[1][2] -= offset;
+      axes[2][0] += 8.0*offset; axes[2][1] -= offset; axes[2][2] -= offset;
+      axes[3][0] += 8.0*offset; axes[3][1] -= offset; axes[3][2] -= offset;
+    } else if  ((domain->dimension == 2) && (axesflag == UPPERLEFT)) {
+      axes[0][0] -= offset; axes[0][1] += 8.0*offset; axes[0][2] -= offset;
+      axes[1][0] -= offset; axes[1][1] += 8.0*offset; axes[1][2] -= offset;
+      axes[2][0] -= offset; axes[2][1] += 8.0*offset; axes[2][2] -= offset;
+      axes[3][0] -= offset; axes[3][1] += 8.0*offset; axes[3][2] -= offset;
+    } else if  ((domain->dimension == 2) && (axesflag == UPPERRIGHT)) {
+      axes[0][0] += 8.0*offset; axes[0][1] += 8.0*offset; axes[0][2] -= offset;
+      axes[1][0] += 8.0*offset; axes[1][1] += 8.0*offset; axes[1][2] -= offset;
+      axes[2][0] += 8.0*offset; axes[2][1] += 8.0*offset; axes[2][2] -= offset;
+      axes[3][0] += 8.0*offset; axes[3][1] += 8.0*offset; axes[3][2] -= offset;
     }
 
     axes[1][0] = axes[0][0] + axeslen*(axes[1][0]-axes[0][0]);
