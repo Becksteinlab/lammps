@@ -2,7 +2,6 @@ this is a molecule template for: initial nylon crosslink, pre-reacting
 
      18 atoms
      16 bonds
-      2 impropers
 
 Coords
 
@@ -107,7 +106,3 @@ Bonds
     15 c_1-o     10     12
     16 o-ho     12     15
 
-Impropers
-
-     1 c2-na-hn-hn      2      1      4      5
-     2 c2-c_1-o_1-o      9     10     11     12

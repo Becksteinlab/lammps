@@ -1835,6 +1835,7 @@ void Molecule::from_json(const std::string &molid, const json &moldata)
 
   if (auto_angleflag) generate_angles();
   if (auto_dihedralflag) generate_dihedrals();
+  if (auto_improperflag) generate_impropers();
 
   // body particle must have natom = 1
   // set radius by having body class compute its own radius
@@ -2685,6 +2686,7 @@ void Molecule::read(int flag)
 
   if (flag && auto_angleflag) generate_angles();
   if (flag && auto_dihedralflag) generate_dihedrals();
+  if (flag && auto_improperflag) generate_impropers();
 
   // body particle must have natom = 1
   // set radius by having body class compute its own radius
@@ -3714,6 +3716,96 @@ void Molecule::generate_dihedrals()
   }
 
   dihedralflag = 1;
+}
+
+/* ----------------------------------------------------------------------
+   auto generate impropers from bond info
+------------------------------------------------------------------------- */
+
+void Molecule::generate_impropers()
+{
+  if (!bondflag)
+    error->all(FLERR, fileiarg, "Cannot generate angles without bonds");
+
+  int newton_bond = force->newton_bond;
+  int itype;
+  tagint m, atom1, atom2, atom3, atom4;
+  std::vector<int> atom1_found, atom2_found, atom3_found, atom4_found;
+
+  for (int i = 0; i < natoms; i++) {
+    count[i] = 0;
+    num_improper[i] = 0;
+  }
+
+  for (atom2 = 0; atom2 < natoms; atom2++) {
+    if (nspecial[atom2][0] == 3) {
+      atom1 = special[atom2][0] - 1;
+      atom3 = special[atom2][1] - 1;
+      atom4 = special[atom2][2] - 1;
+      count[atom2]++;
+      if (newton_bond == 0) {
+        count[atom1]++;
+        count[atom3]++;
+        count[atom4]++;
+      }
+      nimpropers++;
+      atom1_found.push_back(atom1 + 1);
+      atom2_found.push_back(atom2 + 1);
+      atom3_found.push_back(atom3 + 1);
+      atom4_found.push_back(atom4 + 1);
+    }
+  }
+
+  improper_per_atom = 0;
+  for (int i = 0; i < natoms; i++) improper_per_atom = MAX(improper_per_atom, count[i]);
+
+  memory->create(improper_type, natoms, improper_per_atom, "molecule:improper_type");
+  memory->create(improper_atom1, natoms, improper_per_atom, "molecule:improper_atom1");
+  memory->create(improper_atom2, natoms, improper_per_atom, "molecule:improper_atom2");
+  memory->create(improper_atom3, natoms, improper_per_atom, "molecule:improper_atom3");
+  memory->create(improper_atom4, natoms, improper_per_atom, "molecule:improper_atom4");
+
+  for (int i = 0; i < nimpropers; i++) {
+    atom1 = atom1_found[i];
+    atom2 = atom2_found[i];
+    atom3 = atom3_found[i];
+    atom4 = atom4_found[i];
+    itype = atom->lmap->infer_impropertype(type[atom1 - 1], type[atom2 - 1], type[atom3 - 1], type[atom4 - 1]);
+    if (itype == -1) error->one(FLERR,"Unable to infer improper type while autogenerating dihedrals.");
+    m = atom2 - 1;
+    nimpropertypes = MAX(nimpropertypes, itype);
+    improper_type[m][num_improper[m]] = itype;
+    improper_atom1[m][num_improper[m]] = atom1;
+    improper_atom2[m][num_improper[m]] = atom2;
+    improper_atom3[m][num_improper[m]] = atom3;
+    improper_atom4[m][num_improper[m]] = atom4;
+    num_improper[m]++;
+    if (newton_bond == 0) {
+      m = atom1 - 1;
+      improper_type[m][num_improper[m]] = itype;
+      improper_atom1[m][num_improper[m]] = atom1;
+      improper_atom2[m][num_improper[m]] = atom2;
+      improper_atom3[m][num_improper[m]] = atom3;
+      improper_atom4[m][num_improper[m]] = atom4;
+      num_improper[m]++;
+      m = atom3 - 1;
+      improper_type[m][num_improper[m]] = itype;
+      improper_atom1[m][num_improper[m]] = atom1;
+      improper_atom2[m][num_improper[m]] = atom2;
+      improper_atom3[m][num_improper[m]] = atom3;
+      improper_atom4[m][num_improper[m]] = atom4;
+      num_improper[m]++;
+      m = atom4 - 1;
+      improper_type[m][num_improper[m]] = itype;
+      improper_atom1[m][num_improper[m]] = atom1;
+      improper_atom2[m][num_improper[m]] = atom2;
+      improper_atom3[m][num_improper[m]] = atom3;
+      improper_atom4[m][num_improper[m]] = atom4;
+      num_improper[m]++;
+    }
+  }
+
+  improperflag = 1;
 }
 
 /* ----------------------------------------------------------------------
