@@ -781,6 +781,7 @@ styles:
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
    * :doc:`fix graphics/isosurface <fix_graphics_isosurface>`
    * :doc:`fix graphics/labels <fix_graphics_labels>`
+   * :doc:`fix graphics/lines <fix_graphics_lines>`
    * :doc:`fix graphics/objects <fix_graphics_objects>`
    * :doc:`fix graphics/periodic <fix_graphics_periodic>`
    * :doc:`fix bond/react <fix_bond_react>`
