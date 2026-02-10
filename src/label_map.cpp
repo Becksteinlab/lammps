@@ -19,7 +19,6 @@
 #include "error.h"
 #include "force.h"
 #include "improper.h"
-#include "input.h"
 #include "tokenizer.h"
 
 #include <algorithm>
@@ -72,8 +71,6 @@ LabelMap::~LabelMap()
 
 void LabelMap::reset_type_labels()
 {
-  for (int i = 0; i < 4; i++) check_which_labels[i] = 0;
-
   typelabel_map.clear();
   typelabel.resize(natomtypes);
   delete[] lmap2lmap.atom;
@@ -152,17 +149,6 @@ void LabelMap::modify_lmap(int narg, char **arg)
   } else if (tlabel == "write") {
     if (narg != 2) error->all(FLERR, "Incorrect number of arguments for labelmap write command");
     write_map(arg[1]);
-    return;
-  } else if (tlabel == "check_labels") {
-    if (strchr(arg[1], 'b'))
-      check_which_labels[0] = 1;
-    if (strchr(arg[1], 'a'))
-      check_which_labels[1] = 1;
-    if (strchr(arg[1], 'd'))
-      check_which_labels[2] = 1;
-    if (strchr(arg[1], 'i'))
-      check_which_labels[3] = 1;
-    check_labels();
     return;
   } else
     error->all(FLERR, "Unknown labelmap keyword {}", tlabel);
@@ -790,111 +776,5 @@ void LabelMap::write_map(const std::string &filename)
       fputc('\n', fp);
     }
     fclose(fp);
-  }
-}
-
-/* ----------------------------------------------------------------------
-   check type label self-consistency
-------------------------------------------------------------------------- */
-
-void LabelMap::check_labels()
-{
-  input->one("run 0 post no"); // this is non-lammpsian. other ideas?
-  int *type = atom->type;
-  tagint *tag = atom->tag;
-  // in rare cases, bonds are not symmetric. only check if newton on for bonds
-  if (force->newton_bond && check_which_labels[0]) {
-    for (int i = 0; i < atom->nlocal; i++) {
-      int atom1 = i;
-      for (int j = 0; j < atom->num_bond[i]; j++) {
-        int btype = atom->bond_type[i][j];
-        int atom2 = atom->map(atom->bond_atom[i][j]);
-        if (atom2<0) printf("atom2 oops %d\n",atom2);
-        int inferred_type = atom->lmap->infer_bondtype(type[atom1], type[atom2]);
-        if (inferred_type != btype) {
-          std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
-          std::string atom2_label = atom->lmap->find_label(type[atom2], Atom::ATOM);
-          std::string blabel = atom->lmap->find_label(btype, Atom::BOND);
-          if (inferred_type == -btype)
-            error->warning(FLERR, "Bond betwen atoms {}, {} has constituent atom types ({}, {}) in reverse order compared "
-                                  "to its bond type label ({})", tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
-          else error->warning(FLERR, "Bond between atoms {}, {} has constituent atom types ({}, {}) that do not match "
-                                     "its type label ({})", tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
-        }
-      }
-    }
-  }
-  // some angles are not symmetric, like class2
-  if (check_which_labels[1]) {
-    for (int i = 0; i < atom->nlocal; i++) {
-      for (int j = 0; j < atom->num_angle[i]; j++) {
-        int atype = atom->angle_type[i][j];
-        int atom1 = atom->map(atom->angle_atom1[i][j]);
-        int atom2 = atom->map(atom->angle_atom2[i][j]);
-        int atom3 = atom->map(atom->angle_atom3[i][j]);
-        int inferred_type = atom->lmap->infer_angletype(type[atom1], type[atom2], type[atom3]);
-        if (inferred_type != atype) {
-          std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
-          std::string atom2_label = atom->lmap->find_label(type[atom2], Atom::ATOM);
-          std::string atom3_label = atom->lmap->find_label(type[atom3], Atom::ATOM);
-          std::string alabel = atom->lmap->find_label(atype, Atom::ANGLE);
-          if (inferred_type == -atype)
-            error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) in reverse order compared "
-                                  "to its angle type label ({})", tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label, atom3_label, alabel);
-          else error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) that do not match its "
-                                     "type label ({})", tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label, atom3_label, alabel);
-        }
-      }
-    }
-  }
-  // some dihedrals are not symmetric, like class2
-  if (check_which_labels[2]) {
-    for (int i = 0; i < atom->nlocal; i++) {
-      for (int j = 0; j < atom->num_dihedral[i]; j++) {
-        int dtype = atom->dihedral_type[i][j];
-        int atom1 = atom->map(atom->dihedral_atom1[i][j]);
-        int atom2 = atom->map(atom->dihedral_atom2[i][j]);
-        int atom3 = atom->map(atom->dihedral_atom3[i][j]);
-        int atom4 = atom->map(atom->dihedral_atom4[i][j]);
-        int inferred_type = atom->lmap->infer_dihedraltype(type[atom1], type[atom2], type[atom3], type[atom4]);
-        if (inferred_type != dtype) {
-          std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
-          std::string atom2_label = atom->lmap->find_label(type[atom2], Atom::ATOM);
-          std::string atom3_label = atom->lmap->find_label(type[atom3], Atom::ATOM);
-          std::string atom4_label = atom->lmap->find_label(type[atom4], Atom::ATOM);
-          std::string dlabel = atom->lmap->find_label(dtype, Atom::DIHEDRAL);
-          if (inferred_type == -dtype)
-            error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in reverse order compared to its "
-                                  "dihedral type label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
-          else error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                     "dihedral label ({})", atom1, atom2, atom3, atom4, atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
-        }
-      }
-    }
-  }
-  // some impropers are not symmetric, like class2
-  if (check_which_labels[3]) {
-    for (int i = 0; i < atom->nlocal; i++) {
-      for (int j = 0; j < atom->num_improper[i]; j++) {
-        int itype = atom->improper_type[i][j];
-        int atom1 = atom->map(atom->improper_atom1[i][j]);
-        int atom2 = atom->map(atom->improper_atom2[i][j]);
-        int atom3 = atom->map(atom->improper_atom3[i][j]);
-        int atom4 = atom->map(atom->improper_atom4[i][j]);
-        int inferred_type = atom->lmap->infer_impropertype(type[atom1], type[atom2], type[atom3], type[atom4]);
-        if (inferred_type != itype) {
-          std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
-          std::string atom2_label = atom->lmap->find_label(type[atom2], Atom::ATOM);
-          std::string atom3_label = atom->lmap->find_label(type[atom3], Atom::ATOM);
-          std::string atom4_label = atom->lmap->find_label(type[atom4], Atom::ATOM);
-          std::string ilabel = atom->lmap->find_label(itype, Atom::IMPROPER);
-          if (inferred_type == -itype)
-            error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in a different order compared to its "
-                                  "improper type label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
-          else error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                     "improper label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
-        }
-      }
-    }
   }
 }
