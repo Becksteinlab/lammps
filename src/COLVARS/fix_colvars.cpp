@@ -87,7 +87,8 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
   if (narg < 4) error->all(FLERR,"Illegal fix colvars command: too few arguments");
-  if (instances > 0) error->all(FLERR,"Only one colvars fix can be active at a time");
+  if (instances > 0)
+    error->all(FLERR, Error::COMMAND, "Only one fix colvars instance may be active at a time");
   ++instances;
   scalar_flag = 1;
   extscalar = 1;
