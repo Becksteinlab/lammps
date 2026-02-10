@@ -1319,7 +1319,7 @@ void FixPIMDLangevin::reallocate_x_unwrap()
 void FixPIMDLangevin::reallocate()
 {
   maxlocal = atom->nmax;
-  ntotal = atom->natoms;
+  ntotal = atom->map_tag_max;
   if (cmode == SINGLE_PROC) {
     memory->destroy(bufsorted);
     memory->destroy(bufsortedall);
@@ -1353,7 +1353,7 @@ void FixPIMDLangevin::inter_replica_comm(double **ptr)
   if (cmode == SINGLE_PROC) {
     m = 0;
     for (i = 0; i < nlocal; i++) {
-      tagint tagtmp = atom->tag[i];
+      tagint tagtmp = tag[i];
       bufsorted[tagtmp - 1][0] = ptr[i][0];
       bufsorted[tagtmp - 1][1] = ptr[i][1];
       bufsorted[tagtmp - 1][2] = ptr[i][2];
