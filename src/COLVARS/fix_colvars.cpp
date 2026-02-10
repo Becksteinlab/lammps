@@ -767,7 +767,7 @@ void FixColvars::setup_colvars()
     size_array_cols = 0;
     for ( int m=0 ; m<size_array_rows; m++ ) {
       int variable_size = static_cast<int>(variables[m]->value().size());
-      size_array_cols = std::max<int>(size_array_cols, variable_size);
+      size_array_cols = MAX(size_array_cols, variable_size);
     }
     sizes_array[0] = size_array_rows;
     sizes_array[1] = size_array_cols;
