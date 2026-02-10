@@ -494,7 +494,7 @@ void FixColvars::post_force(int /*vflag*/)
   // some housekeeping: update status of the proxy as needed
   if (me == 0)
     if (proxy->want_exit())
-      error->one(FLERR,"Run aborted on request from colvars module.\n");
+      error->one(FLERR, Error::NOLASTLINE, "Run aborted on request from colvars module.");
 
   const tagint * const tag = atom->tag;
   const double * const * const x = atom->x;
