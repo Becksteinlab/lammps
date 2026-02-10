@@ -399,7 +399,9 @@ void FixColvars::setup(int vflag)
     std::vector<cvm::rvector>  &of = *(proxy->modify_atom_total_forces());
     std::vector<cvm::real>     &m  = *(proxy->modify_atom_masses());
     std::vector<cvm::real>     &q  = *(proxy->modify_atom_charges());
+
     // store coordinate data in holding array, clear old forces
+    
     for (i=0; i<num_coords; ++i) {
       const tagint k = atom->map(taglist[i]);
       if ((k >= 0) && (k < nlocal)) {
