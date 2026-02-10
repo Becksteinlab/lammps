@@ -111,7 +111,7 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   out_name = nullptr;
   tfix_name = nullptr;
 
-  // initialize various state variables
+  /* initialize various state variables. */
   energy = 0.0;
   nlevels_respa = 0;
   num_coords = 0;
