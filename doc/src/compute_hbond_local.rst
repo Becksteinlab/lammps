@@ -76,21 +76,21 @@ The following values can be computed and output.
 - The *ehb* value is the hydrogen bond strength computed as the sum of
   the pairwise potential energy between a) the donor atom and the
   acceptor atom, and b) the hydrogen atom and the acceptor atom.  This
-  is typically a positive value for an attractive interaction.
+  is a positive value for an attractive interaction.
 
 If the *ecut* keyword is used, an additional energy cutoff is applied.
 The computed hydrogen bond strength must be larger than the *ecut* value
 or else the potential hydrogen bond is not counted as such.  The energy
-cutoff is not applied for a negative value of *ecut*, which is the
-default setting.
+cutoff is otherwise not applied.
 
 .. admonition:: Restrictions for computing *ehb* and applying *ecut*
    :class: note
 
    Computing the hydrogen bond strength and applying an energy cutoff
    for hydrogen bonds requires that the :doc:`pair_style <pair_style>`
-   used is capable of computing pair-wise energies.  This is usually
-   available for *lj/cut/coul/cut* or similar.
+   in use is capable of computing pair-wise energies.  This is usually
+   available for *lj/cut/coul/cut* or similar but not for most many-body
+   and machine learning force fields.
 
    If a :doc:`kspace solver <kspace_style>` is used, this energy *only*
    contains the real-space contributions.  But since the distances
@@ -243,5 +243,5 @@ Related commands
 Default
 """""""
 
-*ecut* = -1.0, default outputs are the atom-IDs (in this order) for
+*ecut* = off, default outputs are the atom-IDs (in this order) for
 hydrogen bond hydrogen atom, donor atom, and acceptor atom.

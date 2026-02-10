@@ -110,6 +110,8 @@ ComputeHBondLocal::ComputeHBondLocal(LAMMPS *lmp, int narg, char **arg) :
     if (strcmp(arg[iarg], "ecut") == 0) {
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "compute hbond/local ecut", error);
       ehbcutoff = utils::numeric(FLERR, arg[iarg + 1], false, lmp);
+      if (ehbcutoff < 0.0)
+        error->all(FLERR, iarg + 1, "Hydrogen bond strength cutoff ecut must be >= 0.0");
       hdistflag = 1;
       singleflag = 1;
       iarg += 2;
