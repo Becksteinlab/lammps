@@ -172,8 +172,28 @@ reason, the "output" keyword is required for fix colvars.
 
 This fix accesses a global array of the current values of each collective variable computed in the Colvars module. The number of rows of the global array is equal to the number of collective variables and the columns are:
 
-* `f_ID[I][1]` when the collective variable indexed by "`I`" has a scalar values (e.g. `distance <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distances>`_ or `angle <https://colvars.github.io/master/colvars-refman-lammps.html#sec:cvc_angle>`_).
-* `f_ID[I][1], ..., f_ID[I][N]` for a collective variable with vector values (e.g `orientation <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_orientation>`_).
+* `f_ID[I][1]` for a scalar-valued collective variable
+* `f_ID[I][1], ..., f_ID[I][N]` for a vector-valued collective variable
+
+Almost all collective variables are scalars:
+
+* distances (`distance, distanceZ, distanceXY, distanceInv <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distances>`_)
+
+* angles (`angle, dipoleAngle, dihedral, polarTheta, polarPhi <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_angles>`_)
+
+* contacts (`coordNum, selfCoordNum, hBond <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_contacts>`_)
+
+* `collective metrics <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_collective>`_, `rotations <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_rotations>`_, `protein structure descriptors <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_protein>`_, `geometric path <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_gpath>`_, `arithmetic path <https://colvars.github.io/colvars-refman-lammps/colvars-refman-lammps.html#sec:cvc_apathCV>`_, ...
+
+with the exception of:
+
+* 3-dimensional vector (`distanceVec <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceVec>`_ and `distanceDir <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distanceDir>`_)
+
+* 4-dimensional unit quaternion (`orientation <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_orientation>`_)
+
+* flat vector of :math:`N \!\times\! 3` coordinates (`cartesian <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_cartesian>`_)
+
+* flat vector of :math:`N_1 \!\times\! N_2` distances (`distancePairs <https://colvars.github.io/colvars-refman-lammps.html#sec:cvc_distancePairs>`_)
 
 This fix also supports automatically generated thermo column names when using
 :doc:`thermo_modify colname auto <thermo_modify>`. The thermo column names
