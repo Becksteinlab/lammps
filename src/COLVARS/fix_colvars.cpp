@@ -103,8 +103,10 @@ FixColvars::FixColvars(LAMMPS *lmp, int narg, char **arg) :
   energy_global_flag = 1;
   root2root = MPI_COMM_NULL;
   proxy = nullptr;
-  if (strcmp(arg[3], "none") == 0) conf_file = nullptr;
-  else conf_file = utils::strdup(arg[3]);
+  if (strcmp(arg[3], "none") == 0)
+    conf_file = nullptr;
+  else
+    conf_file = utils::strdup(arg[3]);
   rng_seed = 1966;
   unwrap_flag = 1;
   inp_name = nullptr;
