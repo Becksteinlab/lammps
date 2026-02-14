@@ -1576,6 +1576,71 @@ size_t utils::trim_and_count_words(const std::string &text, const std::string &s
 }
 
 /* ----------------------------------------------------------------------
+   combine values in vector to single string with separator added between values
+------------------------------------------------------------------------- */
+namespace {
+template <typename T> std::string join_impl(const std::vector<T> &values, const std::string &sep)
+{
+  std::string result;
+
+  if (values.size() > 0) result = fmt::format("{}",values[0]);
+  for (std::size_t i = 1; i < values.size(); ++i) result += sep + fmt::format("{}",values[i]);
+
+  return result;
+}
+}    // namespace
+
+// specializations
+template <> std::string utils::join<int>(const std::vector<int> &values, const std::string &sep)
+{
+  return join_impl<int>(values, sep);
+}
+
+template <>
+std::string utils::join<long int>(const std::vector<long int> &values, const std::string &sep)
+{
+  return join_impl<long int>(values, sep);
+}
+
+template <>
+std::string utils::join<long long int>(const std::vector<long long int> &values,
+                                       const std::string &sep)
+{
+  return join_impl<long long int>(values, sep);
+}
+
+template <> std::string utils::join<float>(const std::vector<float> &values, const std::string &sep)
+{
+  return join_impl<float>(values, sep);
+}
+
+template <>
+std::string utils::join<double>(const std::vector<double> &values, const std::string &sep)
+{
+  return join_impl<double>(values, sep);
+}
+
+template <>
+std::string utils::join<std::string>(const std::vector<std::string> &values, const std::string &sep)
+{
+  return join_impl<std::string>(values, sep);
+}
+
+template <>
+std::string utils::join<char *>(const std::vector<char *> &values, const std::string &sep)
+{
+  return join_impl<char *>(values, sep);
+}
+
+template <>
+std::string utils::join<const char *>(const std::vector<const char *> &values, const std::string &sep)
+{
+  return join_impl<const char *>(values, sep);
+}
+
+// clang-format on
+
+/* ----------------------------------------------------------------------
    combine words in vector to single string with separator added between words
 ------------------------------------------------------------------------- */
 std::string utils::join_words(const std::vector<std::string> &words, const std::string &sep)
