@@ -40,13 +40,17 @@ ComputeTempDeform::ComputeTempDeform(LAMMPS *lmp, int narg, char **arg) :
   Compute(lmp, narg, arg), temperature(nullptr), id_temp(nullptr)
 {
   tcomputeflag = 1;
-  for (int iarg = 3; iarg < narg; ++iarg) {
-    if (strcmp(arg[iarg], "temp")==0) {
-      ++iarg;
-      if (iarg >= narg) utils::missing_cmd_args(FLERR, fmt::format("compute {} temp", style), error);
-      id_temp = utils::strdup(arg[iarg]);
+  int iarg = 3;
+  while (iarg < narg) {
+    if (strcmp(arg[iarg], "temp") == 0) {
+      if (iarg + 2 > narg)
+        utils::missing_cmd_args(FLERR, fmt::format("compute {} temp", style), error);
+      delete[] id_temp;
+      id_temp = utils::strdup(arg[iarg + 1]);
       tcomputeflag = 0;
-    } else error->all(FLERR, "Unknown compute {} keyword: {}", style, arg[iarg]);
+      iarg += 2;
+    } else
+      error->all(FLERR, "Unknown compute {} keyword: {}", style, arg[iarg]);
   }
 
   scalar_flag = vector_flag = 1;
