@@ -130,6 +130,8 @@ void FixNVTSllodOMP::init()
 
   for (auto &ifix : deform) {
     auto *f = dynamic_cast<FixDeform *>(ifix);
+    // not compatible with fix deform. ignore.
+    if (!f) continue;
     if ((peculiar_flag && f->remapflag != Domain::NO_REMAP) ||
         (!peculiar_flag && f->remapflag != Domain::V_REMAP))
       error->all(FLERR,"Using fix {} with inconsistent fix {} remap option", style, f->style);
@@ -142,6 +144,8 @@ void FixNVTSllodOMP::init()
         f->init();
         utils::logmesg(lmp, "fix {} applying velocity profile kick.\n", style);
         dynamic_cast<ComputeTempDeform*>(temperature)->apply_deform_bias_all();
+        auto *f2 dynamic_cast<ComputeTempDeform*>(temperature);
+        if (f2) f2->apply_deform_bias_all();
         kick_flag = 0;
       } else if (comm->me == 0) {
         error->warning(FLERR,"fix {} using peculiar frame velocity. "
