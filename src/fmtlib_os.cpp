@@ -6,6 +6,8 @@
 //
 // For the license information refer to format.h.
 
+#if (__cplusplus < 202002L)
+
 // Disable bogus MSVC warnings.
 #if !defined(_CRT_SECURE_NO_WARNINGS) && defined(_MSC_VER)
 #  define _CRT_SECURE_NO_WARNINGS
@@ -396,3 +398,4 @@ file_buffer::~file_buffer() {
 ostream::~ostream() = default;
 #endif  // FMT_USE_FCNTL
 FMT_END_NAMESPACE
+#endif // (__cplusplus < 202002L)

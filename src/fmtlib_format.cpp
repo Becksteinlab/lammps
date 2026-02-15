@@ -6,6 +6,8 @@
 //
 // For the license information refer to format.h.
 
+#if (__cplusplus < 202002L)
+
 #include "fmt/format-inl.h"
 
 FMT_BEGIN_NAMESPACE
@@ -42,3 +44,4 @@ template FMT_API void buffer<wchar_t>::append(const wchar_t*, const wchar_t*);
 
 }  // namespace detail
 FMT_END_NAMESPACE
+#endif // (__cplusplus < 202002L)

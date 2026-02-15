@@ -33,6 +33,28 @@
 #ifndef FMT_FORMAT_H_
 #define FMT_FORMAT_H_
 
+#if (__cplusplus >= 202002L)
+
+// when compiling for C++20 or later we emulate
+// the parts of fmt::format we use with std::format
+// eventually, this emulation can be removed when
+// we require C++20 as minimum C++ standard
+
+#include <format>
+#include <string_view>
+
+namespace fmt
+{
+  using std::format;
+  using std::format_args;
+  using std::format_error;
+  using std::make_format_args;
+  using std::string_view;
+  using std::vformat;
+}
+
+#else
+
 #include <cmath>             // std::signbit
 #include <cstdint>           // uint32_t
 #include <cstring>           // std::memcpy
@@ -4514,5 +4536,5 @@ FMT_END_NAMESPACE
 #else
 #  define FMT_FUNC
 #endif
-
+#endif // C++ < 20
 #endif  // FMT_FORMAT_H_

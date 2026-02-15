@@ -22,8 +22,6 @@
 #include "pair_zbl_const.h"
 #include "variable.h"
 
-#include "fmt/args.h"
-
 #include <cctype>
 #include <cmath>
 #include <exception>
@@ -114,21 +112,21 @@ std::string LeptonUtils::condense(const std::string &in)
 /// substitute variable references with their values
 std::string LeptonUtils::substitute(const std::string &in, LAMMPS_NS::LAMMPS *lmp)
 {
-  std::string format, name;
-  std::unordered_set<std::string> vars;
+  std::string output, name;
   bool in_var = false;
   char hold = ' ';
+  auto *variable = lmp->input->variable;
 
   for (const auto &c : in) {
     if (in_var) {
       if (isalnum(c) || (c == '_')) {
-        format.push_back(c);
+        output.push_back(c);
         name.push_back(c);
       } else {
         in_var = false;
-        format.push_back('}');
-        format.push_back(c);
-        vars.insert(name);
+        const char *val = variable->retrieve(name.c_str());
+        output.append(val);
+        output.push_back(c);
       }
     } else {
       if (hold == 'v') {
@@ -136,33 +134,23 @@ std::string LeptonUtils::substitute(const std::string &in, LAMMPS_NS::LAMMPS *lm
           in_var = true;
           hold = ' ';
           name.clear();
-          format.push_back('{');
         } else {
-          format.push_back(hold);
+          output.push_back(hold);
           hold = ' ';
-          format.push_back(c);
+          output.push_back(c);
         }
       } else {
         if (c == 'v')
           hold = c;
         else
-          format.push_back(c);
+          output.push_back(c);
       }
     }
   }
   if (in_var) {
-    format.push_back('}');
-    vars.insert(name);
+    const char *val = variable->retrieve(name.c_str());
+    output.append(val);
   }
 
-  auto *variable = lmp->input->variable;
-  fmt::dynamic_format_arg_store<fmt::format_context> args;
-  for (const auto &v : vars) {
-    const char *val = variable->retrieve(v.c_str());
-    if (val)
-      args.push_back(fmt::arg(v.c_str(), val));
-    else
-      throw VariableException(v, in);
-  }
-  return fmt::vformat(format, args);
+ return output;
 }

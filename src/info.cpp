@@ -1324,7 +1324,7 @@ std::string Info::get_fft_info()
 }
 
 /* ---------------------------------------------------------------------- */
-
+#if (__cplusplus < 202002L)
 static constexpr int fmt_ver_major = FMT_VERSION / 10000;
 static constexpr int fmt_ver_minor = (FMT_VERSION % 10000) / 100;
 static constexpr int fmt_ver_patch = FMT_VERSION % 100;
@@ -1334,6 +1334,12 @@ std::string Info::get_fmt_info()
   return fmt::format("Embedded fmt library version: {}.{}.{}\n",
                      fmt_ver_major, fmt_ver_minor, fmt_ver_patch);
 }
+#else
+std::string Info::get_fmt_info()
+{
+  return "Using fmt library emulation with std::format\n";
+}
+#endif
 
 /* ---------------------------------------------------------------------- */
 
