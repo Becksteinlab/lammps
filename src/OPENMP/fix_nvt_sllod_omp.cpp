@@ -114,19 +114,21 @@ void FixNVTSllodOMP::init()
     if (integrator == LEGACY) {
       nondeformbias = 1;
       if (kick_flag)
-        error->all(FLERR, "fix {} with peculiar=no and kick=yes requires temperature bias "
+        error->all(FLERR, Error::NOLASTLINE,
+                   "fix {} with peculiar=no and kick=yes ""requires temperature bias "
                    "to be calculated by compute temp/deform", style);
     } else if (!peculiar_flag) {
-      error->all(FLERR,"Fix {} used with lab-frame velocity and non-deform "
-                     "temperature bias. For non-deform biases, either set peculiar = yes"
-                     "or pass an explicit temp/deform with an extra bias", style);
+      error->all(FLERR, Error::NOLASTLINE, "Fix {} used with lab-frame velocity and non-deform "
+                 "temperature bias. For non-deform biases, either set peculiar = yes "
+                 "or pass an explicit temp/deform with an extra bias", style);
     }
   }
 
   // check fix deform remap settings
 
   auto deform = modify->get_fix_by_style("^deform");
-  if (deform.size() < 1) error->all(FLERR,"Using fix {} with no fix deform defined", style);
+  if (deform.size() < 1)
+    error->all(FLERR, Error::NOLASTLINE, "Using fix {} with no fix deform defined", style);
 
   for (auto &ifix : deform) {
     auto *f = dynamic_cast<FixDeform *>(ifix);
@@ -134,7 +136,8 @@ void FixNVTSllodOMP::init()
     if (!f) continue;
     if ((peculiar_flag && f->remapflag != Domain::NO_REMAP) ||
         (!peculiar_flag && f->remapflag != Domain::V_REMAP))
-      error->all(FLERR,"Using fix {} with inconsistent fix {} remap option", style, f->style);
+      error->all(FLERR, Error::NOLASTLINE,
+                 "Using fix {} with inconsistent fix {} remap option", style, f->style);
 
     if (kick_flag) {
       // apply initial kick if velocity stored in lab frame
