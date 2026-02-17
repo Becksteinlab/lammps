@@ -33,7 +33,7 @@
 #ifndef FMT_FORMAT_H_
 #define FMT_FORMAT_H_
 
-#if (__cplusplus >= 202002L)
+#if defined(__cpp_lib_format) && (__cpp_lib_format >= 201907L)
 
 // when compiling for C++20 or later we emulate
 // the parts of fmt::format we use with std::format

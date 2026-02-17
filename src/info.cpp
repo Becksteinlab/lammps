@@ -1324,7 +1324,8 @@ std::string Info::get_fft_info()
 }
 
 /* ---------------------------------------------------------------------- */
-#if (__cplusplus < 202002L)
+#if !defined(__cpp_lib_format) || (__cpp_lib_format < 201907L)
+
 static constexpr int fmt_ver_major = FMT_VERSION / 10000;
 static constexpr int fmt_ver_minor = (FMT_VERSION % 10000) / 100;
 static constexpr int fmt_ver_patch = FMT_VERSION % 100;

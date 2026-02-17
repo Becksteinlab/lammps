@@ -6,7 +6,7 @@
 //
 // For the license information refer to format.h.
 
-#if (__cplusplus < 202002L)
+#if !defined(__cpp_lib_format) || (__cpp_lib_format < 201907L)
 
 #include "fmt/format-inl.h"
 

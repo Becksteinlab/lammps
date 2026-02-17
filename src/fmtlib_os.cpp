@@ -6,7 +6,7 @@
 //
 // For the license information refer to format.h.
 
-#if (__cplusplus < 202002L)
+#if !defined(__cpp_lib_format) || (__cpp_lib_format < 201907L)
 
 // Disable bogus MSVC warnings.
 #if !defined(_CRT_SECURE_NO_WARNINGS) && defined(_MSC_VER)
