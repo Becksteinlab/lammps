@@ -23,6 +23,8 @@
      - Fused the CG solve for "S" and "T" matrices
      - Improved the SpMV algorithm by using vector instead of team level
          parallelism on GPUs
+   Evan Weinberg (NVIDIA): Matrix-free representation
+   Balint Joo (NVIDIA): Device-resident reverse comms
 ------------------------------------------------------------------------- */
 
 #include "fix_qeq_reaxff_kokkos.h"

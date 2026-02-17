@@ -12,6 +12,11 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing authors: Christian Trott (SNL), Stan Moore (SNL),
+     Lewis Russell (U. Strathclyde), Balint Joo (NVIDIA)
+------------------------------------------------------------------------- */
+
 #include "comm_kokkos.h"
 
 #include "atom.h"
