@@ -61,6 +61,8 @@ struct TagQEqSum2{};
 struct TagQEqCalculateQ{};
 struct TagQEqPackForwardComm{};
 struct TagQEqUnpackForwardComm{};
+struct TagQEqPackReverseComm{};
+struct TagQEqUnpackReverseComm{};
 struct TagQEqPackExchange{};
 struct TagQEqUnpackExchange{};
 
@@ -159,6 +161,14 @@ class FixQEqReaxFFKokkos : public FixQEqReaxFF, public KokkosBase {
 
 // NOLINTNEXTLINE
   KOKKOS_INLINE_FUNCTION
+  void operator()(TagQEqPackReverseComm, const int&) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
+  void operator()(TagQEqUnpackReverseComm, const int&) const;
+
+// NOLINTNEXTLINE
+  KOKKOS_INLINE_FUNCTION
   void operator()(TagQEqPackExchange, const int&) const;
 
 // NOLINTNEXTLINE
@@ -190,7 +200,11 @@ class FixQEqReaxFFKokkos : public FixQEqReaxFF, public KokkosBase {
   void unpack_forward_comm_kokkos(int, int, DAT::tdual_double_1d&) override;
   int pack_forward_comm(int, int *, double *, int, int *) override;
   void unpack_forward_comm(int, int, double *) override;
+
+  int pack_reverse_comm_kokkos(int, int, DAT::tdual_double_1d&) override;
   int pack_reverse_comm(int, int, double *) override;
+
+  void unpack_reverse_comm_kokkos(int, DAT::tdual_int_1d, DAT::tdual_double_1d&) override; 
   void unpack_reverse_comm(int, int *, double *) override;
   double memory_usage() override;
   void sparse_matvec_kokkos(typename AT::t_kkfloat_1d_2 &);
