@@ -1,4 +1,4 @@
-LAMMPS (10 Dec 2025 - Development - 1b56d059aa)
+LAMMPS (10 Dec 2025 - Development - b6d2e3d6a9)
 OMP_NUM_THREADS environment is not set. Defaulting to 1 thread.
   using 1 OpenMP thread(s) per MPI task
 Reading data file ...
@@ -8,7 +8,7 @@ Reading data file ...
   40200 atoms
   reading velocities ...
   40200 velocities
-  read_data CPU = 0.134 seconds
+  read_data CPU = 0.132 seconds
 39199 atoms in group group_descriptor
 ACE version: 2023.11.25
 Recursive evaluator is used by ACE
@@ -57,30 +57,30 @@ Setting up Verlet run ...
 Per MPI rank memory allocation (min/avg/max) = 59.01 | 60.08 | 61.35 Mbytes
    Step     f_weight_atom[1] f_weight_atom[2]     S/CPU     
          0   0              0              0            
-        10   2.1609636e-06  0.0002015004   2.6243464    
-        20   2.4768128e-06  0.00023606227  2.2460949    
-        30   2.6503539e-06  0.0002454166   2.1640705    
-        40   2.5859861e-06  0.00024633214  2.1907221    
-        50   2.5952606e-06  0.00024785624  2.1858718    
-        60   2.6066395e-06  0.00024761007  2.1836337    
-        70   2.6155858e-06  0.00024844061  2.1766852    
-        80   2.6580321e-06  0.00025144907  2.1304074    
-        90   2.6374009e-06  0.0002539978   2.1313453    
-       100   2.6382123e-06  0.00025099512  2.1535974    
-Loop time of 45.226 on 4 procs for 100 steps with 40200 atoms
+        10   2.2128357e-06  0.00021032807  2.435227     
+        20   2.8069524e-06  0.00027017815  2.0210591    
+        30   2.8447577e-06  0.00027178424  2.0040427    
+        40   2.8511147e-06  0.00027271553  1.999452     
+        50   2.8912584e-06  0.00027393897  1.9865938    
+        60   2.8996167e-06  0.00027510545  1.9787146    
+        70   2.9258309e-06  0.00027539582  1.9724373    
+        80   2.9412965e-06  0.00027665466  1.965132     
+        90   2.9679576e-06  0.00027882916  1.9521923    
+       100   2.9604478e-06  0.00027871963  1.9496617    
+Loop time of 49.5433 on 4 procs for 100 steps with 40200 atoms
 
-Performance: 0.191 ns/day, 125.628 hours/ns, 2.211 timesteps/s, 88.887 katom-step/s
+Performance: 0.174 ns/day, 137.620 hours/ns, 2.018 timesteps/s, 81.141 katom-step/s
 99.8% CPU use with 4 MPI tasks x 1 OpenMP threads
 
 MPI task timing breakdown:
 Section |  min time  |  avg time  |  max time  |%varavg| %total
 ---------------------------------------------------------------
-Pair    | 2.5398     | 7.4582     | 22.009     | 307.6 | 16.49
-Neigh   | 1.4777     | 1.5121     | 1.5522     |   2.6 |  3.34
-Comm    | 0.13342    | 5.494      | 20.022     | 358.1 | 12.15
-Output  | 0.00022339 | 0.00033158 | 0.00045911 |   0.0 |  0.00
-Modify  | 20.676     | 30.735     | 40.862     | 177.5 | 67.96
-Other   |            | 0.02603    |            |       |  0.06
+Pair    | 2.8086     | 8.2449     | 24.34      | 323.6 | 16.64
+Neigh   | 1.7461     | 1.7926     | 1.8472     |   3.2 |  3.62
+Comm    | 0.055638   | 5.6723     | 21.605     | 386.4 | 11.45
+Output  | 0.00020455 | 0.00030652 | 0.00041421 |   0.0 |  0.00
+Modify  | 22.742     | 33.819     | 44.7       | 185.2 | 68.26
+Other   |            | 0.01409    |            |       |  0.03
 
 Nlocal:          10050 ave       10169 max       10000 min
 Histogram: 2 1 0 0 0 0 0 0 0 1
@@ -95,4 +95,4 @@ Total # of neighbors = 14182536
 Ave neighs/atom = 352.7994
 Neighbor list builds = 10
 Dangerous builds = 0
-Total wall time: 0:00:45
+Total wall time: 0:00:50
