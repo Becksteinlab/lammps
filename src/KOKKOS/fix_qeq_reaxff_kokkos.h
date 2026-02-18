@@ -385,7 +385,7 @@ struct FixQEqReaxFFKokkosNeighborFunctor {
      d_val(qeqreax.d_val), d_shield(qeqreax.d_shield), d_tap(qeqreax.d_tap), d_mfill_offset(qeqreax.d_mfill_offset),
      nlocal(qeqreax.nlocal), nn(qeqreax.nn), nmax(qeqreax.nmax), groupbit(qeqreax.groupbit),
      neighflag(qeqreax.neighflag == FULL ? FULL : HALF), cutsq(qeqreax.cutsq)
-  { ; }
+  {}
 
   void update_after_allocation(const FixQEqReaxFFKokkos<DeviceType> &qeqreax);
 

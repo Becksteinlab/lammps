@@ -825,7 +825,6 @@ void FixQEqReaxFFKokkos<DeviceType>::operator()(TagQEqSparseMatvec2_Full_MatrixF
     const KK_FLOAT ytmp = x(i,1);
     const KK_FLOAT ztmp = x(i,2);
     const int itype = type(i);
-    const tagint itag = tag(i);
     const int jnum = d_numneigh[i];
 
     KK_FLOAT2 doi = KK_FLOAT2();
@@ -1150,7 +1149,6 @@ template<class DeviceType>
 KOKKOS_INLINE_FUNCTION
 void FixQEqReaxFFKokkos<DeviceType>::operator()(TagQEqPackReverseComm, const int &i) const
 {
-  //const auto d = d_o(i+first);
   if (!(converged & 1)) d_buf[2*i] = d_o(i+first,0);
   if (!(converged & 2)) d_buf[2*i+1] = d_o(i+first,1);
 }

@@ -667,7 +667,7 @@ void KokkosLMP::accelerator(int narg, char **arg)
       forward_fix_comm_legacy = 1;
       forward_fix_comm_changed = 1;
     }
-     if (reverse_fix_comm_legacy == 0) {
+    if (reverse_fix_comm_legacy == 0) {
       reverse_fix_comm_legacy = 1;
       reverse_fix_comm_changed = 1;
     }

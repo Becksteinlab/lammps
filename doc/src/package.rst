@@ -110,7 +110,7 @@ Syntax
         *comm/pair/reverse* value = *no* or *device*
           *no* = perform communication pack/unpack in non-KOKKOS mode
           *device* = perform pack/unpack on device (e.g. on GPU)
-        *comm/fix/reverse* value = *no** or *host* or *device*
+        *comm/fix/reverse* value = *no* or *host* or *device*
           *no* = perform communication pack/unpack in non-KOKKOS mode
           *host* = perform pack/unpack on host (e.g. with OpenMP threading)
           *device* = perform pack/unpack on device (e.g. on GPU)
