@@ -843,7 +843,7 @@ void FixLambdaLACSPAPIP::calculate_forces(int vflag)
       f[j][1] += dely * fpair;
       f[j][2] += delz * fpair;
 
-      if (vflag_either) ev_tally2(i, j, fpair, delx, dely, delz);
+      if (evflag) ev_tally2(i, j, fpair, delx, dely, delz);
     }
   }
 
@@ -887,7 +887,7 @@ void FixLambdaLACSPAPIP::calculate_forces(int vflag)
       f[i3][1] += ftmp[1];
       f[i3][2] += ftmp[2];
 
-      if (vflag_either) ev_tally3(i1, i2, i3, ftmp, delx1, dely1, delz1, delx2, dely2, delz2);
+      if (evflag) ev_tally3(i1, i2, i3, ftmp, delx1, dely1, delz1, delx2, dely2, delz2);
     }
   }
 
