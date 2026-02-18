@@ -96,7 +96,7 @@ FixQEqReaxFF::FixQEqReaxFF(LAMMPS *lmp, int narg, char **arg) :
   while (iarg < narg) {
     if (strcmp(arg[iarg],"dual") == 0) dual_enabled = 1;
     else if (strcmp(arg[iarg],"nowarn") == 0) maxwarn = 0;
-    else if (strcmp(arg[iarg],"matrix_free") == 0) matrix_free = 1;
+    else if (strcmp(arg[iarg],"matfree") == 0) matrix_free = 1;
     else if (strcmp(arg[iarg],"maxiter") == 0) {
       if (iarg+1 > narg-1)
         error->all(FLERR, iarg, "Illegal fix {} command", style);
