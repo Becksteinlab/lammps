@@ -362,8 +362,8 @@ void FixQEqReaxFFKokkos<DeviceType>::allocate_array()
   if (efield) get_chi_field();
 
   Kokkos::parallel_for(Kokkos::RangePolicy<DeviceType,TagQEqZero>(0,nn),*this);
-
 }
+
 /* ---------------------------------------------------------------------- */
 
 template<class DeviceType>
@@ -809,7 +809,6 @@ void FixQEqReaxFFKokkos<DeviceType>::operator()(TagQEqSparseMatvec2_Half_MatrixF
   }
 }
 
-
 /* ---------------------------------------------------------------------- */
 
 // matrix-free form of the sparse mat-vec
@@ -1152,8 +1151,8 @@ KOKKOS_INLINE_FUNCTION
 void FixQEqReaxFFKokkos<DeviceType>::operator()(TagQEqPackReverseComm, const int &i) const
 {
   //const auto d = d_o(i+first);
-  if (!( converged & 1)) d_buf[2*i] = d_o(i+first,0);
-  if (!( converged & 2)) d_buf[2*i+1] = d_o(i+first,1);
+  if (!(converged & 1)) d_buf[2*i] = d_o(i+first,0);
+  if (!(converged & 2)) d_buf[2*i+1] = d_o(i+first,1);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -1172,9 +1171,8 @@ void FixQEqReaxFFKokkos<DeviceType>::operator()(TagQEqUnpackReverseComm, const i
 {
   int j = d_sendlist(i);
 
-  if ( !(converged & 1)) d_o(j,0) += d_buf[2*i];
-  if ( !(converged & 2)) d_o(j,1) += d_buf[2*i+1];
-
+  if (!(converged & 1)) d_o(j,0) += d_buf[2*i];
+  if (!(converged & 2)) d_o(j,1) += d_buf[2*i+1];
 }
 
 /* ---------------------------------------------------------------------- */
