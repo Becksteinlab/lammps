@@ -6,7 +6,7 @@ PROJECT_ROOT=$(pwd)/../..
 BUILD_DIR="$PROJECT_ROOT/bin/build-openmp-mpi-gpu"
 RUN_DIR="$PROJECT_ROOT/bin/run-openmp-mpi-gpu"
 EXEC_NAME="lmp_openmp_mpi_gpu"
-CUDA_ROOT="/nfs/packages/opt/Linux_x86_64/cudatoolkit/12.3/ubuntu22.04"
+CUDA_ROOT="${CUDA_TOOLKIT_ROOT_DIR:-${CUDA_ROOT}}"
 
 # GPU Architecture selection
 #GPU_ARCH="sm_80"         # NVIDIA A100 80GiB
