@@ -13,7 +13,7 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author: Ray Shan (SNL)
+   Contributing author: Aidan Thompson (SNL)
 ------------------------------------------------------------------------- */
 
 #include "pair_lj_cubic_kokkos.h"
@@ -273,7 +273,7 @@ double PairLJCubicKokkos<DeviceType>::init_one(int i, int j)
   k_params.view_host()(i,j).cut_inner_sq = cut_inner_sqm;
   k_params.view_host()(i,j).cut_inner = static_cast<KK_FLOAT>(cut_inner[i][j]);
   k_params.view_host()(i,j).epsilon = static_cast<KK_FLOAT>(epsilon[i][j]);
-k_params.view_host()(i,j).sigma = static_cast<KK_FLOAT>(sigma[i][j]);
+  k_params.view_host()(i,j).sigma = static_cast<KK_FLOAT>(sigma[i][j]);
 
   k_params.view_host()(j,i) = k_params.view_host()(i,j);
   if (i<MAX_TYPES_STACKPARAMS+1 && j<MAX_TYPES_STACKPARAMS+1) {

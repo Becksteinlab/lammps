@@ -40,9 +40,9 @@ PairLJCubic::PairLJCubic(LAMMPS *_lmp) : Pair(_lmp) {}
 
 PairLJCubic::~PairLJCubic()
 {
- if (copymode) return;
+  if (copymode) return;
 
- if (allocated) {
+  if (allocated) {
     memory->destroy(setflag);
     memory->destroy(cutsq);
 

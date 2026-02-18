@@ -120,7 +120,6 @@ class PairLJCubicKokkos : public PairLJCubic {
   friend EV_FLOAT pair_compute_neighlist<PairLJCubicKokkos,HALFTHREAD>(PairLJCubicKokkos*,NeighListKokkos<DeviceType>*);
   friend EV_FLOAT pair_compute<PairLJCubicKokkos>(PairLJCubicKokkos*,NeighListKokkos<DeviceType>*);
   friend void pair_virial_fdotr_compute<PairLJCubicKokkos>(PairLJCubicKokkos*);
-
 };
 
 }
