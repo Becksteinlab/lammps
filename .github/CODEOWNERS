@@ -66,7 +66,7 @@
 /src/EXTRA-COMMAND/geturl.*          @akohlmey
 /src/EXTRA-COMMAND/group_ndx.*       @akohlmey
 /src/EXTRA-COMMAND/ndx_group.*       @akohlmey
-/src/EXTRA-COMPUTE/compute_hbond_local.* @akohlmepy
+/src/EXTRA-COMPUTE/compute_hbond_local.* @akohlmey
 /src/EXTRA-COMPUTE/compute_stress_mop*.* @RomainVermorel
 /src/EXTRA-COMPUTE/compute_born_matrix.* @Bibobu @athomps
 /src/EXTRA-DUMP/dump_extxyz.*        @fxcoudert @akohlmey
