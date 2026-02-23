@@ -21,6 +21,7 @@
 #include "domain.h"
 #include "error.h"
 #include "force.h"
+#include "improper.h"
 #include "json.h"
 #include "label_map.h"
 #include "math_eigen.h"
@@ -150,6 +151,7 @@ void Molecule::command(int narg, char **arg, int &index)
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "molecule auto", error);
       char *auto_arg = arg[iarg + 1];
       int i = 0;
+
       while (auto_arg[i] != '\0') {
         if (auto_arg[i] == 'a')
           auto_angleflag = 1;
@@ -160,6 +162,7 @@ void Molecule::command(int narg, char **arg, int &index)
         else error->all(FLERR, iarg + 1, "Illegal argument '{}' for molecule auto", auto_arg);
         i++;
       }
+
       iarg += 2;
     } else
       break;
@@ -3631,7 +3634,7 @@ void Molecule::generate_angles()
     }
   }
 
-  angleflag = 1;
+  angleflag = tag_require = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -3656,14 +3659,16 @@ void Molecule::generate_dihedrals()
   for (atom2 = 0; atom2 < natoms; atom2++) {
     for (int i = 0; i < nspecial[atom2][0]; i++) {
       atom3 = special[atom2][i] - 1;
-      if (atom3 <= atom2) continue;
+      if (atom3 <= atom2) continue; // avoid duplicates
 
       for (int j = 0; j < nspecial[atom2][0]; j++) {
         atom1 = special[atom2][j] - 1;
-        if (atom3 == atom1) continue;
+        if (atom1 == atom3) continue;
+        if (atom1 == atom2) continue;
 
         for (int k = 0; k < nspecial[atom3][0]; k++) {
           atom4 = special[atom3][k] - 1;
+          if (atom4 == atom3) continue;
           if (atom4 == atom2) continue;
           if (atom4 == atom1) continue;
 
@@ -3693,6 +3698,7 @@ void Molecule::generate_dihedrals()
   memory->create(dihedral_atom3, natoms, dihedral_per_atom, "molecule:dihedral_atom3");
   memory->create(dihedral_atom4, natoms, dihedral_per_atom, "molecule:dihedral_atom4");
 
+  ndihedraltypes = 0;
   for (int i = 0; i < ndihedrals; i++) {
     atom1 = atom1_found[i];
     atom2 = atom2_found[i];
@@ -3702,8 +3708,10 @@ void Molecule::generate_dihedrals()
     if (!signed_itype) error->one(FLERR,"molecule auto dihedral: Unable to infer dihedral type from bonds.");
     itype = std::abs(signed_itype);
     if (signed_itype < 0) {
-      std::swap(atom1, atom4);
-      std::swap(atom2, atom3);
+      atom1 = atom4_found[i];
+      atom2 = atom3_found[i];
+      atom3 = atom2_found[i];
+      atom4 = atom1_found[i];
     }
     m = atom2 - 1;
     ndihedraltypes = MAX(ndihedraltypes, itype);
@@ -3738,7 +3746,7 @@ void Molecule::generate_dihedrals()
     }
   }
 
-  dihedralflag = 1;
+  dihedralflag = tag_require = 1;
 }
 
 /* ----------------------------------------------------------------------
@@ -3754,6 +3762,7 @@ void Molecule::generate_impropers()
   int itype, signed_itype;
   tagint m, atom1, atom2, atom3, atom4;
   std::vector<tagint> atom1_found, atom2_found, atom3_found, atom4_found;
+  std::array<int, 4> iorder;
 
   for (int i = 0; i < natoms; i++) {
     count[i] = 0;
@@ -3765,6 +3774,7 @@ void Molecule::generate_impropers()
       atom1 = special[atom2][0] - 1;
       atom3 = special[atom2][1] - 1;
       atom4 = special[atom2][2] - 1;
+
       count[atom2]++;
       if (newton_bond == 0) {
         count[atom1]++;
@@ -3776,6 +3786,12 @@ void Molecule::generate_impropers()
       atom2_found.push_back(atom2 + 1);
       atom3_found.push_back(atom3 + 1);
       atom4_found.push_back(atom4 + 1);
+
+      tagint *iptrs[4] = {&atom1_found[nimpropers - 1], &atom2_found[nimpropers - 1], &atom3_found[nimpropers - 1], &atom4_found[nimpropers - 1]};
+      for (int j = 0; j < 4; j++) {
+        if (force->improper && force->improper->symmatoms[j] == 1)
+          std::swap(iptrs[1], iptrs[j]);
+      }
     }
   }
 
@@ -3794,12 +3810,11 @@ void Molecule::generate_impropers()
     atom3 = atom3_found[i];
     atom4 = atom4_found[i];
 
-    std::array<int, 4> iorder;
+    tagint *iptrs[4] = {&atom1, &atom2, &atom3, &atom4};
     signed_itype = atom->lmap->infer_impropertype(type[atom1 - 1], type[atom2 - 1], type[atom3 - 1], type[atom4 - 1], &iorder);
     if (!signed_itype) error->one(FLERR,"molecule auto improper: Unable to infer improper type from bonds.");
     itype = std::abs(signed_itype);
     if (signed_itype < 0) {
-      tagint* iptrs[4] = {&atom1, &atom2, &atom3, &atom4};
       std::array<tagint, 4> tags = {atom1, atom2, atom3, atom4};
       for (int iatom = 0; iatom < 4; iatom++)
         *iptrs[iatom] = tags[iorder[iatom]];
@@ -3838,7 +3853,7 @@ void Molecule::generate_impropers()
     }
   }
 
-  improperflag = 1;
+  improperflag = tag_require = 1;
 }
 
 /* ----------------------------------------------------------------------

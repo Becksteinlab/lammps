@@ -25,12 +25,12 @@ read_data tiny_epoxy.data &
 
 velocity all create 300.0 4928459 dist gaussian
 
-molecule mol1 rxn1_stp1_pre.molecule_template auto angle auto dihedral auto improper
-molecule mol2 rxn1_stp1_post.molecule_template auto angle auto dihedral auto improper
-molecule mol3 rxn1_stp2_post.molecule_template auto angle auto dihedral auto improper
-molecule mol4 rxn2_stp1_pre.molecule_template auto angle auto dihedral auto improper
-molecule mol5 rxn2_stp1_post.molecule_template auto angle auto dihedral auto improper
-molecule mol6 rxn2_stp2_post.molecule_template auto angle auto dihedral auto improper
+molecule mol1 rxn1_stp1_pre.molecule_template auto adi
+molecule mol2 rxn1_stp1_post.molecule_template auto adi
+molecule mol3 rxn1_stp2_post.molecule_template auto adi
+molecule mol4 rxn2_stp1_pre.molecule_template auto adi
+molecule mol5 rxn2_stp1_post.molecule_template auto adi
+molecule mol6 rxn2_stp2_post.molecule_template auto adi
 
 thermo 50
 
