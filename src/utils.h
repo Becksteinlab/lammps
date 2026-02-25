@@ -722,8 +722,7 @@ size_t trim_and_count_words(const std::string &text, const std::string &separato
  * \param sep     separator string (may be empty)
  * \return  string with the concatenated values and separators */
 
-template <typename T>
-std::string join(const std::vector<T> &values, const std::string &sep);
+template <typename T> std::string join(const std::vector<T> &values, const std::string &sep);
 
 /*! Take list of words and join them with a given separator text.
  *
