@@ -376,14 +376,14 @@ acquire ghost atoms around a processor's irregular-shaped subdomain.
 For extreme values of tilt, LAMMPS may also lose atoms and generate an
 error.
 
-The *isochoric* keyword allows to maintain constant volume during NPT
-simulations. The values following the isochoric dimension indicates the
+The *isochoric* keyword allows to maintain constant volume when barostating
+up to two dimensions with this fix. The values following the isochoric keyword indicates the
 dimensions to use in that regard: "x" indicates the x dimension, "yz" (no
-space) indicates the y and z dimensions. The selected dimensions are scaled to
-compensate the strain of the barostat and keep the system at a constant volume
-(or surface in 2d). It is not possible to use this keyword if all the
+space) indicates the y and z dimensions, etc. The selected dimensions are scaled to
+compensate the strain induced by the barostat and keep the system at a constant volume
+(or area in 2d). It is not possible to use this keyword if all the
 dimensions are coupled to barostats. In the case of 2d simulations, only x and
-y dimensions can be used to maintain a constant surface. If you want to perform
+y dimensions can be used to maintain a constant plane area. If you want to perform
 strain with constant volume, the :doc:`fix deform <fix_deform>` command using
 *volume* keyword is more likely to suit your needs.
 
