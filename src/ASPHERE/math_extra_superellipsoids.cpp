@@ -106,12 +106,10 @@ double gaussian_curvature_superellipsoid(const double *shape, const double *bloc
 ------------------------------------------------------------------------- */
 
 void global2local_vector(const double *v, const double *quat, double *local_v){
-
     double qc[4];
     MathExtra::qconjugate(const_cast<double*>(quat), qc);
     MathExtra::quatrotvec(qc, const_cast<double*>(v), local_v);
-
-};
+}
 
 /* ----------------------------------------------------------------------
    Possible regularization for the shape functions 
@@ -120,7 +118,7 @@ void global2local_vector(const double *v, const double *quat, double *local_v){
 ------------------------------------------------------------------------- */
 void apply_regularization_shape_function(double n1, const double avg_radius, double *value, double *grad, double hess[3][3]){
   // value is F - 1
-  double base = *value + 1.0; // should be fine as long as one does not start from the center (otherwise we could guard against it)
+  double base = std::fmax(*value + 1.0, 1e-12); 
   const double inv_F = 1.0 / base;
   const double inv_n1 = 1.0 / n1;
   
@@ -392,7 +390,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
   // avg radii for regularization if GEOMETRIC formulation
   double avg_radius_i = 1;
   double avg_radius_j = 1;
-  double max_step = std::sqrt(lsq) / 3.0;
+  double max_step = sqrt(lsq) / 5.0;  
   if (formulation == FORMULATION_GEOMETRIC) {
     avg_radius_i = (shapei[0] + shapei[1] + shapei[2]) / 3.0;
     avg_radius_j = (shapej[0] + shapej[1] + shapej[2]) / 3.0;
@@ -491,6 +489,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
     // Limit the max step size to avoid jumping too far
     // normalize residual vector if step was limited
     double spatial_residual_norm = std::sqrt(rhs[0]*rhs[0] + rhs[1]*rhs[1] + rhs[2]*rhs[2]);
+    
     if (spatial_residual_norm > max_step) {
         double scale = max_step / spatial_residual_norm;
         rhs[0] *= scale;

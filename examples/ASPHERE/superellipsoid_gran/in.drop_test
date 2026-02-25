@@ -67,7 +67,7 @@ compute         block all property/atom block1 block2
 variable        phi atom "2/c_block[2]"
 variable        theta atom "2/c_block[1]"
 
-dump            mydump all custom 100 dump_drop_geometric_${blockiness}.lammpstrj id type x y z fx fy fz tqx tqy tqz c_diameter[*] c_orient[*] v_phi v_theta
+dump            mydump all custom 100 dump_drop_pushed_${blockiness}.lammpstrj id type x y z fx fy fz tqx tqy tqz c_diameter[*] c_orient[*] v_phi v_theta
 # Explicit mapping for Ovito
 dump_modify     mydump colname c_orient[1] quatw colname c_orient[2] quati colname c_orient[3] quatj colname c_orient[4] quatk
 
@@ -93,4 +93,4 @@ thermo          100
 thermo_style  custom time step ke c_rke 
 
 timestep        0.0001
-run             100000
+run             200000
