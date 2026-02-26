@@ -87,7 +87,7 @@ the contact point :math:`\mathbf{X}_0` in the global frame is obtained as:
                    \text{, subject to } F_i(\mathbf{X}) = F_j(\mathbf{X}) 
 
 where the shape function is given by
-:math:`F_i(\mathbf{X}) = f(\mathbf{R}_i^T (\mathbf{X} - \mathbf{X}_i))`
+:math:`F_i(\mathbf{X}) = f_i(\mathbf{R}_i^T (\mathbf{X} - \mathbf{X}_i))`
 and where :math:`\mathbf{X}_i` and :math:`\mathbf{R}_i` are the center of mass
 and rotation matrix of the particle, respectively.
 The constrained minimization problem is solved using Lagrange multipliers and
@@ -125,10 +125,10 @@ Newton's method is used to solve this equation for the scalars
     :math:`G(\mathbf{X}) = (F(\mathbf{X})+1)^{1/n_1}-1` which is a radial distance function formulation.
     This formulation is used to compute the surface points once the midway contact point is found.
     This formulation is also used when the *geometric* keyword is specified in the pair_style command and the following optimization problem is solved instead for the contact point:
-    :math:`\mathbf{X}_0 = \underset{\mathbf{X}}{\text{argmin}} r_i \ G_i(\mathbf{X}) + r_j G_j(\mathbf{X})  \text{, subject to } r_i G_i(\mathbf{X}) = r_j G_j(\mathbf{X})`, 
+    :math:`\mathbf{X}_0 = \underset{\mathbf{X}}{\text{argmin}} \, r_i \ G_i(\mathbf{X}) + r_j G_j(\mathbf{X})  \text{, subject to } r_i G_i(\mathbf{X}) = r_j G_j(\mathbf{X})`, 
     where :math:`r_i` and :math:`r_j` are the average radii of the two particles.
     The geometric formulation thus yields a better approximation of the contact point
-    for particles with different sizes, and it can be slightly more robust for particles with high *block* exponents.    
+    for particles with different sizes, and it is more robust for particles with high *block* exponents.    
 
 A hierarchical approach is used to limit the cost of contact detection.
 First, intersection of the bounding spheres of the two particles of bounding
@@ -139,13 +139,8 @@ Then, if the bounding spheres intersect, intersection of the oriented
 bounding box is checked. This is done following the equations of
 :ref:`(Eberly) <GeometricTools>`.
 This check is only performed if the *bounding_box* keyword is used.
-This can be advantageous for particles with high aspect ratio, where the
-bounding sphere encompasses a large empty volume, and minimization
-would otherwise be performed for particles that might be separated by
-large distances, and using a poor initial guess that might cause
-poor convergence of Newton's method.
-However, for grains with aspect ratio near 1:1,
-the additional bounding box check may be detrimental to performance.
+This is advantageous for all particles except for superellipses with 
+aspect ratio close to one and both blockiness indexes close to 2.
 
 The force calculation is similar to the :doc:`gran/hooke/history <pair_gran>`
 and :doc:`gran/hertz/history <pair_gran>` styles for spherical particles,
