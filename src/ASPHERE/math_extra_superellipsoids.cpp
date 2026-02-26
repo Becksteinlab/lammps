@@ -554,11 +554,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       if ((norm <= TOL_NR_RES) &&
           (MathExtra::lensq3(rhs) * a * a <= TOL_NR_POS * lsq)) {
         converged = true;
-        // TODO: consider testing picking the normal with the least error
-        //       i.e., likely the grain with the smallest curvature (Hessian norm?)
-        //       or with the largest gradient?
-        //       or some other measure like average gradients.
-        //       right now we use the gradient on grain i for simplicity and performance
+        
         MathExtra::normalize3(gradi, nij);
         break;
       } else if (norm > norm_old - PARAMETER_LS * a * norm_old) { // Armijo - Goldstein condition not met

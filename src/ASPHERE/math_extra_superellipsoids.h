@@ -30,10 +30,7 @@ enum ContactFormulation { FORMULATION_ALGEBRAIC = 0, FORMULATION_GEOMETRIC = 1 }
 enum CurvatureModel { CURV_MEAN = 0, CURV_GAUSSIAN = 1 };
 
 // needed for shape functions grad and matrix
-void global2local_vector(
-    const double v[3], const double *quat,
-    double local_v
-        [3]);    // TODO: TBD if still useful once we implement Hertz. There might be a cheaper way with the rotation matrix that we need for contact detection anyway
+void global2local_vector(const double v[3], const double *quat, double local_v[3]);
 
 inline double det4_M44_zero(const double m[4][4]);
 

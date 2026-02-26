@@ -10,6 +10,9 @@
 
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
+/* ----------------------------------------------------------------------
+   Contributing author: Jacopo Bilotto (EPFL), Jibril B. Coulibaly
+------------------------------------------------------------------------- */
 
 #ifdef PAIR_CLASS
 // clang-format off
