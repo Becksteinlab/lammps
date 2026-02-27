@@ -1689,7 +1689,7 @@ void DumpImage::create_image()
                vec3{objarray[i][4], objarray[i][5], objarray[i][6]}, color, opacity);
       } else if (objvec[i] == Graphics::PIXMAP) {
         // get pointer to pixmap buffer and get background transparency color
-        const auto *pixmap = (const unsigned char *) ubuf(objarray[i][6]).i; // NOLINT
+        const auto *pixmap = (const unsigned char *) ubuf(objarray[i][6]).i;    // NOLINT
         double transcolor[3] = {objarray[i][7], objarray[i][8], objarray[i][9]};
         if (iobj.flag1 == 0.0)    // coordinates are in box coordinates
           image->draw_pixmap(&objarray[i][1], (int) objarray[i][4], (int) objarray[i][5], pixmap,
@@ -1820,11 +1820,17 @@ void DumpImage::create_image()
           // inconsistent style. should not happen.
           if (!myreg) continue;
 
-          corners = cornerdata{
-              vec3{myreg->xlo, myreg->ylo, myreg->zlo}, vec3{myreg->xlo, myreg->ylo, myreg->zhi},
-              vec3{myreg->xlo, myreg->yhi, myreg->zhi}, vec3{myreg->xlo, myreg->yhi, myreg->zlo},
-              vec3{myreg->xhi, myreg->ylo, myreg->zlo}, vec3{myreg->xhi, myreg->ylo, myreg->zhi},
-              vec3{myreg->xhi, myreg->yhi, myreg->zhi}, vec3{myreg->xhi, myreg->yhi, myreg->zlo}};
+          // clamp region boundaries to box boundaries
+          double xlo = MAX(myreg->xlo, domain->boxlo[0]);
+          double ylo = MAX(myreg->ylo, domain->boxlo[1]);
+          double zlo = MAX(myreg->zlo, domain->boxlo[2]);
+          double xhi = MIN(myreg->xhi, domain->boxhi[0]);
+          double yhi = MIN(myreg->yhi, domain->boxhi[1]);
+          double zhi = MIN(myreg->zhi, domain->boxhi[2]);
+
+          corners = cornerdata{vec3{xlo, ylo, zlo}, vec3{xlo, ylo, zhi}, vec3{xlo, yhi, zhi},
+                               vec3{xlo, yhi, zlo}, vec3{xhi, ylo, zlo}, vec3{xhi, ylo, zhi},
+                               vec3{xhi, yhi, zhi}, vec3{xhi, yhi, zlo}};
         }
 
         if (regstyle == "prism") {
@@ -1832,24 +1838,32 @@ void DumpImage::create_image()
           // inconsistent style. should not happen.
           if (!myreg) continue;
 
+          // clamp region boundaries to box boundaries
+          double xlo = MAX(myreg->xlo, domain->boxlo[0]);
+          double ylo = MAX(myreg->ylo, domain->boxlo[1]);
+          double zlo = MAX(myreg->zlo, domain->boxlo[2]);
+          double xhi = MIN(myreg->xhi, domain->boxhi[0]);
+          double yhi = MIN(myreg->yhi, domain->boxhi[1]);
+          double zhi = MIN(myreg->zhi, domain->boxhi[2]);
+
           corners = cornerdata{
-              vec3{myreg->xlo, myreg->ylo, myreg->zlo},
-              vec3{myreg->xlo + myreg->xz, myreg->ylo + myreg->yz, myreg->zhi},
-              vec3{myreg->xlo + myreg->xy + myreg->xz, myreg->yhi + myreg->yz, myreg->zhi},
-              vec3{myreg->xlo + myreg->xy, myreg->yhi, myreg->zlo},
-              vec3{myreg->xhi, myreg->ylo, myreg->zlo},
-              vec3{myreg->xhi + myreg->xz, myreg->ylo + myreg->yz, myreg->zhi},
-              vec3{myreg->xhi + myreg->xy + myreg->xz, myreg->yhi + myreg->yz, myreg->zhi},
-              vec3{myreg->xhi + myreg->xy, myreg->yhi, myreg->zlo}};
+              vec3{xlo, ylo, zlo},
+              vec3{xlo + myreg->xz, ylo + myreg->yz, zhi},
+              vec3{xlo + myreg->xy + myreg->xz, yhi + myreg->yz, zhi},
+              vec3{xlo + myreg->xy, yhi, zlo},
+              vec3{xhi, ylo, zlo},
+              vec3{xhi + myreg->xz, ylo + myreg->yz, zhi},
+              vec3{xhi + myreg->xy + myreg->xz, yhi + myreg->yz, zhi},
+              vec3{xhi + myreg->xy, yhi, zlo}};
         }
 
         for (int i = 0; i < 8; ++i)
           reg.ptr->forward_transform(corners[i][0], corners[i][1], corners[i][2]);
 
-#define DRAW_CYLINDER(i, j) \
-  image->draw_cylinder(corners[i].data(), corners[j].data(), reg.color, reg.diameter, 3, 1.0)
-#define DRAW_TRIANGLE(i, j, k) \
-  image->draw_triangle(corners[i].data(), corners[j].data(), corners[k].data(), reg.color, opacity)
+#define DRAW_CYLINDER(j, k) \
+  image->draw_cylinder(corners[j].data(), corners[k].data(), reg.color, reg.diameter, 3, 1.0)
+#define DRAW_TRIANGLE(j, k, l) \
+  image->draw_triangle(corners[j].data(), corners[k].data(), corners[l].data(), reg.color, opacity)
 
         if (reg.style == FRAME) {
           DRAW_CYLINDER(0, 1);
@@ -1907,21 +1921,29 @@ void DumpImage::create_image()
           // inconsistent style. should not happen.
           if (!myreg) continue;
 
-          length = myreg->hi - myreg->lo;
           radiuslo = myreg->radiuslo;
           radiushi = myreg->radiushi;
           if (myreg->axis == 'x') {
             xdir = 1.0;
-            lo = {myreg->lo, myreg->c1, myreg->c2};
-            hi = {myreg->hi, myreg->c1, myreg->c2};
+            double xlo = MAX(myreg->lo, domain->boxlo[0]);
+            double xhi = MIN(myreg->hi, domain->boxhi[0]);
+            length = xhi - xlo;
+            lo = {xlo, myreg->c1, myreg->c2};
+            hi = {xhi, myreg->c1, myreg->c2};
           } else if (myreg->axis == 'y') {
             ydir = 1.0;
-            lo = {myreg->c1, myreg->lo, myreg->c2};
-            hi = {myreg->c1, myreg->hi, myreg->c2};
+            double ylo = MAX(myreg->lo, domain->boxlo[1]);
+            double yhi = MIN(myreg->hi, domain->boxhi[1]);
+            length = yhi - ylo;
+            lo = {myreg->c1, ylo, myreg->c2};
+            hi = {myreg->c1, yhi, myreg->c2};
           } else {    // myreg->axis == 'z'
             zdir = 1.0;
-            lo = {myreg->c1, myreg->c2, myreg->lo};
-            hi = {myreg->c1, myreg->c2, myreg->hi};
+            double zlo = MAX(myreg->lo, domain->boxlo[2]);
+            double zhi = MIN(myreg->hi, domain->boxhi[2]);
+            length = zhi - zlo;
+            lo = {myreg->c1, myreg->c2, zlo};
+            hi = {myreg->c1, myreg->c2, zhi};
           }
         }
 
@@ -1936,16 +1958,25 @@ void DumpImage::create_image()
           radiushi = myreg->radius;
           if (myreg->axis == 'x') {
             xdir = 1.0;
-            lo = {myreg->lo, myreg->c1, myreg->c2};
-            hi = {myreg->hi, myreg->c1, myreg->c2};
+            double xlo = MAX(myreg->lo, domain->boxlo[0]);
+            double xhi = MIN(myreg->hi, domain->boxhi[0]);
+            length = xhi - xlo;
+            lo = {xlo, myreg->c1, myreg->c2};
+            hi = {xhi, myreg->c1, myreg->c2};
           } else if (myreg->axis == 'y') {
             ydir = 1.0;
-            lo = {myreg->c1, myreg->lo, myreg->c2};
-            hi = {myreg->c1, myreg->hi, myreg->c2};
+            double ylo = MAX(myreg->lo, domain->boxlo[1]);
+            double yhi = MIN(myreg->hi, domain->boxhi[1]);
+            length = yhi - ylo;
+            lo = {myreg->c1, ylo, myreg->c2};
+            hi = {myreg->c1, yhi, myreg->c2};
           } else {    // myreg->axis == 'z'
             zdir = 1.0;
-            lo = {myreg->c1, myreg->c2, myreg->lo};
-            hi = {myreg->c1, myreg->c2, myreg->hi};
+            double zlo = MAX(myreg->lo, domain->boxlo[2]);
+            double zhi = MIN(myreg->hi, domain->boxhi[2]);
+            length = zhi - zlo;
+            lo = {myreg->c1, myreg->c2, zlo};
+            hi = {myreg->c1, myreg->c2, zhi};
           }
         }
 
