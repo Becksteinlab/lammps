@@ -165,6 +165,8 @@ void Molecule::command(int narg, char **arg, int &index)
       iarg += 2;
     } else if (strcmp(arg[iarg], "auto") == 0) {
       if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "molecule auto", error);
+      if (std::string(force->improper_style) == "hybrid")
+        error->all(FLERR, fileiarg, "Cannot infer improper type with improper_style hybrid");
 
       int i = 0;
       char option;
@@ -3800,9 +3802,6 @@ void Molecule::generate_dihedrals()
 
 void Molecule::generate_impropers()
 {
-  if (std::string(force->improper_style) == "hybrid")
-    error->all(FLERR, fileiarg, "Cannot infer improper type with improper_style hybrid");
-
   if (specialflag == 0)
     error->all(FLERR, fileiarg, "Unable to generate impropers without special bonds.");
 
