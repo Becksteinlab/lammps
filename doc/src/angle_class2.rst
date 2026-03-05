@@ -113,9 +113,11 @@ The *class2xe* angle style uses the potential
 
 .. math::
     
+   \begin{aligned}
    E_a & = K_2 (\theta - \theta_0)^2 + K_3 (\theta - \theta_0)^3 + K_4(\theta - \theta_0)^4 \\
    E_{bb} & =  D \left[ 1 - e^{-\alpha (r_{ij} - r_1)} \right] \left[ 1 - e^{-\alpha (r_{jk} - r_2)} \right] \\
-   E_{ba} & = D_1 \left[ 1 - e^{-\alpha_1 (r_{ij} - r_1)} \right] \left[\theta - \theta_0\right] + D_2 \left[ 1 - e^{-\alpha_2 (r_{jk} - r_2)} \right] \left[\theta - \theta_0\right] 
+   E_{ba} & = D_1 \left[ 1 - e^{-\alpha_1 (r_{ij} - r_1)} \right] \left[\theta - \theta_0\right] + D_2 \left[ 1 - e^{-\alpha_2 (r_{jk} - r_2)} \right] \left[\theta - \theta_0\right]
+   \end{aligned}
 
 where :math:`E_a` is the angle term, :math:`E_{bb}` is a bond-bond
 term, and :math:`E_{ba}` is a bond-angle term.  :math:`\theta_0` is
