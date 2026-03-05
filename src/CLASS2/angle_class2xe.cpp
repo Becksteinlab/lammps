@@ -510,7 +510,7 @@ double AngleClass2xe::single(int type, int i1, int i2, int i3)
   dr2 = r2 - ba_r2[type];
   double ba_ralpha1 = exp(-ba_alpha1[type]*dr1);
   double ba_ralpha2 = exp(-ba_alpha2[type]*dr2);
-  energy += ba_d1[type]*(1 - ba_ralpha1)*dtheta + ba_d2[type]*(1 - ba_ralpha1)*dtheta;
+  energy += ba_d1[type]*(1 - ba_ralpha1)*dtheta + ba_d2[type]*(1 - ba_ralpha2)*dtheta;
 
   return energy;
 }
