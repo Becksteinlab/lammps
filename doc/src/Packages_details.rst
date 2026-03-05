@@ -200,6 +200,10 @@ D. Immel, R. Drautz and G. Sutmann, "Adaptive-precision potentials for
 large-scale atomistic simulations", J. Chem. Phys. 162, 114119 (2025)
 `link <immel2025_doi_>`_
 
+D. Immel, R. Drautz and G. Sutmann, "Conservative adaptive-precision
+interatomic potentials", arXiv:2512.07693
+`link <immel2026_doi_>`_
+
 Adaptive-precision means, that a fast interatomic potential, such as EAM,
 is coupled to a precise interatomic potential, such as ACE.
 This package provides the required pair_styles and fixes to run an efficient,
@@ -209,6 +213,7 @@ In the context of this package, precision refers to the accuracy of an interatom
 potential.
 
 .. _immel2025_doi: https://doi.org/10.1063/5.0245877
+.. _immel2026_doi: https://doi.org/10.48550/arXiv.2512.07693
 
 **Authors:**
 
@@ -232,6 +237,7 @@ The APIP package requires also the installation of ML-PACE, which has
 * ``examples/PACKAGES/apip``
 * :doc:`fix atom_weight/apip <fix_atom_weight_apip>`
 * :doc:`fix lambda/apip <fix_lambda_apip>`
+* :doc:`fix lambda/la/csp/apip <fix_lambda_la_csp_apip>`
 * :doc:`fix lambda_thermostat/apip <fix_lambda_thermostat_apip>`
 * :doc:`pair_style eam/apip <pair_eam_apip>`
 * :doc:`pair_style lambda/zone/apip <pair_lambda_zone_apip>`
@@ -257,6 +263,8 @@ particle models including ellipsoids, 2d lines, and 3d triangles.
 * :doc:`pair_style gayberne <pair_gayberne>`
 * :doc:`pair_style resquared <pair_resquared>`
 * :doc:`pair_style ylz <pair_ylz>`
+* :doc:`pair_style line/lj <pair_line_lj>`
+* :doc:`pair_style tri/lj <pair_tri_lj>`
 * `doc/PDF/pair_gayberne_extra.pdf <PDF/pair_gayberne_extra.pdf>`_
 * `doc/PDF/pair_resquared_extra.pdf <PDF/pair_resquared_extra.pdf>`_
 * ``examples/ASPHERE``
@@ -512,6 +520,7 @@ the :doc:`Build extras <Build_extras>` page.
 **Supporting info:**
 
 * ``src/COLVARS``: filenames -> commands
+* https://colvars.github.io/master/colvars-refman-lammps.html
 * `doc/PDF/colvars-refman-lammps.pdf <PDF/colvars-refman-lammps.pdf>`_
 * ``src/COLVARS/README``
 * ``lib/colvars/README``
@@ -1086,9 +1095,15 @@ of regions scripted graphics in VMD.
 * :doc:`fix graphics/arrows <fix_graphics_arrows>`
 * :doc:`fix graphics/isosurface <fix_graphics_isosurface>`
 * :doc:`fix graphics/labels <fix_graphics_labels>`,
+* :doc:`fix graphics/lines <fix_graphics_lines>`,
 * :doc:`fix graphics/objects <fix_graphics_objects>`,
 * :doc:`fix graphics/periodic <fix_graphics_periodic>`,
 * :doc:`region2vmd <region2vmd>`
+* https://www.youtube.com/watch?v=9HEsGaOsdik
+* https://www.youtube.com/watch?v=f4hfPs7aCmI
+* https://www.youtube.com/shorts/1QEjIITapwQ
+* https://www.youtube.com/shorts/OYn_VVodnIg
+* https://www.youtube.com/shorts/4Cm5p0SfgNU
 
 ----------
 
