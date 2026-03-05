@@ -1336,16 +1336,26 @@ void ComputePropertyAtom::pack_angmomz(int n)
 
 void ComputePropertyAtom::pack_shapex(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
 
-  for (int i = 0; i < nlocal; i++) {
+  if (atom->superellipsoid_flag){
+    AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
     if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
       buf[n] = 2.0*bonus[ellipsoid[i]].shape[0];
     else buf[n] = 1.0;
     n += nvalues;
+  }
+  } else {
+    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+    for (int i = 0; i < nlocal; i++) {
+      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+        buf[n] = 2.0*bonus[ellipsoid[i]].shape[0];
+      else buf[n] = 1.0;
+      n += nvalues;
+    }
   }
 }
 
@@ -1353,33 +1363,54 @@ void ComputePropertyAtom::pack_shapex(int n)
 
 void ComputePropertyAtom::pack_shapey(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
 
-  for (int i = 0; i < nlocal; i++) {
+  if (atom->superellipsoid_flag){
+    AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
     if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
       buf[n] = 2.0*bonus[ellipsoid[i]].shape[1];
     else buf[n] = 1.0;
     n += nvalues;
   }
+  } else {
+    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+    for (int i = 0; i < nlocal; i++) {
+      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+        buf[n] = 2.0*bonus[ellipsoid[i]].shape[1];
+      else buf[n] = 1.0;
+      n += nvalues;
+    }
+  }
 }
 
 /* ---------------------------------------------------------------------- */
 
+
 void ComputePropertyAtom::pack_shapez(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
 
-  for (int i = 0; i < nlocal; i++) {
+  if (atom->superellipsoid_flag){
+    AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
     if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
       buf[n] = 2.0*bonus[ellipsoid[i]].shape[2];
     else buf[n] = 1.0;
     n += nvalues;
+  }
+  } else {
+    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+    for (int i = 0; i < nlocal; i++) {
+      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+        buf[n] = 2.0*bonus[ellipsoid[i]].shape[2];
+      else buf[n] = 1.0;
+      n += nvalues;
+    }
   }
 }
 
@@ -1387,7 +1418,7 @@ void ComputePropertyAtom::pack_shapez(int n)
 
 void ComputePropertyAtom::pack_block1(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+  AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -1403,7 +1434,7 @@ void ComputePropertyAtom::pack_block1(int n)
 
 void ComputePropertyAtom::pack_block2(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+  AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -1422,7 +1453,7 @@ void ComputePropertyAtom::pack_block2(int n)
 
 void ComputePropertyAtom::pack_inertiax(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+  AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -1438,7 +1469,7 @@ void ComputePropertyAtom::pack_inertiax(int n)
 
 void ComputePropertyAtom::pack_inertiay(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+  AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -1455,7 +1486,7 @@ void ComputePropertyAtom::pack_inertiay(int n)
 
 void ComputePropertyAtom::pack_inertiaz(int n)
 {
-  AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+  AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
   int *ellipsoid = atom->ellipsoid;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
@@ -1473,16 +1504,27 @@ void ComputePropertyAtom::pack_inertiaz(int n)
 void ComputePropertyAtom::pack_quatw(int n)
 {
   if (avec_ellipsoid) {
-    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+
     int *ellipsoid = atom->ellipsoid;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
 
-    for (int i = 0; i < nlocal; i++) {
-      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
-        buf[n] = bonus[ellipsoid[i]].quat[0];
-      else buf[n] = 1.0;
-      n += nvalues;
+    if (atom->superellipsoid_flag){
+      AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[0];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
+    } else {
+      AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[0];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
     }
 
   } else if (avec_body) {
@@ -1516,16 +1558,27 @@ void ComputePropertyAtom::pack_quatw(int n)
 void ComputePropertyAtom::pack_quati(int n)
 {
   if (avec_ellipsoid) {
-    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+
     int *ellipsoid = atom->ellipsoid;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
 
-    for (int i = 0; i < nlocal; i++) {
-      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
-        buf[n] = bonus[ellipsoid[i]].quat[1];
-      else buf[n] = 0.0;
-      n += nvalues;
+    if (atom->superellipsoid_flag){
+      AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[1];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
+    } else {
+      AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[1];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
     }
 
   } else if (avec_body) {
@@ -1559,16 +1612,27 @@ void ComputePropertyAtom::pack_quati(int n)
 void ComputePropertyAtom::pack_quatj(int n)
 {
   if (avec_ellipsoid) {
-    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+
     int *ellipsoid = atom->ellipsoid;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
 
-    for (int i = 0; i < nlocal; i++) {
-      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
-        buf[n] = bonus[ellipsoid[i]].quat[2];
-      else buf[n] = 0.0;
-      n += nvalues;
+    if (atom->superellipsoid_flag){
+      AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[2];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
+    } else {
+      AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[2];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
     }
 
   } else if (avec_body) {
@@ -1602,16 +1666,27 @@ void ComputePropertyAtom::pack_quatj(int n)
 void ComputePropertyAtom::pack_quatk(int n)
 {
   if (avec_ellipsoid) {
-    AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+
     int *ellipsoid = atom->ellipsoid;
     int *mask = atom->mask;
     int nlocal = atom->nlocal;
 
-    for (int i = 0; i < nlocal; i++) {
-      if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
-        buf[n] = bonus[ellipsoid[i]].quat[3];
-      else buf[n] = 0.0;
-      n += nvalues;
+    if (atom->superellipsoid_flag){
+      AtomVecEllipsoid::BonusSuper *bonus = avec_ellipsoid->bonus_super;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[3];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
+    } else {
+      AtomVecEllipsoid::Bonus *bonus = avec_ellipsoid->bonus;
+      for (int i = 0; i < nlocal; i++) {
+        if ((mask[i] & groupbit) && ellipsoid[i] >= 0)
+          buf[n] = bonus[ellipsoid[i]].quat[3];
+        else buf[n] = 1.0;
+        n += nvalues;
+      }
     }
 
   } else if (avec_body) {
