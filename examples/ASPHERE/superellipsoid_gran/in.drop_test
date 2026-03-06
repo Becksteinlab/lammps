@@ -1,7 +1,7 @@
 # Lattice wall drop test
 
 units           si
-atom_style      ellipsoid
+atom_style      ellipsoid superellipsoid
 dimension       3
 boundary        p p f 
 comm_modify     vel yes
@@ -13,7 +13,7 @@ neigh_modify   delay 0 every 1 check yes
 
 # Setup Simulation Box
 variable        box_length equal 50
-variable        box_height equal 350
+variable        box_height equal 35
 
 region          box block 0 ${box_length} 0 ${box_length} 0 ${box_height}
 create_box      2 box
@@ -28,7 +28,7 @@ create_atoms    1 region floor_reg
 
 # Create Falling Particles (Type 2)
 region          drop_zone block 5 ${insertion_length} 5 ${insertion_length} 5 ${box_height}
-create_atoms    2 random 30000 12345 drop_zone overlap 2.0 maxtry 100
+create_atoms    2 random 3000 12345 drop_zone overlap 2.0 maxtry 100
 
 # Material Properties
 # Type 1: Wall particles
@@ -47,7 +47,7 @@ group           wall type 1
 group           mobile type 2
 
 # Interaction / Pair Style
-pair_style      gran/hooke/history/ellipsoid 1e4 0.0 20.0 0.0 0.5 0 bounding_box
+pair_style      gran/hooke/history/ellipsoid 1e4 NULL 20.0 0.0 0.5 0 bounding_box
 pair_coeff      * *
 
 # Computes and Output
@@ -59,7 +59,7 @@ compute         block all property/atom block1 block2
 variable        phi atom "2/c_block[2]"
 variable        theta atom "2/c_block[1]"
 
-dump            mydump all custom 1000 dump_drop_algebraic_block_${blockiness}.lammpstrj id type x y z fx fy fz tqx tqy tqz c_diameter[*] c_orient[*] v_phi v_theta
+dump            mydump all custom 1000 dump_drop_algebraic_block_${blockiness}_friction.lammpstrj id type x y z fx fy fz tqx tqy tqz c_diameter[*] c_orient[*] v_phi v_theta
 # Explicit mapping for Ovito
 dump_modify     mydump colname c_orient[1] quatw colname c_orient[2] quati colname c_orient[3] quatj colname c_orient[4] quatk
 

@@ -1,5 +1,5 @@
 units           si
-atom_style      ellipsoid
+atom_style      ellipsoid superellipsoid
 dimension       3
 boundary p p p
 comm_modify vel yes
