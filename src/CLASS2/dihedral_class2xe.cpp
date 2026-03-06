@@ -411,8 +411,7 @@ void DihedralClass2xe::compute(int eflag, int vflag)
 
     for (i = 0; i < 4; i++)
       for (j = 0; j < 3; j++)
-        fabcd[i][j] += db*sumbtf*dphidr[i][j]
-                       + sumbte*(mbt_alpha2[type]*mbt_ralpha2)*dbonddr[1][i][j];
+        fabcd[i][j] += db*sumbtf*dphidr[i][j] + sumbte*(mbt_alpha2[type]*mbt_ralpha2)*dbonddr[1][i][j];
 
     // end-bond/torsion coupling
     // energy on bond1 (first bond)
@@ -436,7 +435,7 @@ void DihedralClass2xe::compute(int eflag, int vflag)
 
     for (i = 0; i < 4; i++)
       for (j = 0; j < 3; j++)
-        fabcd[i][j] -= db*sumbtf*dphidr[i][j] + sumbte*dbonddr[0][i][j];
+        fabcd[i][j] -= db*sumbtf*dphidr[i][j] + sumbte*(ebt_alpha1[type]*ebt_ralpha1)*dbonddr[0][i][j];
 
     // end-bond/torsion coupling
     // energy on bond3 (last bond)
@@ -460,7 +459,7 @@ void DihedralClass2xe::compute(int eflag, int vflag)
 
     for (i = 0; i < 4; i++)
       for (j = 0; j < 3; j++)
-        fabcd[i][j] += db*sumbtf*dphidr[i][j] + sumbte*dbonddr[2][i][j];
+        fabcd[i][j] += db*sumbtf*dphidr[i][j] + sumbte*(ebt_alpha3[type]*ebt_ralpha3)*dbonddr[2][i][j];
 
     // angle/torsion coupling
     // energy on angle1
