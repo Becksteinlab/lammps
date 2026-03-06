@@ -17,8 +17,8 @@ DihedralStyle(class2xe,DihedralClass2xe);
 // clang-format on
 #else
 
-#ifndef LMP_DIHEDRAL_CLASS2xe_H
-#define LMP_DIHEDRAL_CLASS2xe_H
+#ifndef LMP_DIHEDRAL_CLASS2XE_H
+#define LMP_DIHEDRAL_CLASS2XE_H
 
 #include "dihedral.h"
 
