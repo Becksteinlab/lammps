@@ -58,6 +58,7 @@ Pre-processing tools
    * :ref:`stl_bin2txt <stlconvert>`
    * :ref:`tabulate <tabulate>`
    * :ref:`tinker <tinker>`
+   * :ref:`LUNAR <lunar>`
    * :doc:`AMBER2LAMMPS <Howto_amber2lammps>`
 
 Post-processing tools
@@ -81,6 +82,7 @@ Post-processing tools
    * :ref:`smd <smd>`
    * :ref:`spin <spin>`
    * :ref:`xmgrace <xmgrace>`
+   * :ref:`LUNAR <lunar>`
 
 Miscellaneous tools
 ===================
@@ -859,7 +861,7 @@ with those in the provided log file with the same number of processors
 in the same subdirectory. If the differences between the actual and
 reference values are within specified tolerances, the test is considered
 passed.  For each test batch, that is, a set of example input scripts,
-the ``mpirun`` command, the LAMMPS command-line arguments, and the
+the mpirun command, the LAMMPS command-line arguments, and the
 tolerances for individual thermo quantities can be specified in a
 configuration file in YAML format.
 
@@ -1149,3 +1151,46 @@ simulation.
 See the README file for details.
 
 These files were provided by Vikas Varshney (vv0210 at gmail.com)
+
+
+.. _lunar:
+
+LUNAR tool
+----------------------
+
+LUNAR (LAMMPS Utility for Network Analysis and Reactivity) is an open-source Python toolkit designed to
+streamline the preparation, execution, and analysis of molecular dynamics simulations performed with
+LAMMPS. The goal of LUNAR was to be a complete pre- and post-processing tool designed around LAMMPS and
+usage of fixed bond force fields. LUNAR supports many pre-processing efforts, such as automatic atom
+typing, generation of bonded interactions based on force field rules, automatic charge assignment,
+automatic parameterization of a molecular model in a specific force field, simulation cell
+initialization methods, and automated generation of molecule files. Building on the automatic
+generation of molecule files, LUNAR offers streamlined workflows to use commands like:
+
+* :doc:`fix deposit <fix_deposit>`
+* :doc:`fix pour <fix_pour>`
+* :doc:`fix rigid/small <fix_rigid>`
+* :doc:`fix shake <fix_shake>`
+* :doc:`fix gcmc <fix_gcmc>`
+* :doc:`fix bond/react <fix_bond_react>`
+* :doc:`create_atoms <create_atoms>`
+* :doc:`atom_style template <atom_style>`
+
+with a particular focus on the usage of the :doc:`fix bond/react <fix_bond_react>`. This is because a
+secondary goal of LUNAR was to lower the amount of time required (and lower the barrier to entry) to
+generate inputs to the :doc:`fix bond/react <fix_bond_react>`. The force fields LUNAR supports are:
+PCFF, PCFF-IFF, CVFF, CVFF-IFF, CFF91, COMPASS, Clay-FF, DREIDING, and OPLS-AA.
+
+LUNAR supports many post-processing efforts, such as free volume calculations of a molecular model
+and a general analysis tool built around the LAMMPS :doc:`thermo_style <thermo_style>` command. The
+goal of post-processing is to extract properties of a material from the simulation. This typically
+has large amounts of subjectivity involved and is often manually performed. The LUNAR toolkit aims
+to provide methods to reduce (or nearly completely remove) subjectivity from post-processing and has
+methods to automate the post-processing task completely. Meaning LUNAR can be used for high-throughput
+post-processing analysis.
+
+All of LUNARs pre- and post-processing capabilities are accessible via a graphical user interface or a command
+line interface. LUNAR was written by Josh Kemppainen (jdkemppa@mtu.edu), who supports and maintains it. The
+`LUNAR publication is available <https://doi.org/10.1021/acs.jcim.4c00730>`_ and the latest version can be
+found `on LUNAR's GitHub page <https://github.com/CMMRLab/LUNAR>`_.
+
