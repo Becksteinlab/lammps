@@ -116,7 +116,8 @@ void BuildRyMatrix(double R[3][3], const double angle);
 void BuildRzMatrix(double R[3][3], const double angle);
 
 // moment of inertia operations
-void inertia_ellipsoid(double *idiag, double *quat, double mass, double *inertia);
+void inertia_ellipsoid(double *idiag, double *quat, double *inertia); //superellipsoid version
+void inertia_ellipsoid(double *shape, double *quat, double mass, double *inertia);
 void inertia_line(double length, double theta, double mass, double *inertia);
 void inertia_triangle(double *v0, double *v1, double *v2, double mass, double *inertia);
 void inertia_triangle(double *idiag, double *quat, double mass, double *inertia);

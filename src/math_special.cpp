@@ -668,7 +668,6 @@ double MathSpecial::erfcx_y100(const double y100)
     return 1.0;
 } /* erfcx_y100 */
 
-
 /* optimizer friendly implementation of exp2(x).
  *
  * strategy:

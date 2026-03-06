@@ -805,8 +805,10 @@ void Set::setrandom(int keyword, Action *action)
     if (domain->dimension == 3) {
       for (i = 0; i < nlocal; i++)
         if (select[i]) {
-          if (avec_ellipsoid && ellipsoid[i] >= 0)
-            quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
+          if (avec_ellipsoid && ellipsoid[i] >= 0){
+            if (atom->superellipsoid_flag) quat_one = avec_ellipsoid->bonus_super[ellipsoid[i]].quat;
+            else quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
+          }
           else if (avec_tri && tri[i] >= 0)
             quat_one = avec_tri->bonus[tri[i]].quat;
           else if (avec_body && body[i] >= 0)
@@ -832,8 +834,10 @@ void Set::setrandom(int keyword, Action *action)
       double theta2;
       for (i = 0; i < nlocal; i++)
         if (select[i]) {
-          if (avec_ellipsoid && ellipsoid[i] >= 0)
-            quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
+          if (avec_ellipsoid && ellipsoid[i] >= 0){
+              if (atom->superellipsoid_flag) quat_one = avec_ellipsoid->bonus_super[ellipsoid[i]].quat;
+              else quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
+          }
           else if (avec_body && body[i] >= 0)
             quat_one = avec_body->bonus[body[i]].quat;
           else if (quat_flag)
@@ -1120,8 +1124,8 @@ void Set::invoke_apip_lambda(Action *action)
 
 void Set::process_block(int &iarg, int narg, char **arg, Action *action)
 {
-  if (!atom->ellipsoid_flag)
-    error->all(FLERR,"Cannot set attribute {} for atom style {}", arg[iarg], atom->get_style());
+  if (!atom->superellipsoid_flag)
+    error->all(FLERR,"Cannot set attribute {} for atom style {} (available with ellipsoid with superellipsoid flag)", arg[iarg], atom->get_style());
   if (iarg+3 > narg) utils::missing_cmd_args(FLERR, "set block", error);
   if (utils::strmatch(arg[iarg+1],"^v_")) varparse(arg[iarg+1],1,action);
   else {
@@ -1340,7 +1344,9 @@ void Set::invoke_density(Action *action)
       else rmass[i] = 4.0*MY_PI/3.0 * radius[i]*radius[i]*radius[i] * density;
 
     else if (ellipsoid_flag && ellipsoid[i] >= 0) {
-      double *shape = avec_ellipsoid->bonus[ellipsoid[i]].shape;
+      double *shape;
+      if (atom->superellipsoid_flag) shape = avec_ellipsoid->bonus_super[ellipsoid[i]].shape; 
+      else shape = avec_ellipsoid->bonus[ellipsoid[i]].shape;
       // could enable 2d ellipse (versus 3d ellipsoid) when time integration
       //   options (fix nve/asphere, fix nh/asphere) are also implemented
       // if (discflag)
@@ -2008,8 +2014,10 @@ void Set::invoke_quat(Action *action)
   for (int i = 0; i < nlocal; i++) {
     if (!select[i]) continue;
 
-    if (avec_ellipsoid && ellipsoid[i] >= 0)
-      quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
+    if (avec_ellipsoid && ellipsoid[i] >= 0){
+      if (atom->superellipsoid_flag) quat_one = avec_ellipsoid->bonus_super[ellipsoid[i]].quat;
+      else quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat; 
+    }
     else if (avec_tri && tri[i] >= 0)
       quat_one = avec_tri->bonus[tri[i]].quat;
     else if (avec_body && body[i] >= 0)

@@ -968,8 +968,6 @@ void AtomVecEllipsoid::set_shape(int i, double shapex, double shapey, double sha
 
 void AtomVecEllipsoid::set_block(int i, double blockn1, double blockn2)
 {
-  if (!atom->superellipsoid_flag)
-    error->one(FLERR, "Cannot set blockiness exponents for non-superellipsoid atom");
   if (ellipsoid[i] < 0) {
     if (nlocal_bonus == nmax_bonus) grow_bonus();
     double *shape = bonus_super[nlocal_bonus].shape;

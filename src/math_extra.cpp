@@ -475,20 +475,41 @@ void quat_to_mat_trans(const double *quat, double mat[3][3])
   mat[2][2] = w2-i2-j2+k2;
 }
 
-
 /* ----------------------------------------------------------------------
    compute space-frame inertia tensor of an ellipsoid
-   shape = 3 radii of ellipsoid
+   shape = 3 semiaxes of ellipsoid
    quat = orientiation quaternion of ellipsoid
-   block = blockiness exponents of super-ellipsoid
    return symmetric inertia tensor as 6-vector in Voigt ordering
-
-   THIS IS EXACTLY THE SAME FUNCTION AS INERTIA_TRIANGLE
-   TAKES DIAG PRINCIPA INERTIA AND ROTATES IT. SHOULD WE CONSOLIDATE ???
 ------------------------------------------------------------------------- */
 
-void inertia_ellipsoid(double *idiag, double *quat, double /*mass*/,
+void inertia_ellipsoid(double *shape, double *quat, double mass,
                        double *inertia)
+{
+  double p[3][3],ptrans[3][3],itemp[3][3],tensor[3][3];
+  double idiag[3];
+
+  quat_to_mat(quat,p);
+  quat_to_mat_trans(quat,ptrans);
+  idiag[0] = 0.2*mass * (shape[1]*shape[1] + shape[2]*shape[2]);
+  idiag[1] = 0.2*mass * (shape[0]*shape[0] + shape[2]*shape[2]);
+  idiag[2] = 0.2*mass * (shape[0]*shape[0] + shape[1]*shape[1]);
+  diag_times3(idiag,ptrans,itemp);
+  times3(p,itemp,tensor);
+  inertia[0] = tensor[0][0];
+  inertia[1] = tensor[1][1];
+  inertia[2] = tensor[2][2];
+  inertia[3] = tensor[1][2];
+  inertia[4] = tensor[0][2];
+  inertia[5] = tensor[0][1];
+}
+
+/* ----------------------------------------------------------------------
+  Superellipsoid inertia tensor
+  No need to compute new inertia tensor
+  for superellipsoid since it is stored in bonus_super
+------------------------------------------------------------------------- */
+
+void inertia_ellipsoid(double *idiag, double *quat, double *inertia)
 {
   double p[3][3],ptrans[3][3],itemp[3][3],tensor[3][3];
 
