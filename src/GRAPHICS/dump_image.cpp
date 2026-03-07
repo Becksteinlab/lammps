@@ -75,6 +75,37 @@ enum { NO = 0, YES = 1, AUTO = 2 };
 enum { FILLED, FRAME, POINTS, TRANSPARENT };
 enum { OFF = 0, CENTER, LOWERLEFT, LOWERRIGHT, UPPERLEFT, UPPERRIGHT };
 
+//  convenience functions to change and restore lighting, assuming uncolored light
+
+struct savedColors {
+  double ambient;
+  double key;
+  double fill;
+  double back;
+};
+
+savedColors reset_lighting(Image *image, double ambient, double key, double fill, double back)
+{
+  savedColors saved;
+  saved.ambient = image->ambientColor[0];
+  image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = ambient;
+  saved.key = image->keyLightColor[0];
+  image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = key;
+  saved.fill = image->fillLightColor[0];
+  image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = fill;
+  saved.back = image->backLightColor[0];
+  image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = back;
+  return saved;
+}
+
+void restore_lighting(const savedColors &saved, Image *image)
+{
+  image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = saved.ambient;
+  image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = saved.key;
+  image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = saved.fill;
+  image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = saved.back;
+}
+
 }    // namespace
 // clang-format off
 
@@ -1191,10 +1222,7 @@ void DumpImage::create_image()
 
     // reset lighting for flat surfaces to make them brighter
 
-    image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.9;
-    image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.3;
-    image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.3;
-    image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.3;
+    auto saved = reset_lighting(image, 0.9, 0.3, 0.3, 0.3);
 
     int n = 0;
     if (domain->dimension == 2) {
@@ -1234,10 +1262,7 @@ void DumpImage::create_image()
 
     // restore lighting for curved objects
 
-    image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.0;
-    image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.9;
-    image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-    image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.9;
+    restore_lighting(saved, image);
   }
 
   // render atoms that are lines
@@ -1344,19 +1369,13 @@ void DumpImage::create_image()
       MathExtra::add3(pt3,x[j],pt3);
 
       if (tridraw) {
-        // brighten flat surfaces a little bit
-        image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.3;
-        image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.8;
-        image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-        image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.8;
+        // brighten flat surfaces a bit
+        auto saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
 
         image->draw_triangle(pt1,pt2,pt3,color,opacity);
 
         // restore previous settings
-        image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.0;
-        image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.9;
-        image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-        image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.9;
+        restore_lighting(saved, image);
       }
       if (edgedraw) {
         image->draw_cylinder(pt1,pt2,color,tdiamvalue,3,opacity);
@@ -1400,22 +1419,17 @@ void DumpImage::create_image()
       } else {
         color = image->color2rgb("white");
       }
+      savedColors saved;
       if (estyle & 1) {
         // brighten flat surfaces a little bit
-        image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.3;
-        image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.8;
-        image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-        image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.8;
+        saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
       }
       EllipsoidObj e(elevel);
       e.draw(image, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
              avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, opacity);
       if (estyle & 1) {
         // restore previous settings
-        image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.0;
-        image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.9;
-        image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-        image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.9;
+        restore_lighting(saved, image);
       }
       m += size_one;
     }
@@ -1464,15 +1478,12 @@ void DumpImage::create_image()
           image->draw_cylinder(&bodyarray[k][0],&bodyarray[k][3],color,bodyarray[k][6],3,opacity);
         else if (bodyvec[k] == Graphics::TRI) {
           // brighten flat surfaces a little bit
-          image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.3;
-          image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.8;
-          image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-          image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.8;
+          auto saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
+
           image->draw_triangle(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],color,opacity);
-          image->ambientColor[0] = image->ambientColor[1] = image->ambientColor[2] = 0.0;
-          image->keyLightColor[0] = image->keyLightColor[1] = image->keyLightColor[2] = 0.9;
-          image->fillLightColor[0] = image->fillLightColor[1] = image->fillLightColor[2] = 0.45;
-          image->backLightColor[0] = image->backLightColor[1] = image->backLightColor[2] = 0.9;
+
+          // restore previous settings
+          restore_lighting(saved, image);
         }
       }
 
