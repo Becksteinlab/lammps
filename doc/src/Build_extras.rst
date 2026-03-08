@@ -429,8 +429,9 @@ detailed information is available at:
       the KIM library is already installed on your system (in a location
       where CMake cannot find it), you may need to set the
       ``PKG_CONFIG_PATH`` environment variable so that libkim-api can be
-      found, or run the command ``source kim-api-activate``.  If CMake can't find
-      the KIM API, the ``DOWNLOAD_KIM`` option will be enabled automatically.
+      found, or run the command ``source kim-api-activate``.  If CMake cannot find
+      the KIM API when configuring for the first time (or after clearing the
+      CMake cache), the default value of the ``DOWNLOAD_KIM`` option will be ``yes``.
 
       Extra unit tests can only be available if they are explicitly requested
       (``KIM_EXTRA_UNITTESTS`` is set to ``yes`` (or ``on``)) and the prerequisites
