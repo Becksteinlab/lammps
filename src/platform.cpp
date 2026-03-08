@@ -1007,6 +1007,27 @@ bool platform::file_is_writable(const std::string &path)
 }
 
 /* ----------------------------------------------------------------------
+   read first line of file to see if it is a redirect file of a git checkout
+   on a file system without symlinks
+------------------------------------------------------------------------- */
+
+std::string platform::file_redirect(const std::string &path)
+{
+#if defined(_WIN32)
+  // read the first (and only) line and see if it is a valid path
+  char buffer[1024];
+  char *target = (char *) path.c_str();
+  FILE *fp = fopen(target, "r");
+  if (fp) {
+    char *target = fgets(buffer, 1024, fp);
+    fclose(fp);
+    if (target && platform::file_is_readable(target)) return {target};
+  }
+#endif
+  return path;
+}
+
+/* ----------------------------------------------------------------------
    get file modification time since initial time stamp
 ------------------------------------------------------------------------- */
 double platform::file_write_time(const std::string &path)

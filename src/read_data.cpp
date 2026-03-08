@@ -2466,26 +2466,15 @@ int ReadData::reallocate(int **pcount, int cmax, int amax)
 
 void ReadData::open(const std::string &file)
 {
-  // do we have a windows redirect?
-  // read the first (and only) line and see if it is a valid path
-  char buffer[CHUNK];
-  char *target = (char *)file.c_str();
-  fp = fopen(target, "r");
-  if (fp) {
-    char *target = fgets(buffer, CHUNK, fp);
-    // restore if no data or no path
-    if (!target || !platform::file_is_readable(target))
-      target = (char *)file.c_str();
-    fclose(fp);
-  }
-
-  if (platform::has_compress_extension(target)) {
+  // file may be a redirect, e.g. on a git checkout on Windows in lieu of a symbolic link
+  auto path = platform::file_redirect(file);
+  if (platform::has_compress_extension(path)) {
     compressed = 1;
-    fp = platform::compressed_read(target);
+    fp = platform::compressed_read(path);
     if (!fp) error->one(FLERR, "Cannot open compressed file {}", file);
   } else {
     compressed = 0;
-    fp = fopen(target, "r");
+    fp = fopen(path.c_str(), "r");
     if (!fp) error->one(FLERR, "Cannot open file {}: {}", file, utils::getsyserror());
   }
 }
