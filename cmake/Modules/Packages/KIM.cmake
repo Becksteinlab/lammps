@@ -26,7 +26,7 @@ if(PKG_CONFIG_FOUND)
 endif()
 option(DOWNLOAD_KIM "Download KIM-API from OpenKIM instead of using an already installed one" ${DOWNLOAD_KIM_DEFAULT})
 if(DOWNLOAD_KIM)
-  message(STATUS "KIM-API download requested - we will build our own")  
+  message(STATUS "KIM-API download requested - we will build our own")
   if(NOT KIM-API_FOUND)
       message(WARNING "KIM-API was not found, and DOWNLOAD_KIM is on, "
               "so we will download and build our own. "
