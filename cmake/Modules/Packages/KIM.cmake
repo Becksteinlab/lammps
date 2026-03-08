@@ -24,6 +24,12 @@ if(PKG_CONFIG_FOUND)
     set(DOWNLOAD_KIM_DEFAULT OFF)
   endif()
 endif()
+if(NOT KIM-API_FOUND)
+  message(WARNING "KIM-API was not found, so we will download and build our own. "
+          "If you intend to use LAMMPS with a pre-installed KIM-API, "
+          "you may need to set PKG_CONFIG_PATH, or run the command "
+          "'source kim-api-activate', then re-run CMake.")
+endif()
 option(DOWNLOAD_KIM "Download KIM-API from OpenKIM instead of using an already installed one" ${DOWNLOAD_KIM_DEFAULT})
 if(DOWNLOAD_KIM)
   message(STATUS "KIM-API download requested - we will build our own")
