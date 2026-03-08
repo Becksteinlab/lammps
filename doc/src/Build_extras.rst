@@ -393,10 +393,6 @@ learn how to install the KIM API, as well as how to install any models you
 wish to use afterward.
 See the list of all KIM models here: https://openkim.org/browse/models
 
-(Also note that when downloading and installing from source
-the KIM API library with all its models, may take a long time (tens of
-minutes to hours) to build.  Of course you only need to do that once.)
-
 If you would like to use the :doc:`kim query <kim_commands>`
 command, you also need to have libcurl installed with the matching
 development headers and the curl-config tool.
