@@ -46,7 +46,7 @@ Syntax
          precise = switching parameter of fast potential (0)
          float = constant float or atom-style variable (between 0 and 1)
        *block* value = block1, block2
-         block1,block2 = 2 blockiness parameters for super-ellipsoids
+         block1,block2 = 2 blockiness parameters for superellipsoids
        *bond* value = numeric bond type or bond type label, for all bonds between selected atoms
        *cc* values = index cc
          index = index of a chemical species (1 to Nspecies)
@@ -544,8 +544,8 @@ keyword.
 Keyword *block* sets the blockiness of the selected atoms.  The
 particles must be ellipsoids as defined by the :doc:`atom_style
 ellipsoid <atom_style>` command.  This command is used to define
-super-ellipsoid particle shapes for use in granular simulations.
-The *block1*, *block2* settings are the 2 exponents of the super-ellipsoid
+superellipsoid particle shapes for use in granular simulations.
+The *block1*, *block2* settings are the 2 exponents of the superellipsoid
 in the vertical and horizontal directions.  Vertical sections through the
 center are superellipses with squareness *block1* and horizontal sections
 are superellipses with squareness *block2*.  If both parameters are set to

@@ -75,6 +75,23 @@ property, and the exponents :math:`n_1` and :math:`n_2` to the *block* property
 of the ellipsoid atom. See the doc page for the :doc:`set <set>` command for
 more details.
 
+.. note::
+   
+    The contact solver strictly requires convex particle shapes to ensure a mathematically
+    unique point of deepest penetration. Therefore, the blockiness parameters must be
+    :math:`n_1 \ge 2.0` and :math:`n_2 \ge 2.0`. Attempting to simulate concave or "pointy"
+    particles (:math:`n < 2.0`) will result in an error.
+
+.. note::
+
+    For particles with high blockiness exponents (:math:`n > 4.0`) involved in edge-to-edge
+    or corner-to-corner contacts, the surface normal vector varies rapidly over small
+    distances. The Newton solver may occasionally fail to converge to the strict gradient
+    alignment tolerance (typically :math:`10^{-10}`).
+    You may see warning messages in the log indicating that the solver returned a sub-optimal solution, 
+    but the simulation will proceed using this best-effort contact point.
+    Using the `geometric` keyword will help mitigate this issue. 
+
 Contact detection for these aspherical particles uses the so-called ''midway''
 minimization approach from :ref:`(Houlsby) <Houlsby>`. Considering two
 particles with shape functions,  :math:`F_i` and :math:`F_j`,
@@ -286,14 +303,6 @@ All settings are global and are made via the pair_style command.
 However you must still use the :doc:`pair_coeff <pair_coeff>` for all
 pairs of granular atom types.  For example the command
 
-.. note::
-   For particles with high blockiness exponents (:math:`n > 4`) involved in edge-to-edge
-   or corner-to-corner contacts, the surface normal vector varies rapidly over microscopic
-   distances. The Newton solver may occasionally fail to converge to the strict gradient
-   alignment tolerance (typically :math:`10^{-10}`).
-   You may see warning messages in the log indicating that the solver returned a sub-optimal solution, 
-   but the simulation will proceed using this best-effort contact point.
-
 .. code-block:: LAMMPS
 
    pair_coeff * *
@@ -347,7 +356,8 @@ Restrictions
 All the granular pair styles are part of the GRANULAR package.  It is
 only enabled if LAMMPS was built with that package.  See the :doc:`Build package <Build_package>` page for more info.
 
-These pair styles require the *ellipsoid* atom style, which is part of the ASPHERE package. It is
+These pair styles require the *ellipsoid* atom style with the *superellipsoid* flag enabled,
+(i.e. `atom_style ellipsoid superellipsoid`) which is part of the ASPHERE package. It is
 only enabled if LAMMPS was built with that package.  See the :doc:`Build package <Build_package>` page for more info.
 
 This pair style requires you to use the :doc:`comm_modify vel yes <comm_modify>` command so that velocities are stored by ghost

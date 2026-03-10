@@ -51,13 +51,16 @@ individual particles, after then are created.
 The ellipsoid style defines particles that are ellipsoids and thus can
 be aspherical.  Each particle has a shape, specified by 3 diameters,
 and mass (or density).  Superellipsoid particles can be defined by
-specifying 2 blockiness exponents (block).  These particles store an angular
+specifying 2 blockiness exponents (block) and adding the `superellipsoid` 
+keyword to the `atom_style ellipsoid` command.  These particles store an angular
 momentum and their orientation (quaternion), and can be acted upon by
 torque.  They do not store an angular velocity (omega), which can be
 in a different direction than angular momentum, rather they compute it
-as needed.  The "set" command can be used to modify the diameter,
-blockiness, orientation, and mass of individual particles, after they
-are created.  It also has a brief explanation of what quaternions are.
+as needed.  The "set" command can be used to modify the diameter, orientation, 
+and mass of individual particles, after they are created.
+The "set" command can also be used to modify the blockiness of superellipsoid 
+particles.
+It also has a brief explanation of what quaternions are.
 
 The line style defines line segment particles with two end points and
 a mass (or density).  They can be used in 2d simulations, and they can
@@ -130,9 +133,8 @@ such interactions.  These are the various :doc:`pair styles <pair_style>` that g
 * :doc:`pair_style body/nparticle <pair_body_nparticle>`
 
 The granular pair styles are used with spherical particles.  The
-*gran/ellipsoid* granular pair styles are used with
-ellipsoidal and superellipsoid particles.  The
-dipole pair style is used with the dipole atom style, which could be
+*gran/ellipsoid* granular pair styles are used with superellipsoid particles.
+The dipole pair style is used with the dipole atom style, which could be
 applied to spherical or ellipsoidal particles.  The GayBerne and
 REsquared potentials require ellipsoidal particles, though they will
 also work if the 3 shape parameters are the same (a sphere).  The
