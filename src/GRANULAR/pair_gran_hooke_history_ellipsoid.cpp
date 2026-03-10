@@ -597,6 +597,18 @@ void PairGranHookeHistoryEllipsoid::init_style()
   if (comm->ghost_velocity == 0)
     error->all(FLERR, "Pair gran/h/ellipsoid* requires ghost atoms store velocity");
 
+  // ensure all atoms have an allocated ellipsoid bonus structure (ellipsoidflag > 0)
+  int *ellipsoid = atom->ellipsoid;
+  if (!ellipsoid) 
+    error->all(FLERR, "Pair gran/h/ellipsoid* requires atom style ellipsoid");
+
+  int nlocal = atom->nlocal;
+  for (i = 0; i < nlocal; i++) {
+    if (ellipsoid[i] < 0) {
+      error->one(FLERR, "Pair gran/h/ellipsoid* requires all atoms to have ellipsoidflag = 1");
+    }
+  }
+
   // need a granular neighbor list
 
   if (use_history)
@@ -668,7 +680,6 @@ void PairGranHookeHistoryEllipsoid::init_style()
   double *radius = atom->radius;
   int *mask = atom->mask;
   int *type = atom->type;
-  int nlocal = atom->nlocal;
 
   for (i = 0; i < nlocal; i++) {
     if (mask[i] & freeze_group_bit)
