@@ -52,6 +52,7 @@ namespace {
 constexpr int NCOLORS = 140;
 constexpr int NELEMENTS = 109;
 constexpr double EPSILON = 1.0e-6;
+constexpr double TRANS_DELTA = 0.01;
 
 enum { NUMERIC, MINVALUE, MAXVALUE };
 enum { CONTINUOUS, DISCRETE, SEQUENTIAL };
@@ -888,9 +889,9 @@ void Image::draw_pixmap(int xc, int yc, int pixwidth, int pixheight, const unsig
       // we allow a few steps difference for each channel to account
       // for rounding errors and reduce "bleeding" from interpolation
 
-      if ((fabs(pixelcolor[0] - transcolor[0]) < 0.01) &&
-          (fabs(pixelcolor[1] - transcolor[1]) < 0.01) &&
-          (fabs(pixelcolor[2] - transcolor[2]) < 0.01)) continue;
+      if ((fabs(pixelcolor[0] - transcolor[0]) < TRANS_DELTA) &&
+          (fabs(pixelcolor[1] - transcolor[1]) < TRANS_DELTA) &&
+          (fabs(pixelcolor[2] - transcolor[2]) < TRANS_DELTA)) continue;
 
       draw_pixel(ix, iy, dist, normal, pixelcolor);
     }
