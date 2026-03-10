@@ -237,6 +237,8 @@ principal radii of curvature. For simplicity, the Hertzian model
 approximates the contact radius of each particle, :math:`R`, as either 
 the inverse of the mean curvature or as the gaussian curvature coefficient
 if the *curvature_gaussian* keyword is used.
+These curvatures are calculated at the particle surface point that is closest 
+to the contact point in the direction of the contact normal. 
 Thus Kn has units of force per area and is thus specified in units of
 (pressure).  The effects of absolute particle size (monodispersity)
 and relative size (polydispersity) are captured in the radii-dependent
