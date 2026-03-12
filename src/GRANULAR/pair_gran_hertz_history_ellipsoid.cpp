@@ -196,13 +196,9 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
           } else {
             // New contact: Build initial guess incrementally by morphing the particles from spheres to actual shape
 
-            // TODO: there might be better heuristic for the "volume equivalent spheres" suggested in the paper
-            //       but this is good enough. We might even be able to use radi and radj which is cheaper, TBD when testing
-            //       If we pick a small radius, we could guaranteed to start outise the grains, would that be better for the Newton?
-            //       If we pick a large radius (e.g. radi, radj) we are more likely to start inside the grains, is this an easier minimization landscape to navigate?
-            //       I don't think there is a general answer because we don't know the shape, and contact point may be far from spherical initial guess
-            //       This makes me think using radi and radj could be fine! To be investigated
-            //       MathExtra::scaleadd3(radj / radsum, x[i], radi /radsum, x[j], X0);
+            // There might be better heuristic for the "volume equivalent spheres" suggested in the paper
+            // but this is good enough. We might even be able to use radi and radj which is cheaper
+            // MathExtra::scaleadd3(radj / radsum, x[i], radi /radsum, x[j], X0);
 
             double reqi = std::cbrt(shapei[0] * shapei[1] * shapei[2]);
             double reqj = std::cbrt(shapej[0] * shapej[1] * shapej[2]);

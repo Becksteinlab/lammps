@@ -26,7 +26,7 @@
 namespace MathExtraSuperellipsoids {
 
 inline constexpr double TIKHONOV_SCALE =
-    1e-14;    // TODO: inline constexpr are C++17, which is Okay as of 10Sep2025 version of LAMMPS!
+    1e-14;   
 
 static constexpr int ITERMAX_NR = 100;
 static constexpr double TOL_NR_RES = 1e-10 * 1e-10;
@@ -586,7 +586,7 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
       } else if (norm > norm_old - PARAMETER_LS * a * norm_old) { // Armijo - Goldstein condition not met
         // Tested after convergence check because tiny values of norm and norm_old < TOL_NR
         // Can still fail the Armijo - Goldstein condition`
-        a *= CUTBACK_LS; // TODO: Golden-section search? Simple cutback strategy is crude and might miss low residual loci along the line search
+        a *= CUTBACK_LS;
       } else {
         // Only compute the jacobian if there is another Newton iteration to come
         double tmp_m[3][3];
