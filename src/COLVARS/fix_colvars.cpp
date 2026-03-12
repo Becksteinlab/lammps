@@ -473,7 +473,7 @@ void FixColvars::setup(int vflag)
         ++nme;
       }
     }
-    // blocking receive to wait until it is our turn to send data
+    /* blocking receive to wait until it is our turn to send data */
     MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
     MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
   }
@@ -511,7 +511,7 @@ void FixColvars::post_force(int /*vflag*/)
   const double xz = domain->xz;
   const double yz = domain->yz;
   const int nlocal = atom->nlocal;
-  // check and potentially grow local communication buffers
+  /* check and potentially grow local communication buffers */
   int i,nmax_new,nme=0;
   for (i=0; i < num_coords; ++i) {
     const tagint k = atom->map(taglist[i]);
@@ -546,7 +546,7 @@ void FixColvars::post_force(int /*vflag*/)
         }
       }
     }
-    // loop over procs to receive remote data
+    /* loop over procs to receive remote data */
     for (i=1; i < comm->nprocs; ++i) {
       int maxbuf = nmax*size_one;
       MPI_Irecv(comm_buf, maxbuf, MPI_BYTE, i, 0, world, &request);
@@ -565,7 +565,7 @@ void FixColvars::post_force(int /*vflag*/)
       }
     }
   } else { // me != 0
-    // copy coordinate data into communication buffer
+    /* copy coordinate data into communication buffer */
     nme = 0;
     for (i=0; i<num_coords; ++i) {
       const tagint k = atom->map(taglist[i]);
@@ -586,7 +586,7 @@ void FixColvars::post_force(int /*vflag*/)
         ++nme;
       }
     }
-    // blocking receive to wait until it is our turn to send data
+    /* blocking receive to wait until it is our turn to send data */
     MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
     MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
   }
@@ -633,7 +633,7 @@ void FixColvars::min_post_force(int vflag)
 /* ---------------------------------------------------------------------- */
 void FixColvars::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 {
-  // only process colvar forces on the outmost RESPA level
+  /* only process colvar forces on the outmost RESPA level */
   if (ilevel == nlevels_respa-1) post_force(vflag);
 }
 
@@ -644,7 +644,7 @@ void FixColvars::end_of_step()
     const tagint * const tag = atom->tag;
     double * const * const f = atom->f;
     const int nlocal = atom->nlocal;
-    // check and potentially grow local communication buffers
+    /* check and potentially grow local communication buffers */
     int i,nmax_new,nme=0;
     for (i=0; i < num_coords; ++i) {
       const tagint k = atom->map(taglist[i]);
@@ -674,7 +674,7 @@ void FixColvars::end_of_step()
           }
         }
       }
-      // loop over procs to receive remote data
+      /* loop over procs to receive remote data */
       for (i=1; i < comm->nprocs; ++i) {
         int maxbuf = nmax*size_one;
         MPI_Irecv(comm_buf, maxbuf, MPI_BYTE, i, 0, world, &request);
@@ -693,7 +693,7 @@ void FixColvars::end_of_step()
         }
       }
     } else { // me != 0
-      // copy total force data into communication buffer
+      /* copy total force data into communication buffer */
       nme = 0;
       for (i=0; i<num_coords; ++i) {
         const tagint k = atom->map(taglist[i]);
@@ -705,7 +705,7 @@ void FixColvars::end_of_step()
           ++nme;
         }
       }
-      // blocking receive to wait until it is our turn to send data
+      /* blocking receive to wait until it is our turn to send data */
       MPI_Recv(&tmp, 0, MPI_INT, 0, 0, world, MPI_STATUS_IGNORE);
       MPI_Rsend(comm_buf, nme*size_one, MPI_BYTE, 0, 0, world);
     }
