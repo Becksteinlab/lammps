@@ -211,10 +211,10 @@ void Fix::ev_setup(int eflag, int vflag)
 
   if (!thermo_energy) eflag_either = eflag_global = eflag_atom = eflag_only = 0;
   else {
-    eflag_either = eflag;
+    eflag_either = eflag & (ENERGY_GLOBAL | ENERGY_ATOM);
     eflag_global = eflag & ENERGY_GLOBAL;
     eflag_atom = eflag & ENERGY_ATOM;
-    eflag_only = eflag & ENERGY_ONLY;
+    eflag_only = eflag_global ? (eflag & ENERGY_ONLY) : 0;
   }
 
   if (!thermo_virial) vflag_either = vflag_global = vflag_atom = 0;
