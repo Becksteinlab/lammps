@@ -346,8 +346,11 @@ double compute_residual(const double shapefunci, const double* gradi_global,
 
   // --- Spatial Normalization ---
   // Algebraic: Gradients are ~1/R. Dividing by lensq3 normalizes this.
+  // We take average of gradient for polydisperse case
   // Geometric: Gradients are unit vectors. lensq3 is 1.0. This works for both.
-  double spatial_norm = MathExtra::lensq3(residual) / MathExtra::lensq3(gradi_global);
+
+  double gradi_global_mag = 0.5 * (MathExtra::lensq3(gradi_global) + MathExtra::lensq3(gradj_global));
+  double spatial_norm = MathExtra::lensq3(residual) / gradi_global_mag;
 
   // --- Scalar Normalization ---
   double scalar_denom;
