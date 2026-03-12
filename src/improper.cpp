@@ -100,7 +100,7 @@ void Improper::settings(int narg, char **args)
      eflag_atom   != 0 if ENERGY_ATOM bit of eflag is set
      eflag_either != 0 if eflag_global or eflag_atom is set
      eflag_only   != 0 if ENERGY_GLOBAL and ENERGY_ONLY bits of eflag are set
-     vflag_global != 0 if VIRIAL_PAIR or VIRIAL_FDOTR bits of vflag is set
+     vflag_global != 0 if VIRIAL_PAIR or VIRIAL_FDOTR bit of vflag is set
      vflag_atom   != 0 if VIRIAL_ATOM bit of vflag is set
      vflag_atom   != 0 if VIRIAL_CENTROID bit of vflag is set
                        and centroidstressflag != CENTROID_AVAIL
