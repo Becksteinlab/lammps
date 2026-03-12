@@ -635,10 +635,6 @@ int determine_contact_point(const double* xci, const double Ri[3][3], const doub
 
   if (!converged){
     if (shapefunc[0] > 0.0 || shapefunc[1] > 0.0) return 1;
-    std::cout << "Current residual norm: " << norm << std::endl;
-    std::cout << "Shape functions: " << shapefunc[0] << ", " << shapefunc[1] << std::endl;
-    std::cout << "Positions X0: " << X0[0] << ", " << X0[1] << ", " << X0[2] << ", mu2: " << X0[3] << std::endl;
-    std::cout << "Normal nij: " << nij[0] << ", " << nij[1] << ", " << nij[2] << std::endl;
     return 2;} // not failing if not converged but shapefuncs positive (i.e., no contact)
               // might be risky to assume no contact if not converged, NR might have gone to a far away point
               // but no guarantee there is no contact

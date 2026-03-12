@@ -36,11 +36,8 @@ void global2local_vector(const double v[3], const double *quat, double local_v[3
 inline double det4_M44_zero(const double m[4][4]);
 
 // 4 by 4 sytems solvers, they all overwrite b with the solution
-inline bool solve_4x4_manual(double A[16], double b[4]);
-inline bool solve_4x4_robust(double A[16], double b[4]);
 inline bool solve_4x4_robust_unrolled(double A[16], double b[4]);
 
-// ADD CONTACT DETECTION HERE
 inline bool check_oriented_bounding_boxes(const double *xc1, const double R1[3][3],
                                           const double *shape1, const double *xc2,
                                           const double R2[3][3], const double *shape2,

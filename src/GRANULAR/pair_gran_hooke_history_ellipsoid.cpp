@@ -243,22 +243,18 @@ void PairGranHookeHistoryEllipsoid::compute(int eflag, int vflag)
               touching = true;
             else if (status == 1)
               touching = false;
-            else if (status == 2) {
+            else {
               error->warning(FLERR,
-                             "Ellipsoid contact detection (old contact) failed with status {} "
-                             "betwen particle {} and particle {} ",
-                             status, atom->tag[i], atom->tag[j]);
+                             "Ellipsoid contact detection (old contact) failed "
+                             "between particle {} and particle {} ",
+                             atom->tag[i], atom->tag[j]);
             }
           } else {
             // New contact: Build initial guess incrementally by morphing the particles from spheres to actual shape
 
-            // TODO: there might be better heuristic for the "volume equivalent spheres" suggested in the paper
-            //       but this is good enough. We might even be able to use radi and radj which is cheaper, TBD when testing
-            //       If we pick a small radius, we could guaranteed to start outise the grains, would that be better for the Newton?
-            //       If we pick a large radius (e.g. radi, radj) we are more likely to start inside the grains, is this an easier minimization landscape to navigate?
-            //       I don't think there is a general answer because we don't know the shape, and contact point may be far from spherical initial guess
-            //       This makes me think using radi and radj could be fine! To be investigated
-            //       MathExtra::scaleadd3(radj / radsum, x[i], radi /radsum, x[j], X0);
+            // There might be better heuristic for the "volume equivalent spheres" suggested in the paper
+            // but this is good enough. We might even be able to use radi and radj which is cheaper
+            // MathExtra::scaleadd3(radj / radsum, x[i], radi /radsum, x[j], X0);
 
             double reqi = std::cbrt(shapei[0] * shapei[1] * shapei[2]);
             double reqj = std::cbrt(shapej[0] * shapej[1] * shapej[2]);
@@ -290,9 +286,9 @@ void PairGranHookeHistoryEllipsoid::compute(int eflag, int vflag)
               else if (iter_ig == NUMSTEP_INITIAL_GUESS) {
                 // keep trying until last iteration to avoid erroring out too early
                 error->warning(FLERR,
-                               "Ellipsoid contact detection (new contact) failed with status {} "
-                               "betwen particle {} and particle {}",
-                               status, atom->tag[i], atom->tag[j]);
+                               "Ellipsoid contact detection (new contact) failed"
+                               "between particle {} and particle {}",
+                               atom->tag[i], atom->tag[j]);
               }
             }
           }
@@ -591,16 +587,15 @@ void PairGranHookeHistoryEllipsoid::init_style()
   // error and warning checks
 
   if (!atom->radius_flag || !atom->rmass_flag || !atom->angmom_flag || !atom->superellipsoid_flag)
-    error->all(
-        FLERR,
-        "Pair gran/h/ellipsoid* requires atom attributes radius, rmass, angmom and superellipdoid flag");
+    error->all(FLERR,
+               "Pair gran/h/ellipsoid* requires atom attributes radius, rmass, angmom and "
+               "superellipdoid flag");
   if (comm->ghost_velocity == 0)
     error->all(FLERR, "Pair gran/h/ellipsoid* requires ghost atoms store velocity");
 
   // ensure all atoms have an allocated ellipsoid bonus structure (ellipsoidflag > 0)
   int *ellipsoid = atom->ellipsoid;
-  if (!ellipsoid) 
-    error->all(FLERR, "Pair gran/h/ellipsoid* requires atom style ellipsoid");
+  if (!ellipsoid) error->all(FLERR, "Pair gran/h/ellipsoid* requires atom style ellipsoid");
 
   int nlocal = atom->nlocal;
   for (i = 0; i < nlocal; i++) {
@@ -873,7 +868,10 @@ double PairGranHookeHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
       return 0.0;
     }
     if (status != 0)
-      error->one(FLERR, "Ellipsoid contact detection failed with status {} ", status);
+      error->warning(FLERR,
+                     "Ellipsoid contact detection (old contact) failed"
+                     "between particle {} and particle {}",
+                     atom->tag[i], atom->tag[j]);
   } else {
     double reqi = std::cbrt(shapei[0] * shapei[1] * shapei[2]);
     double reqj = std::cbrt(shapej[0] * shapej[1] * shapej[2]);
@@ -902,7 +900,10 @@ double PairGranHookeHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
         return 0.0;
       }
       if (status != 0)
-        error->one(FLERR, "Ellipsoid contact detection failed with status {} ", status);
+        error->one(FLERR,
+                   "Ellipsoid contact detection (new contact) failed"
+                   "between particle {} and particle {}",
+                   atom->tag[i], atom->tag[j]);
     }
   }
   double overlap1, overlap2, omegai[3], omegaj[3];

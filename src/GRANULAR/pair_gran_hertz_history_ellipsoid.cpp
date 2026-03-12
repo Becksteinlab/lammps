@@ -190,9 +190,9 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
               touching = false;
             else
               error->warning(FLERR,
-                             "Ellipsoid contact detection (old contact) failed with status {} "
-                             "betwen particle {} and particle {} ",
-                             status, atom->tag[i], atom->tag[j]);
+                             "Ellipsoid contact detection (old contact) failed"
+                             "between particle {} and particle {}",
+                             atom->tag[i], atom->tag[j]);
           } else {
             // New contact: Build initial guess incrementally by morphing the particles from spheres to actual shape
 
@@ -233,9 +233,9 @@ void PairGranHertzHistoryEllipsoid::compute(int eflag, int vflag)
               else if (iter_ig == NUMSTEP_INITIAL_GUESS) {
                 // keep trying until last iteration to avoid erroring out too early
                 error->warning(FLERR,
-                               "Ellipsoid contact detection (new contact) failed with status {} "
-                               "betwen particle {} and particle {}",
-                               status, atom->tag[i], atom->tag[j]);
+                               "Ellipsoid contact detection (new contact) failed"
+                               "between particle {} and particle {}",
+                               atom->tag[i], atom->tag[j]);
               }
             }
           }
@@ -590,7 +590,10 @@ double PairGranHertzHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
       return 0.0;
     }
     if (status != 0)
-      error->all(FLERR, "Ellipsoid contact detection failed with status {} ", status);
+      error->all(FLERR,
+                 "Ellipsoid contact detection (old contact) failed"
+                 "between particle {} and particle {}",
+                 atom->tag[i], atom->tag[j]);
   } else {
     double reqi = std::cbrt(shapei[0] * shapei[1] * shapei[2]);
     double reqj = std::cbrt(shapej[0] * shapej[1] * shapej[2]);
@@ -619,7 +622,10 @@ double PairGranHertzHistoryEllipsoid::single(int i, int j, int /*itype*/, int /*
         return 0.0;
       }
       if (status != 0)
-        error->all(FLERR, "Ellipsoid contact detection failed with status {} ", status);
+        error->all(FLERR,
+                   "Ellipsoid contact detection (new contact) failed"
+                   "between particle {} and particle {}",
+                   atom->tag[i], atom->tag[j]);
     }
   }
   double overlap1, overlap2, omegai[3], omegaj[3];
