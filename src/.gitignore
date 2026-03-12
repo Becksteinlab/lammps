@@ -1340,6 +1340,8 @@
 /pair_gayberne.h
 /pair_granular.cpp
 /pair_granular.h
+/pair_granular_superellipsoid.cpp
+/pair_granular_superellipsoid.h
 /pair_gran_easy.cpp
 /pair_gran_easy.h
 /pair_gran_hertz_history.cpp
