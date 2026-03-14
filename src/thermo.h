@@ -78,7 +78,7 @@ class Thermo : protected Pointers {
 
   int firststep;
   int lostbefore, warnbefore;
-  int flushflag, lineflag;
+  int flushflag, lineflag, colnameautoflag;
 
   double last_tpcpu, last_spcpu;
   double last_time, last_cpu1, last_cpu2;
