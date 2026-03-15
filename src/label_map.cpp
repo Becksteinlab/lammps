@@ -843,8 +843,8 @@ void LabelMap::check_labels()
         }
       }
     }
-    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
-    if (comm->me == 0 && globally_perfect_labels)
+    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_PROD, 0, MPI_COMM_WORLD);
+    if (comm->me == 0 && globally_perfect_labels == 1)
       utils::logmesg(lmp, "All bonds in the simulation have self-consistent type labels\n");
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -872,8 +872,8 @@ void LabelMap::check_labels()
         }
       }
     }
-    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
-    if (comm->me == 0 && globally_perfect_labels)
+    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_PROD, 0, MPI_COMM_WORLD);
+    if (comm->me == 0 && globally_perfect_labels == 1)
       utils::logmesg(lmp, "All angles in the simulation have self-consistent type labels\n");
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -903,8 +903,8 @@ void LabelMap::check_labels()
         }
       }
     }
-    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
-    if (comm->me == 0 && globally_perfect_labels)
+    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_PROD, 0, MPI_COMM_WORLD);
+    if (comm->me == 0 && globally_perfect_labels == 1)
       utils::logmesg(lmp, "All dihedrals in the simulation have self-consistent type labels\n");
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -934,8 +934,8 @@ void LabelMap::check_labels()
         }
       }
     }
-    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_LAND, 0, MPI_COMM_WORLD);
-    if (comm->me == 0 && globally_perfect_labels)
+    MPI_Reduce(&perfect_labels, &globally_perfect_labels, 1, MPI_INT, MPI_PROD, 0, MPI_COMM_WORLD);
+    if (comm->me == 0 && globally_perfect_labels == 1)
       utils::logmesg(lmp, "All impropers in the simulation have self-consistent type labels\n");
   }
 }
