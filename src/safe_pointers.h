@@ -16,8 +16,6 @@
 
 // collection of smart pointers for specific purposes
 
-#include "platform.h"
-
 #include <cstdio>
 
 namespace LAMMPS_NS {
@@ -75,27 +73,9 @@ class SafeFilePtr {
   SafeFilePtr(SafeFilePtr &&o) noexcept : fp(o.fp), use_pclose(o.use_pclose) { o.fp = nullptr; }
   SafeFilePtr &operator=(const SafeFilePtr &) = delete;
 
-  ~SafeFilePtr()
-  {
-    if (fp) {
-      if (use_pclose)
-        platform::pclose(fp);
-      else
-        fclose(fp);
-    }
-  }
+  ~SafeFilePtr();
 
-  SafeFilePtr &operator=(FILE *_fp)
-  {
-    if (fp && (fp != _fp)) {
-      if (use_pclose)
-        platform::pclose(fp);
-      else
-        fclose(fp);
-    }
-    fp = _fp;
-    return *this;
-  }
+  SafeFilePtr &operator=(FILE *_fp);
   void set_pclose() { use_pclose = true; }
   operator FILE *() const { return fp; }
 
