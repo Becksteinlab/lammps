@@ -245,7 +245,10 @@ void GranSubModTangentialLinearHistoryClassic::calculate_forces()
       scale3(Fscrit * magfs_inv, fs, history);
       scale3(damp, vtr, temp_array);
       add3(history, temp_array, history);
-      scale3(-1.0 / k, history);
+      if (contact_radius_flag)
+        scale3(-1.0 / (k * contact_radius), history);
+      else
+        scale3(-1.0 / k, history);
       scale3(Fscrit * magfs_inv, fs);
     } else {
       zero3(fs);
