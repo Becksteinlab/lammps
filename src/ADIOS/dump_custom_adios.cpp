@@ -35,6 +35,7 @@
 #include "adios_common.h"
 
 using namespace LAMMPS_NS;
+using namespace LAMMPS_ADIOS;
 
 namespace LAMMPS_NS {
 class DumpCustomADIOSInternal {
