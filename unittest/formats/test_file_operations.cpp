@@ -233,11 +233,6 @@ TEST_F(FileOperationsTest, read_lines_from_file)
     if (me == 0) fclose(fp);
 }
 
-// to detect if compiling with C++20 and using std::format instead of fmt::format
-#if __has_include(<version>)
-#include <version>
-#endif
-
 TEST_F(FileOperationsTest, logmesg)
 {
     char buf[128];
