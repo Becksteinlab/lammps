@@ -179,7 +179,7 @@ int FixColvars::parse_fix_arguments(int narg, char **arg, bool fix_constructor)
       // Valid LAMMPS fix keyword: raise error if it has no argument
       if (iarg + 1 == narg) {
         if (fix_constructor)
-          error->all(FLERR, ("Missing argument to keyword \""+std::string(arg[iarg]) +"\""));
+          error->all(FLERR, "Missing argument to keyword {}", arg[iarg]);
         else
           return 0; // Error code consistent with Fix::modify_param()
       }
