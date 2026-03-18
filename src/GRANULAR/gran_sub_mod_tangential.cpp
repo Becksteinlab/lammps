@@ -121,7 +121,7 @@ void GranSubModTangentialLinearHistory::coeffs_to_local()
 void GranSubModTangentialLinearHistory::calculate_forces()
 {
   // Note: this is the same as the base Mindlin calculation except k isn't scaled by contact radius
-  double magfs, magfs_inv, rsht, shrmag;
+  double magfs, rsht, shrmag;
   double hist_increment[3], fdamp[3], vtr2[3];
   int frame_update = 0;
 
@@ -174,11 +174,13 @@ void GranSubModTangentialLinearHistory::calculate_forces()
   if (magfs > Fscrit) {
     shrmag = len3(history);
     if (shrmag != 0.0) {
-      magfs_inv = 1.0 / magfs;
-      scale3(Fscrit * magfs_inv, fs, history);
-      sub3(history, fdamp, history);
+      // Rescale shear force
+      scale3(Fscrit / magfs, fs);
+
+      // Set shear to elastic component of rescaled force
+      //  has extra factor of k that is then removed
+      sub3(fs, fdamp, history);
       scale3(-1.0 / k, history);
-      scale3(Fscrit * magfs_inv, fs);
     } else {
       zero3(fs);
     }
@@ -335,7 +337,7 @@ void GranSubModTangentialMindlin::mix_coeffs(double *icoeffs, double *jcoeffs)
 
 void GranSubModTangentialMindlin::calculate_forces()
 {
-  double k_scaled, magfs, magfs_inv, rsht, shrmag;
+  double k_scaled, magfs, rsht, shrmag;
   double hist_increment[3], fdamp[3], vtr2[3];
   int frame_update = 0;
 
@@ -394,6 +396,14 @@ void GranSubModTangentialMindlin::calculate_forces()
   }
 
   // tangential forces = history + tangential velocity damping
+
+  if (!mindlin_force) {
+    scale3(-k_scaled, history, fs);
+  } else {
+    copy3(history, fs);
+  }
+
+
   // Rotating vtr for damping term in nx direction
   if (frame_update && gm->synchronized_verlet) {
     copy3(vtr, vtr2);
@@ -401,28 +411,22 @@ void GranSubModTangentialMindlin::calculate_forces()
   } else {
     copy3(vtr, vtr2);
   }
-  scale3(-damp, vtr2, fs);
-
-  if (!mindlin_force) {
-    scale3(k_scaled, history, hist_increment);
-    sub3(fs, hist_increment, fs);
-  } else {
-    add3(fs, history, fs);
-  }
+  scale3(-damp, vtr2, fdamp);
+  add3(fs, fdamp, fs);
 
   // rescale frictional displacements and forces if needed
   magfs = len3(fs);
   if (magfs > Fscrit) {
     shrmag = len3(history);
     if (shrmag != 0.0) {
-      magfs_inv = 1.0 / magfs;
-      scale3(Fscrit * magfs_inv, fs, history);
-      scale3(damp, vtr, fdamp);
-      add3(history, fdamp, history);
+      // Rescale shear force
+      scale3(Fscrit / magfs, fs);
 
-      if (!mindlin_force) scale3(-1.0 / k_scaled, history);
-
-      scale3(Fscrit * magfs_inv, fs);
+      // Set shear to elastic component of rescaled force
+      //  may have extra factor of k_scaled that is then removed
+      sub3(fs, fdamp, history);
+      if (!mindlin_force)
+        scale3(-1.0 / k_scaled, history);
     } else {
       zero3(fs);
     }
