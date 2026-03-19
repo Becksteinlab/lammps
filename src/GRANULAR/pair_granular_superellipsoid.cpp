@@ -144,7 +144,7 @@ PairGranularSuperellipsoid::~PairGranularSuperellipsoid()
 void PairGranularSuperellipsoid::compute(int eflag, int vflag)
 {
   int i, j, k, ii, jj, inum, jnum;
-  double factor_lj, mi, mj, meff;
+  double factor_lj, mi, mj;
 
   int *ilist, *jlist, *numneigh, **firstneigh;
   int *touch, **firsttouch;
@@ -229,8 +229,6 @@ void PairGranularSuperellipsoid::compute(int eflag, int vflag)
       xj = x[j];
       radi = radius[i];
       radj = radius[j];
-      itype = itype;
-      jtype = jtype;
       history_data = &allhistory[size_history * jj];
       xref = (tag[i] < tag[j]) ? xi : xj;
       tagi = tag[i];
@@ -1169,10 +1167,10 @@ void PairGranularSuperellipsoid::calculate_forces()
   double damp_prefactor, Fdamp;
   if (damping_model[itype][jtype] == MASS_VELOCITY) {
     damp_prefactor = damp * meff;
-    Fdamp = -damp_prefactor * vnnr;
+    Fdamp = damp_prefactor * vnnr;
   } else {
     damp_prefactor = damp * meff * contact_radius;
-    Fdamp = -damp_prefactor * vnnr;
+    Fdamp = damp_prefactor * vnnr;
   }
 
   // normal forces = elastic contact + normal velocity damping
