@@ -482,6 +482,7 @@ void PairGranularSuperellipsoid::coeff(int narg, char **arg)
   if (damping_one == -1) damping_one = VISCOELASTIC;
 
   // granular model init
+  contact_radius_flag = 0;
   if (normal_one == HERTZ || damping_one == VISCOELASTIC) contact_radius_flag = 1;
 
   int count = 0;
@@ -1130,7 +1131,7 @@ void PairGranularSuperellipsoid::calculate_forces()
 
   sub3(vr, vn, vtr);
 
-  vrel = len3(vtr);   
+  vrel = len3(vtr);
 
   // Approximate contact radius
 
