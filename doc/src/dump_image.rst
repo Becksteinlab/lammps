@@ -560,11 +560,11 @@ and repeats itself for types > 6.
 
 The *level* setting determines the number of triangles in the mesh of
 triangles and thus the resolution of the representation of the
-ellipsoid.  At level 1 the ellipsoid is represented by an octahedron
+ellipsoid.  At level 1 the ellipsoid is represented by an icosahedron
 that is stretched according to the ellipsoid's shape parameters.  For
 each higher level, any of the triangles is replaced by four triangles
 and their edges are shifted to be on the surface of the ellipsoid.  The
-maximum allowed level is 6 (corresponding to 8192 triangles).
+maximum allowed level is 6 (corresponding to 12288 triangles).
 
 .. admonition:: Image quality versus rendering speed
    :class: Hint
