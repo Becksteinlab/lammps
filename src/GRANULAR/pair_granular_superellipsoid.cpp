@@ -357,6 +357,7 @@ void PairGranularSuperellipsoid::settings(int narg, char **arg)
 {
   cutoff_global = -1;    // default: will be set based on particle sizes, model choice
   curvature_model = MathExtraSuperellipsoids::CURV_MEAN;
+  bounding_box = 0;
 
   int iarg = 0;
   while (iarg < narg) {
