@@ -1353,6 +1353,168 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   }
 }
 
+/* ----------------------------------------------------------------------
+   draw triangle with 3 corner points x,y,z
+   3 normals nx,ny,nz and 3 colors cx,cy,cz, one per corner
+   normal and color for each pixel are interpolated using barycentric coords
+------------------------------------------------------------------------- */
+
+void Image::draw_trinorm(const double *x, const double *y, const double *z,
+                         const double *nx, const double *ny, const double *nz,
+                         const double *cx, const double *cy, const double *cz,
+                         const double opacity)
+{
+  if (opacity <= 0.0) return;  // nothing to do
+
+  double d1[3], d1len, d2[3], d2len, normal[3], invndotd;
+  double xlocal[3], ylocal[3], zlocal[3];
+  double surface[3];
+  double depth;
+
+  xlocal[0] = x[0] - xctr;
+  xlocal[1] = x[1] - yctr;
+  xlocal[2] = x[2] - zctr;
+  ylocal[0] = y[0] - xctr;
+  ylocal[1] = y[1] - yctr;
+  ylocal[2] = y[2] - zctr;
+  zlocal[0] = z[0] - xctr;
+  zlocal[1] = z[1] - yctr;
+  zlocal[2] = z[2] - zctr;
+
+  MathExtra::sub3(xlocal, ylocal, d1);
+  d1len = MathExtra::len3(d1);
+  if (d1len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d1len, d1);
+
+  MathExtra::sub3(zlocal, ylocal, d2);
+  d2len = MathExtra::len3(d2);
+  if (d2len == 0.0) return;     // zero length of triangle side
+  MathExtra::scale3(1.0 / d2len, d2);
+
+  MathExtra::cross3(d1, d2, normal);
+  MathExtra::norm3(normal);
+  invndotd = MathExtra::dot3(normal, camDir);
+
+  // triangle parallel to camera and thus invisible
+  if (invndotd == 0.0) return;
+  invndotd = 1.0 / invndotd;
+
+  double r[3],u[3];
+
+  r[0] = MathExtra::dot3(camRight,xlocal);
+  r[1] = MathExtra::dot3(camRight,ylocal);
+  r[2] = MathExtra::dot3(camRight,zlocal);
+
+  u[0] = MathExtra::dot3(camUp,xlocal);
+  u[1] = MathExtra::dot3(camUp,ylocal);
+  u[2] = MathExtra::dot3(camUp,zlocal);
+
+  double rasterLeft = r[0] - MIN(r[0],MIN(r[1],r[2]));
+  double rasterRight = MAX(r[0],MAX(r[1],r[2])) - r[0];
+  double rasterDown = u[0] - MIN(u[0],MIN(u[1],u[2]));
+  double rasterUp = MAX(u[0],MAX(u[1],u[2])) - u[0];
+
+  double xmap = MathExtra::dot3(camRight,xlocal);
+  double ymap = MathExtra::dot3(camUp,xlocal);
+  double dist = MathExtra::dot3(camPos,camDir) - MathExtra::dot3(xlocal,camDir);
+
+  double pixelWidth = (tanPerPixel > 0) ? tanPerPixel * dist : -tanPerPixel / zoom;
+  double xf = xmap / pixelWidth;
+  double yf = ymap / pixelWidth;
+  int xc = static_cast<int>(xf);
+  int yc = static_cast<int>(yf);
+  double width_error = xf - xc;
+  double height_error = yf - yc;
+
+  // shift 0,0 to screen center (vs lower left)
+
+  xc += width / 2;
+  yc += height / 2;
+
+  double pixelLeftFull = rasterLeft / pixelWidth;
+  double pixelRightFull = rasterRight / pixelWidth;
+  double pixelDownFull = rasterDown / pixelWidth;
+  double pixelUpFull = rasterUp / pixelWidth;
+  int pixelLeft = std::lround(pixelLeftFull);
+  int pixelRight = std::lround(pixelRightFull);
+  int pixelDown = std::lround(pixelDownFull);
+  int pixelUp = std::lround(pixelUpFull);
+
+  // precompute for barycentric coordinates
+
+  double v0[3], v1[3];
+  MathExtra::sub3(ylocal, xlocal, v0);
+  MathExtra::sub3(zlocal, xlocal, v1);
+  double d00 = MathExtra::dot3(v0, v0);
+  double d01 = MathExtra::dot3(v0, v1);
+  double d11 = MathExtra::dot3(v1, v1);
+  double denom = d00 * d11 - d01 * d01;
+  if (denom == 0.0) return;    // degenerate triangle
+  double inv_denom = 1.0 / denom;
+
+  for (int iy = yc - pixelDown; iy <= yc + pixelUp; iy ++) {
+    for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ix ++) {
+      if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
+      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+        continue;
+
+      double sy = ((iy - yc) - height_error) * pixelWidth;
+      double sx = ((ix - xc) - width_error) * pixelWidth;
+      surface[0] = camRight[0] * sx + camUp[0] * sy;
+      surface[1] = camRight[1] * sx + camUp[1] * sy;
+      surface[2] = camRight[2] * sx + camUp[2] * sy;
+
+      double t = -MathExtra::dot3(normal,surface) * invndotd;
+
+      // compute point on triangle plane
+
+      double p[3];
+      p[0] = xlocal[0] + surface[0] + camDir[0] * t;
+      p[1] = xlocal[1] + surface[1] + camDir[1] * t;
+      p[2] = xlocal[2] + surface[2] + camDir[2] * t;
+
+      // compute barycentric coordinates
+
+      double v2[3];
+      MathExtra::sub3(p, xlocal, v2);
+      double d20 = MathExtra::dot3(v2, v0);
+      double d21 = MathExtra::dot3(v2, v1);
+      double lambda_y = (d11 * d20 - d01 * d21) * inv_denom;
+      double lambda_z = (d00 * d21 - d01 * d20) * inv_denom;
+      double lambda_x = 1.0 - lambda_y - lambda_z;
+
+      // point outside triangle if any barycentric coordinate is negative
+
+      if (lambda_x < 0.0 || lambda_y < 0.0 || lambda_z < 0.0) continue;
+
+      // interpolate normal from per-vertex normals
+
+      double inormal[3];
+      inormal[0] = lambda_x * nx[0] + lambda_y * ny[0] + lambda_z * nz[0];
+      inormal[1] = lambda_x * nx[1] + lambda_y * ny[1] + lambda_z * nz[1];
+      inormal[2] = lambda_x * nx[2] + lambda_y * ny[2] + lambda_z * nz[2];
+      MathExtra::norm3(inormal);
+
+      // interpolate color from per-vertex colors
+
+      double icolor[3];
+      icolor[0] = lambda_x * cx[0] + lambda_y * cy[0] + lambda_z * cz[0];
+      icolor[1] = lambda_x * cx[1] + lambda_y * cy[1] + lambda_z * cz[1];
+      icolor[2] = lambda_x * cx[2] + lambda_y * cy[2] + lambda_z * cz[2];
+
+      // transform interpolated normal to camera space
+
+      double cNormal[3];
+      cNormal[0] = MathExtra::dot3(camRight, inormal);
+      cNormal[1] = MathExtra::dot3(camUp, inormal);
+      cNormal[2] = MathExtra::dot3(camDir, inormal);
+
+      depth = dist - t;
+      draw_pixel(ix,iy,depth,cNormal,icolor);
+    }
+  }
+}
+
 /* ---------------------------------------------------------------------- */
 
 void Image::draw_pixel(int ix, int iy, double depth,
