@@ -1378,7 +1378,7 @@ void DumpImage::create_image()
   }
 
   // render atoms that are ellipsoids
-  // estyle = 1 for tri only, estyle 2 for wireframe only, estyle 3 for both
+  // estyle = 1 for tri only, estyle 2 for wireframe only
 
   if (ellipsoidflag) {
     double **x = atom->x;
@@ -1410,18 +1410,9 @@ void DumpImage::create_image()
       } else {
         color = image->color2rgb("white");
       }
-      savedColors saved;
-      if (estyle & 1) {
-        // brighten flat surfaces a little bit
-        saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
-      }
       EllipsoidObj e(elevel);
       e.draw(image, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
              avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, opacity);
-      if (estyle & 1) {
-        // restore previous settings
-        restore_lighting(saved, image);
-      }
       m += size_one;
     }
   }
