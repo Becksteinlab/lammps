@@ -1747,17 +1747,18 @@ void DumpImage::create_image()
       if (!objvec || !objarray) continue;
 
       // set color and transparency
+      double *white = image->color2rgb("white");
       opacity = iobj.opacity;
       if (iobj.colorstyle == TYPE) {
         itype = static_cast<int>(objarray[i][0] - 1.0) % ntypes + 1;
-        color = colortype[itype];
+        color = (itype > 0) ? colortype[itype] : white;
       } else if (iobj.colorstyle == ELEMENT) {
         itype = static_cast<int>(objarray[i][0] - 1.0) % ntypes + 1;
-        color = colorelement[itype];
+        color = (itype > 0) ? colorelement[itype] : white;
       } else if (iobj.colorstyle == CONSTANT) {
         color = iobj.rgb;
       } else {
-        color = image->color2rgb("white");
+        color = white;
         opacity = 1.0;
       }
 
@@ -1792,6 +1793,25 @@ void DumpImage::create_image()
         }
       } else if (objvec[i] == Graphics::TRINORM) {    // don't render surface meshes in 2d
         if (domain->dimension == 3) {
+          double *color2 = nullptr;
+          double *color3 = nullptr;
+          if (iobj.colorstyle == TYPE) {
+            itype = static_cast<int>(objarray[i][1] - 1.0) % ntypes + 1;
+            color2 = (itype > 0) ? colortype[itype] : white;
+            itype = static_cast<int>(objarray[i][2] - 1.0) % ntypes + 1;
+            color3 = (itype > 0) ? colortype[itype] : white;
+          } else if (iobj.colorstyle == ELEMENT) {
+            itype = static_cast<int>(objarray[i][1] - 1.0) % ntypes + 1;
+            color2 = (itype > 0) ? colorelement[itype] : white;
+            itype = static_cast<int>(objarray[i][2] - 1.0) % ntypes + 1;
+            color3 = (itype > 0) ? colorelement[itype] : white;
+          } else if (iobj.colorstyle == CONSTANT) {
+            color2 = iobj.rgb;
+            color3 = iobj.rgb;
+          } else {
+            color2 = color3 = image->color2rgb("white");
+            opacity = 1.0;
+          }
           image->draw_trinorm(&objarray[i][1], &objarray[i][4], &objarray[i][7], &objarray[i][10],
                               &objarray[i][13], &objarray[i][16], color, color, color, opacity);
         }
