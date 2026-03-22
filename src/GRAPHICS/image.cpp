@@ -843,6 +843,8 @@ void Image::draw_pixmap(const double *x, int pixwidth, int pixheight, const unsi
 void Image::draw_pixmap(int xc, int yc, int pixwidth, int pixheight, const unsigned char *pixmap,
                         double *transcolor, double scale, double opacity, double dist)
 {
+  if (opacity <= 0.0) return;  // nothing to do
+
   const unsigned char *mypixmap = pixmap;
   unsigned char *npixmap = nullptr;
 
@@ -873,8 +875,8 @@ void Image::draw_pixmap(int xc, int yc, int pixwidth, int pixheight, const unsig
       int iy = ylo + j - pixheight/2;
       int ix = xlo + i - pixwidth/2;
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
-        continue;
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
+          continue;
 
       // get color of pixel at x/y position of pixmap
 
@@ -939,7 +941,7 @@ void Image::draw_sphere(const double *x, const double *surfaceColor, double diam
   for (int iy = yc - pixelRadius; iy <= yc + pixelRadius; iy++) {
     for (int ix = xc - pixelRadius; ix <= xc + pixelRadius; ix++) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
         continue;
 
       double surface[3];
@@ -1007,7 +1009,7 @@ void Image::draw_cube(const double *x, const double *surfaceColor, double diamet
   for (int iy = yc - pixelHalfWidth; iy <= yc + pixelHalfWidth; ++iy) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ++ix) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
         continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
@@ -1163,7 +1165,7 @@ void Image::draw_cylinder(const double *x, const double *y,
   for (int iy = yc - pixelHalfHeight; iy <= yc + pixelHalfHeight; ++iy) {
     for (int ix = xc - pixelHalfWidth; ix <= xc + pixelHalfWidth; ++ix) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
         continue;
 
       double surface[3], normal[3];
@@ -1294,7 +1296,7 @@ void Image::draw_triangle(const double *x, const double *y, const double *z,
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; ++iy) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ++ix) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
         continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
@@ -1449,7 +1451,7 @@ void Image::draw_trinorm(const double *x, const double *y, const double *z,
   for (int iy = yc - pixelDown; iy <= yc + pixelUp; ++iy) {
     for (int ix = xc - pixelLeft; ix <= xc + pixelRight; ++ix) {
       if (iy < 0 || iy >= height || ix < 0 || ix >= width) continue;
-      if (((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity)) || (opacity <= 0.0))
+      if ((opacity < 1.0) && (transthresh[ix % TRANK][iy % TRANK] > opacity))
         continue;
 
       double sy = ((iy - yc) - height_error) * pixelWidth;
