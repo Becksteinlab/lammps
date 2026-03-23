@@ -8,11 +8,11 @@ Syntax
 
 .. code-block:: LAMMPS
 
-   pair_style granular/superellipsoid cutoff bounding_box curvature_gaussian
+   pair_style granular/superellipsoid cutoff no_bounding_box curvature_gaussian
 
 Optional settings, see discussion below.
 * cutoff = global cutoff value
-* bounding_box = oriented bounding box check
+* no_bounding_box = skip oriented bounding box check
 * curvature_gaussian = gaussian curvature coeff approximation for contact patch
 
 Examples
@@ -20,7 +20,7 @@ Examples
 
 .. code-block:: LAMMPS
 
-   pair_style granular/superellipsoid bounding_box
+   pair_style granular/superellipsoid
    pair_coeff * * hooke 1000.0 50.0 tangential linear_history 1000.0 1.0 0.5 damping mass_velocity
 
    pair_style granular/superellipsoid 10.0 curvature_gaussian
@@ -150,7 +150,7 @@ between the particles center is more than the sum of the radii
 Then, if the bounding spheres intersect, intersection of the oriented
 bounding box is checked. This is done following the equations of
 :ref:`(Eberly) <GeometricTools>`.
-This check is only performed if the *bounding_box* keyword is used.
+This check is always performed, unless the *no_bounding_box* keyword is used.
 This is advantageous for all particle shapes except for superellipses with
 aspect ratio close to one and both blockiness indexes close to 2.
 

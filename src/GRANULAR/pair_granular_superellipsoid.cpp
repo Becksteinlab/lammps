@@ -357,12 +357,12 @@ void PairGranularSuperellipsoid::settings(int narg, char **arg)
 {
   cutoff_global = -1;    // default: will be set based on particle sizes, model choice
   curvature_model = MathExtraSuperellipsoids::CURV_MEAN;
-  bounding_box = 0;
+  bounding_box = 1;
 
   int iarg = 0;
   while (iarg < narg) {
-    if (strcmp(arg[iarg], "bounding_box") == 0) {
-      bounding_box = 1;
+    if (strcmp(arg[iarg], "no_bounding_box") == 0) {
+      bounding_box = 0;
       iarg++;
     } else if (strcmp(arg[iarg], "geometric") == 0) {
       contact_formulation = MathExtraSuperellipsoids::FORMULATION_GEOMETRIC;

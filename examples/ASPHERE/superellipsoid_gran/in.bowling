@@ -34,9 +34,8 @@ set             type 2 block 2.0 2.0
 set             type 2 mass 10.0
 group ball type 2
 
-pair_style      granular/superellipsoid bounding_box
+pair_style      granular/superellipsoid
 pair_coeff      * * hooke 1000.0 0.0 tangential linear_history 285 0.0 0.5 damping mass_velocity
-
 
 compute diameter all property/atom shapex shapey shapez
 compute orient all property/atom quatw quati quatj quatk

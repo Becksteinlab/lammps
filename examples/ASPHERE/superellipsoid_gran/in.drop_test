@@ -48,9 +48,7 @@ group           wall type 1
 group           mobile type 2
 
 # Interaction / Pair Style
-# pair_style      gran/hertz/history/ellipsoid 1e4 NULL 20.0 0.0 0.5 0 bounding_box curvature_gaussian
-# pair_coeff      * *
-pair_style granular/superellipsoid curvature_gaussian bounding_box
+pair_style granular/superellipsoid curvature_gaussian
 pair_coeff * * hertz 10000.0 200.0 tangential classic 2850 0.0 0.5 damping viscoelastic
 # Computes and Output
 compute         diameter all property/atom shapex shapey shapez
@@ -81,4 +79,4 @@ thermo          1000
 thermo_style  custom time step ke c_rke 
 
 timestep        0.0001
-run             200000
+run             20000
