@@ -35,10 +35,6 @@
 #include <cmath>
 #include <cstring>
 
-#if !defined(M_PI)
-#define M_PI 3.14159265358979323846
-#endif
-
 #include "fix_mbx.h"
 #include "bblock/system.h"
 

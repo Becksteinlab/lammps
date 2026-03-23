@@ -36,10 +36,6 @@
 #include <cstring>
 #include <mpi.h>
 
-#if !defined(M_PI)
-#define M_PI 3.14159265358979323846
-#endif
-
 #include "bblock/system.h"
 
 #define _MAX_SIZE_MOL_NAME 16
