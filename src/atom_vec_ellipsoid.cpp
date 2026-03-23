@@ -1069,13 +1069,13 @@ void AtomVecEllipsoid::inertia_ellipsoid_principal(double *shape, double mass, d
   } else {
     // superellipsoid, Eq. (12) of Jaklic and Solina, 2003
     double e1 = 2.0 / block[0], e2 = 2.0 / block[1];
-    double beta_tmp1 = std::beta(0.5 * e1, 1 + 2 * e1);
-    double beta_tmp2 = std::beta(0.5 * e2, 0.5 * e2);
-    double beta_tmp3 = std::beta(0.5 * e2, 1.5 * e2);
-    double dens = mass / (std::beta(0.5 * e1, 1.0 + e1) * beta_tmp2);
+    double beta_tmp1 = MathExtra::beta(0.5 * e1, 1 + 2 * e1);
+    double beta_tmp2 = MathExtra::beta(0.5 * e2, 0.5 * e2);
+    double beta_tmp3 = MathExtra::beta(0.5 * e2, 1.5 * e2);
+    double dens = mass / (MathExtra::beta(0.5 * e1, 1.0 + e1) * beta_tmp2);
     double m0 = 0.5 * rsq0 * beta_tmp1 * beta_tmp3;
     double m1 = 0.5 * rsq1 * beta_tmp1 * beta_tmp3;
-    double m2 = rsq2 * std::beta(1.5 * e1, 1 + e1) * beta_tmp2;
+    double m2 = rsq2 * MathExtra::beta(1.5 * e1, 1 + e1) * beta_tmp2;
     idiag[0] = dens * (m1 + m2);
     idiag[1] = dens * (m0 + m2);
     idiag[2] = dens * (m0 + m1);

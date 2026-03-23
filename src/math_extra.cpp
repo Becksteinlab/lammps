@@ -655,8 +655,8 @@ double volume_ellipsoid(double *shape, double *block, int flag_super)
 
   if (flag_super) {
     double e1 = 2.0 / block[0], e2 = 2.0 / block[1];
-    unitvol = e1 * e2 * std::beta(0.5 * e1, 1.0 + e1) *
-                        std::beta(0.5 * e2, 0.5 * e2);
+    unitvol = e1 * e2 * beta(0.5 * e1, 1.0 + e1) *
+                        beta(0.5 * e2, 0.5 * e2);
   }
   return unitvol * shape[0] * shape[1] * shape[2];
 }
