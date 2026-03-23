@@ -154,6 +154,17 @@ This check is always performed, unless the *no_bounding_box* keyword is used.
 This is advantageous for all particle shapes except for superellipses with
 aspect ratio close to one and both blockiness indexes close to 2.
 
+.. warning::
+
+    The Newton-Raphson minimization used to find the midway contact point can
+    fail to converge if the initial starting guess is too far from the true
+    physical surface. This typically occurs if a user specifies a manual global
+    *cutoff* that is significantly larger than the particles **and** enables the
+    *no_bounding_box* keyword. Under these conditions, the solver attempts to
+    resolve contacts between widely separated particles, which might cause the
+    math to diverge and instantly crashing the simulation. It is strongly
+    recommended to keep bounding box checks enabled if a large cutoff is specified.
+
 ----------
 
 This section provides an overview of the various normal, tangential,
@@ -200,6 +211,19 @@ gaussian curvature coefficient :math:`R_i = 1 / \sqrt{\kappa_1 \kappa_2}`, where
 :math:`\kappa_{1,2}` are the principal curvatures of the particle surface at the
 contact point. For *hertz*, the units of the spring constant :math:`k_n` are
 *force*\ /\ *length*\ \^2, or equivalently *pressure*\ .
+
+.. note::
+
+    To ensure numerical stability and preserve physical realism, the computed
+    contact radius is mathematically capped. For highly blocky particles
+    undergoing flat-on-flat contact, the theoretical curvature approaches zero,
+    which would yield an infinite contact radius and cause a force explosion. To
+    prevent this, the maximum contact radius is capped at the physical bounding
+    radius of the smallest interacting particle. Conversely, for sharp corner
+    contacts where curvature approaches infinity, the calculated radius would
+    drop to zero, eliminating the repulsive force entirely. The contact radius
+    is therefore lower-bounded by a minimum fraction of the physical radius
+    (:math:`10^{-4} \min(r_i, r_j)`) to prevent particles from unphysically interpenetrating.
 
 In addition, the normal force is augmented by a damping term of the
 following general form:
@@ -392,9 +416,9 @@ attractive force.
 ----------
 
 LAMMPS automatically sets pairwise cutoff values for *pair_style
-granular* based on particle radii. In the vast majority of situations,
+granular/superellipsoid* based on particle radii. In the vast majority of situations,
 this is adequate. However, a cutoff value can optionally be appended
-to the *pair_style granular* command to specify a global cutoff (i.e.
+to the *pair_style granular/superellipsoid* command to specify a global cutoff (i.e.
 a cutoff for all atom types). This option may be useful in some rare
 cases where the automatic cutoff determination is not sufficient.
 
@@ -441,7 +465,7 @@ This pair style require Newton's third law be set to *off* for pair interactions
 There are currently no versions of *fix wall/gran* or *fix wall/gran/region* that
 are compatible with the superellipsoid particles.
 
-This pair style is part of the GRANULAR package.  It is
+This pair style is part of the ASPHERE package.  It is
 only enabled if LAMMPS was built with that package.
 See the :doc:`Build package <Build_package>` page for more info.
 
