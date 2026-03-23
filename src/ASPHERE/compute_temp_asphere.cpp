@@ -206,13 +206,13 @@ void ComputeTempAsphere::compute_scalar_templated(double &t)
   // no point particles since divide by inertia
   for (int i = 0; i < nlocal; i++) {
     if (mask[i] & groupbit) {
-      
+
       if (mode == ALL) {
         t += (v[i][0]*v[i][0] + v[i][1]*v[i][1] + v[i][2]*v[i][2]) * rmass[i];
       }
 
       int j = ellipsoid[i];
-      
+
       if (is_super) {
         quat = bonus_super[j].quat;
         // principal moments of inertia
@@ -237,7 +237,7 @@ void ComputeTempAsphere::compute_scalar_templated(double &t)
       wbody[2] /= inertia[2];
 
       t += inertia[0]*wbody[0]*wbody[0] +
-           inertia[1]*wbody[1]*wbody[1] + 
+           inertia[1]*wbody[1]*wbody[1] +
            inertia[2]*wbody[2]*wbody[2];
     }
   }
@@ -290,7 +290,7 @@ void ComputeTempAsphere::compute_vector_templated(double *t)
     for (int i = 0; i < nlocal; i++) {
       if (mask[i] & groupbit) {
          massone = rmass[i];
-         
+
         if (mode == ALL) {
           t[0] += massone * v[i][0]*v[i][0];
           t[1] += massone * v[i][1]*v[i][1];
@@ -305,7 +305,7 @@ void ComputeTempAsphere::compute_vector_templated(double *t)
         // principal moments of inertia
         if (is_super) {
           quat = bonus_super[j].quat;
-        
+
           inertia[0] = bonus_super[j].inertia[0];
           inertia[1] = bonus_super[j].inertia[1];
           inertia[2] = bonus_super[j].inertia[2];
@@ -313,7 +313,7 @@ void ComputeTempAsphere::compute_vector_templated(double *t)
         } else {
           quat = bonus[j].quat;
           shape = bonus[j].shape;
-        
+
           inertia[0] = INERTIA*massone * (shape[1]*shape[1] + shape[2]*shape[2]);
           inertia[1] = INERTIA*massone * (shape[0]*shape[0] + shape[2]*shape[2]);
           inertia[2] = INERTIA*massone * (shape[0]*shape[0] + shape[1]*shape[1]);

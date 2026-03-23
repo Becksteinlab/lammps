@@ -174,7 +174,7 @@ See the :doc:`set <set>` command for an explanation of the blockiness.
 The quantities *inertiax*, *inertiay*, and *inertiaz* are defined for superellipsoidal
 particles and define the 3 principal moments of inertia of each particle.
 These are with respect to the particle's center of mass and in a reference system
-aligned with the particle's principal axes.  
+aligned with the particle's principal axes.
 
 The quantities *quatw*, *quati*, *quatj*, and *quatk* are defined for
 ellipsoidal particles and body particles and store the 4-vector quaternion

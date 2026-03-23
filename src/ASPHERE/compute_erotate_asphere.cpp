@@ -127,7 +127,7 @@ double ComputeERotateAsphere::compute_scalar()
           inertia[1] = rmass[i] * (shape[0]*shape[0]+shape[2]*shape[2]) / 5.0;
           inertia[2] = rmass[i] * (shape[0]*shape[0]+shape[1]*shape[1]) / 5.0;
         }
-          
+
         // wbody = angular velocity in body frame
 
         MathExtra::quat_to_mat(quat,rot);

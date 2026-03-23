@@ -355,8 +355,8 @@ quaternion 4-vector with its orientation.  Each particle stores a flag
 in the ellipsoid vector which indicates whether it is an ellipsoid (1)
 or a point particle (0).
 By adding the flag *superellipsoid* to the atom_style command, the particles
-can be superellipsoids, which are a generalization of ellipsoids with two 
-additional blockiness parameters that control the shape. Superellipsoids 
+can be superellipsoids, which are a generalization of ellipsoids with two
+additional blockiness parameters that control the shape. Superellipsoids
 also store the principal moments of inertia of the particle.
 
 For the *line* style, particles can be are idealized line segments

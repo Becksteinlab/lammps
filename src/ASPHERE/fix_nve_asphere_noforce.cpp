@@ -63,7 +63,7 @@ template <bool is_super>
 void FixNVEAsphereNoforce::initial_integrate_templated()
 {
   AtomVecEllipsoid::Bonus *bonus = nullptr;
-  AtomVecEllipsoid::BonusSuper *bonus_super = nullptr;  
+  AtomVecEllipsoid::BonusSuper *bonus_super = nullptr;
   if (avec) {
     if (is_super) bonus_super = avec->bonus_super;
     else bonus = avec->bonus;

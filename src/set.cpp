@@ -1345,7 +1345,7 @@ void Set::invoke_density(Action *action)
 
     else if (ellipsoid_flag && ellipsoid[i] >= 0) {
       double *shape;
-      if (atom->superellipsoid_flag) shape = avec_ellipsoid->bonus_super[ellipsoid[i]].shape; 
+      if (atom->superellipsoid_flag) shape = avec_ellipsoid->bonus_super[ellipsoid[i]].shape;
       else shape = avec_ellipsoid->bonus[ellipsoid[i]].shape;
       // could enable 2d ellipse (versus 3d ellipsoid) when time integration
       //   options (fix nve/asphere, fix nh/asphere) are also implemented
@@ -2016,7 +2016,7 @@ void Set::invoke_quat(Action *action)
 
     if (avec_ellipsoid && ellipsoid[i] >= 0){
       if (atom->superellipsoid_flag) quat_one = avec_ellipsoid->bonus_super[ellipsoid[i]].quat;
-      else quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat; 
+      else quat_one = avec_ellipsoid->bonus[ellipsoid[i]].quat;
     }
     else if (avec_tri && tri[i] >= 0)
       quat_one = avec_tri->bonus[tri[i]].quat;

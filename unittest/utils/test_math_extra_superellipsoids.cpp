@@ -21,23 +21,23 @@
 // TODO: consider making a fixture with several setup functions?
 
 static constexpr double EPSILON = 1e-4;
-static constexpr double SOLV_EPSILON = std::numeric_limits<double>::epsilon() * 100; 
+static constexpr double SOLV_EPSILON = std::numeric_limits<double>::epsilon() * 100;
 
 TEST(HandwrittenSolver, invertible)
 {
-    double A[16] = {4, 2, 1, 3, 
-                    0, 5, 2, 1, 
-                    1, 0, 3, 2, 
+    double A[16] = {4, 2, 1, 3,
+                    0, 5, 2, 1,
+                    1, 0, 3, 2,
                     2, 1, 0, 4};
-                    
+
     double b[4] = {23.0, 20.0, 18.0, 20.0};
-    
+
     double expected_solution[4] = {1.0, 2.0, 3.0, 4.0};
 
     bool success = MathExtraSuperellipsoids::solve_4x4_robust_unrolled(A, b);
 
     ASSERT_TRUE(success) << "The solver falsely flagged an invertible matrix as singular.";
-    
+
     for (int i = 0; i < 4; ++i) {
         ASSERT_NEAR(b[i], expected_solution[i], SOLV_EPSILON) << "Failed at index " << i;
     }

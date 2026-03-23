@@ -581,7 +581,7 @@ void FixRigidSmall::init()
   }
 
   // error for not supported superellipsoids
-  
+
   if (atom->superellipsoid_flag) error->all(FLERR,"Superellipsoids not supported in fix rigid");
 
   // timestep info

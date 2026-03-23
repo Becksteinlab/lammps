@@ -45,8 +45,8 @@ enum { CLASSIC, LINEAR_HISTORY };
 
 static constexpr int NUMSTEP_INITIAL_GUESS = 5;
 static constexpr double EPSILON = 1e-10;
-static constexpr double MIN_RADIUS_RATIO = 1e-4;   
-static constexpr double MIN_CURVATURE = 1e-12;    
+static constexpr double MIN_RADIUS_RATIO = 1e-4;
+static constexpr double MIN_CURVATURE = 1e-12;
 
 /* ---------------------------------------------------------------------- */
 
@@ -1156,7 +1156,7 @@ void PairGranularSuperellipsoid::calculate_forces()
           shapej, blockj, flagj, Rj, surf_point_j, xj);
     }
     double sum_curvature = curvature_i + curvature_j;
-    
+
     // Physical upper bound smallest particle's bounding sphere radius
     double max_physical_radius = MIN(radi, radj);
     double min_physical_radius = MIN_RADIUS_RATIO * max_physical_radius;
@@ -1164,7 +1164,7 @@ void PairGranularSuperellipsoid::calculate_forces()
     if (sum_curvature > MIN_CURVATURE) {
       contact_radius = sqrt((overlap_i + overlap_j) / sum_curvature);
       // Cap the maximum radius (flat faces)
-      contact_radius = MIN(contact_radius, max_physical_radius); 
+      contact_radius = MIN(contact_radius, max_physical_radius);
       // Cap the minimum radius (sharp corners) to prevent force collapse
       contact_radius = MAX(contact_radius, min_physical_radius);
     } else {

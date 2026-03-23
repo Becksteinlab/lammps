@@ -99,14 +99,14 @@ class AtomVecEllipsoid : virtual public AtomVec {
   static double radius_ellipsoid(double *, double *, BlockType);
   static void inertia_ellipsoid_principal(double *, double, double *,
                                    double *block, BlockType);
-  
+
 
   template <bool is_super>
   int pack_comm_bonus_templated(int, int *, double *);
 
   template <bool is_super>
-  void unpack_comm_bonus_templated(int, int, double *); 
-  
+  void unpack_comm_bonus_templated(int, int, double *);
+
   template <bool is_super>
   int pack_border_bonus_templated(int, int *, double *);
 

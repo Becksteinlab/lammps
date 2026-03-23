@@ -1491,7 +1491,7 @@ TEST_F(AtomStyleTest, superellipsoid)
     command("create_atoms 1 single -2.0  2.0  0.1"); // Point
     command("create_atoms 2 single  2.0  2.0 -0.1"); // ELLIPSOID (n1=2, n2=2)
     command("create_atoms 3 single  2.0  2.0 -2.1"); // GENERAL (n1!=n2)
-    command("create_atoms 4 single -2.0 -2.0  0.1"); // N1_EQUAL_N2 
+    command("create_atoms 4 single -2.0 -2.0  0.1"); // N1_EQUAL_N2
     command("set type 1 mass 4.0");
     command("set type 2 mass 2.4");
     command("set type 3 mass 4.4");
@@ -1584,7 +1584,7 @@ TEST_F(AtomStyleTest, superellipsoid)
     EXPECT_NEAR(bonus[1].shape[1], 0.4, EPSILON);
     EXPECT_NEAR(bonus[1].shape[2], 0.55, EPSILON);
     EXPECT_NEAR(bonus[1].block[0], 4.0, EPSILON);
-    EXPECT_NEAR(bonus[1].block[1], 3.0, EPSILON); 
+    EXPECT_NEAR(bonus[1].block[1], 3.0, EPSILON);
     EXPECT_NEAR(bonus[1].type, 2, EPSILON); // BlockType::GENERAL
     ASSERT_EQ(type[GETIDX(4)], 4);
     ASSERT_EQ(ellipsoid[GETIDX(4)], 2);
@@ -1593,7 +1593,7 @@ TEST_F(AtomStyleTest, superellipsoid)
     EXPECT_NEAR(bonus[2].shape[1], 1.0, EPSILON);
     EXPECT_NEAR(bonus[2].shape[2], 1.0, EPSILON);
     EXPECT_NEAR(bonus[2].block[0], 3.5, EPSILON);
-    EXPECT_NEAR(bonus[2].block[1], 3.5, EPSILON); 
+    EXPECT_NEAR(bonus[2].block[1], 3.5, EPSILON);
     EXPECT_NEAR(bonus[2].type, 1, EPSILON); // BlockType::N1_EQUAL_N2
 
     BEGIN_HIDE_OUTPUT();
