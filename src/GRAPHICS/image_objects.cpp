@@ -454,7 +454,8 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   const vec3 offs{center[0], center[1], center[2]};
 
   // optimization: just draw a sphere if a filled surface is requested and the object is a sphere
-  if (dotri && (shape[0] == shape[1]) && (shape[0] == shape[2])) {
+  // note: this does not apply to superellipsoids
+  if (dotri && !block && (shape[0] == shape[1]) && (shape[0] == shape[2])) {
     img->draw_sphere(center, color, 2.0 * shape[0], opacity);
     return;
   }
@@ -496,16 +497,32 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
     }
 
     if (doframe) {
-      // set shape
-      for (int i = 0; i < 3; ++i) {
-        auto &t = tri[i];
-        if (dotri) {
-          // shift the cylinder positions inward by their diameter when using cylinders and
-          // triangles together for a smoother surface to avoid increasing the final size
-          double shapeplus[3] = {shape[0] - diameter, shape[1] - diameter, shape[1] - diameter};
-          t = radscale(shapeplus, t) * t;
-        } else {
-          t = radscale(shape, t) * t;
+      if (block) {
+        // set shape
+        for (int i = 0; i < 3; ++i) {
+          auto &t = tri[i];
+          if (dotri) {
+            // shift the cylinder positions inward by their diameter when using cylinders and
+            // triangles together for a smoother surface to avoid increasing the final size
+            double shapeplus[3] = {shape[0] - diameter, shape[1] - diameter, shape[1] - diameter};
+            t = superscale(shapeplus, block, t) * t;
+          } else {
+            t = superscale(shape, block, t) * t;
+          }
+        }
+
+      } else {
+        // set shape
+        for (int i = 0; i < 3; ++i) {
+          auto &t = tri[i];
+          if (dotri) {
+            // shift the cylinder positions inward by their diameter when using cylinders and
+            // triangles together for a smoother surface to avoid increasing the final size
+            double shapeplus[3] = {shape[0] - diameter, shape[1] - diameter, shape[1] - diameter};
+            t = radscale(shapeplus, t) * t;
+          } else {
+            t = radscale(shape, t) * t;
+          }
         }
       }
 
