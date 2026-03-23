@@ -67,6 +67,14 @@ inline double radscale(const double *shape, const vec3 &pos)
                pos[2] / shape[2] * pos[2] / shape[2]));
 }
 
+// scale factor to move a position to the surface of a superellipsoid with given parameters
+inline double superscale(const double *shape, const double *block, const vec3 &pos)
+{
+  double a = pow(fabs(pos[0] / shape[0]), block[1]) + pow(fabs(pos[1] / shape[1]), block[1]);
+  double b = pow(fabs(pos[2] / shape[2]), block[0]);
+  return pow(pow(a, block[0] / block[1]) + b, -1.0 / block[0]);
+}
+
 // re-orient list of triangles to point along "dir", then scale and translate it.
 std::vector<triangle> transform(const std::vector<triangle> &triangles, const vec3 &dir,
                                 const vec3 &offs, double len, double width)
@@ -430,7 +438,8 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
 // draw method for drawing ellipsoids from per-atom data which has a quaternion
 // and the shape list to define the orientation and stretch
 void EllipsoidObj::draw(Image *img, int flag, const double *color, const double *center,
-                        const double *shape, const double *quat, double diameter, double opacity)
+                        const double *shape, const double *quat, double diameter, double opacity,
+                        const double *block)
 {
   // select between triangles or cylinders or both
   bool doframe = true;
@@ -461,9 +470,16 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
 
     if (dotri) {
       // set shape by shifting each corner to the surface
-      for (int i = 0; i < 3; ++i) {
-        auto &t = tri[i];
-        t = radscale(shape, t) * t;
+      if (block) {
+        for (int i = 0; i < 3; ++i) {
+          auto &t = tri[i];
+          t = superscale(shape, block, t) * t;
+        }
+      } else {
+        for (int i = 0; i < 3; ++i) {
+          auto &t = tri[i];
+          t = radscale(shape, t) * t;
+        }
       }
 
       // rotate
