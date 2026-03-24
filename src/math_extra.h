@@ -848,7 +848,7 @@ inline void MathExtra::outer3(const double *v1, const double *v2, double ans[3][
 
 inline double MathExtra::beta(double x, double y)
 {
-  return std::tgamma(x) * std::tgamma(y) / std::tgamma(x + y);
+  return std::exp(std::lgamma(x) + std::lgamma(y) - std::lgamma(x + y));
 }
 
 #endif
