@@ -1365,12 +1365,16 @@ the quaternion that represents its new orientation is given by
 LAMMPS normalizes each atom's quaternion in case (a,b,c) is not
 specified as a unit vector.
 
-The blockiness values *block1*, *block2* generalize the geometry to a super
-ellipsoid for use in granular simulations. Sections through the center and
-parallel to the z-axis are superellipses with squareness *block1* and sections
-in the x-y plane are superellipses with squareness *block2*.  These parameters
-are optional and default to a value of 2, recovering ellipsoid geometry.
-When specified, both values must be greater than or equal to 2.
+.. versionchanged:: TBD
+
+  Added *block1* and *block2* parameters for superellipsoid geometry.
+
+  The blockiness values *block1*, *block2* generalize the geometry to a super
+  ellipsoid for use in granular simulations. Sections through the center and
+  parallel to the z-axis are superellipses with squareness *block1* and sections
+  in the x-y plane are superellipses with squareness *block2*.  These parameters
+  are optional and default to a value of 2, recovering ellipsoid geometry.
+  When specified, both values must be greater than or equal to 2.
 
 If the data file defines a general triclinic box, then the quaternion
 for each ellipsoid should be specified for its orientation relative to

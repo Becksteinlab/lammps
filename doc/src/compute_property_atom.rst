@@ -167,14 +167,18 @@ If :doc:`newton bond off <newton>` is set, it will be tallied with both atom
 The quantities *shapex*, *shapey*, and *shapez* are defined for ellipsoidal
 particles and define the 3d shape of each particle.
 
-The quantities *block1*, and *block2*, are defined for superellipsoidal
-particles and define the blockiness of each superellipsoid particle.
-See the :doc:`set <set>` command for an explanation of the blockiness.
+.. versionchanged:: TBD
 
-The quantities *inertiax*, *inertiay*, and *inertiaz* are defined for superellipsoidal
-particles and define the 3 principal moments of inertia of each particle.
-These are with respect to the particle's center of mass and in a reference system
-aligned with the particle's principal axes.
+   Added *block1*, *block2*, and *inertiax*, *inertiay*, *inertiaz* keywords for superellipsoids.
+
+   The quantities *block1*, and *block2*, are defined for superellipsoidal
+   particles and define the blockiness of each superellipsoid particle.
+   See the :doc:`set <set>` command for an explanation of the blockiness.
+
+   The quantities *inertiax*, *inertiay*, and *inertiaz* are defined for superellipsoidal
+   particles and define the 3 principal moments of inertia of each particle.
+   These are with respect to the particle's center of mass and in a reference system
+   aligned with the particle's principal axes.
 
 The quantities *quatw*, *quati*, *quatj*, and *quatk* are defined for
 ellipsoidal particles and body particles and store the 4-vector quaternion

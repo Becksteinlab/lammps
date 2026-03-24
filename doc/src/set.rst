@@ -541,21 +541,25 @@ other. Note that the SPH smoothing kernel diameter used for computing
 long range, nonlocal interactions, is set using the *diameter*
 keyword.
 
-Keyword *block* sets the blockiness of the selected atoms.  The
-particles must be ellipsoids as defined by the :doc:`atom_style
-ellipsoid <atom_style>` command.  This command is used to define
-superellipsoid particle shapes for use in granular simulations.
-The *block1*, *block2* settings are the 2 exponents of the superellipsoid
-in the vertical and horizontal directions.  Vertical sections through the
-center are superellipses with squareness *block1* and horizontal sections
-are superellipses with squareness *block2*.  If both parameters are set to
-a value of 2 (the default), the atom is a regular ellipsoid.  The keyword
-*block* should be used together with the keyword *shape* to give the particle
-the desired shape.  If the keyword *block* is given alone, and the *shape* has
-not been defined, e.g., in a previous *set* command, the 3 diameters would be
-set to a value of 1 internally.  Note that this command does not
-adjust the particle mass, even if it was defined with a density,
-e.g. via the :doc:`read_data <read_data>` command.
+.. versionchanged:: TBD
+
+  Added *block* keyword to set blockiness parameters for superellipsoids.
+
+  Keyword *block* sets the blockiness of the selected atoms.  The
+  particles must be ellipsoids as defined by the :doc:`atom_style
+  ellipsoid <atom_style>` command.  This command is used to define
+  superellipsoid particle shapes for use in granular simulations.
+  The *block1*, *block2* settings are the 2 exponents of the superellipsoid
+  in the vertical and horizontal directions.  Vertical sections through the
+  center are superellipses with squareness *block1* and horizontal sections
+  are superellipses with squareness *block2*.  If both parameters are set to
+  a value of 2 (the default), the atom is a regular ellipsoid.  The keyword
+  *block* should be used together with the keyword *shape* to give the particle
+  the desired shape.  If the keyword *block* is given alone, and the *shape* has
+  not been defined, e.g., in a previous *set* command, the 3 diameters would be
+  set to a value of 1 internally.  Note that this command does not
+  adjust the particle mass, even if it was defined with a density,
+  e.g. via the :doc:`read_data <read_data>` command.
 
 
 Keyword *smd/mass/density* sets the mass of all selected particles,

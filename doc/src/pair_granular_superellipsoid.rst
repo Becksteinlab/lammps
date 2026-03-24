@@ -3,6 +3,8 @@
 pair_style granular/superellipsoid command
 ===========================
 
+.. versionadded:: TBD
+
 Syntax
 """"""
 
