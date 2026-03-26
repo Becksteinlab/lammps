@@ -26,6 +26,7 @@
 #include "memory.h"
 #include "modify.h"
 
+#include <algorithm>
 #include <cstring>
 
 using namespace LAMMPS_NS;
@@ -598,7 +599,7 @@ void AtomVecEllipsoid::data_atom_bonus(int m, const std::vector<std::string> &va
 
     double *block = bonus_super[nlocal_bonus].block;
     BlockType &type = bonus_super[nlocal_bonus].type;
-    if (ivalue == (int)values.size()) {
+    if (ivalue == (int) values.size()) {
       block[0] = block[1] = 2.0;
       type = BlockType::ELLIPSOID;
     } else {
