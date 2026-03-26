@@ -620,11 +620,20 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
   } else {
 
     // select whether edges or faces or both should be drawn
-    bool edgeflag = true;
+    bool edgeflag = false;
     bool triflag = true;
+    bool flatflag = false;
     int flag = static_cast<int>(flag2);
-    if (flag == 2) triflag = false;
-    if (flag == 1) edgeflag = false;
+    // default settings are for flag2 == 1
+    if (flag == 2) {
+      edgeflag = true;
+      triflag = false;
+    } else if (flag == 3) {
+      edgeflag = true;
+      flatflag = true;
+    } else if (flag == 4) {
+      flatflag = true;
+    }
 
     int nedges = bonus->ivalue[1];
     if (nvertices == 2) nedges = 1;                  // special case: just two vertices -> one rod
@@ -726,11 +735,14 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
           MathExtra::norm3(&imdata[nelements][12]);
           MathExtra::norm3(&imdata[nelements][15]);
 
-          // shift triangles toward the outside of the body by half diameter when also drawing edges
-          if (edgeflag) {
-            // reset rounded triangles to flat triangles
+          if (flatflag) {
+            // reset rounded triangles to flat triangles, if requested
             imflag[nelements] = Graphics::TRI;
             imflag[nelements-1] = Graphics::TRI;
+          }
+
+          // shift triangles toward the outside of the body by half diameter when also drawing edges
+          if (edgeflag) {
             double vec1[3];
             // get center of face
             double vec2[3] = {imdata[nelements][0],imdata[nelements][1],imdata[nelements][2]};
@@ -796,10 +808,11 @@ int BodyRoundedPolyhedron::image(int ibonus, double flag1, double flag2,
           MathExtra::norm3(&imdata[nelements][12]);
           MathExtra::norm3(&imdata[nelements][15]);
 
+          // reset rounded triangles to flat triangles, if requested
+          if (flatflag) imflag[nelements] = Graphics::TRI;
+
           // shift triangle toward the outside of the body by half diameter when also drawing edges
           if (edgeflag) {
-            // reset rounded triangle to flat triangle
-            imflag[nelements] = Graphics::TRI;
             double vec1[3];
             // get center of face
             double vec2[3] = {imdata[nelements][0],imdata[nelements][1],imdata[nelements][2]};
