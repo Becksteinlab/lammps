@@ -567,7 +567,10 @@ void EllipsoidObj::draw(Image *img, int flag, const double *color, const double 
   bool doframe = false;
   bool dotri = true;
   if (flag == 1) doframe = false;
-  if (flag == 2) doframe = true;
+  if (flag == 2) {
+    dotri = false;
+    doframe = true;
+  }
   if (diameter <= 0.0) doframe = false;
   if (!dotri && !doframe) return;    // nothing to do
 
