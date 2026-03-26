@@ -1410,16 +1410,15 @@ void DumpImage::create_image()
         color = image->color2rgb("white");
       }
       savedColors saved;
-      if (estyle & 1) {
-        // brighten flat surfaces a little bit
-        saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
-      }
       EllipsoidObj e(elevel);
-      e.draw(image, estyle, color, x[j], avec_ellipsoid->bonus[ellipsoid[j]].shape,
-             avec_ellipsoid->bonus[ellipsoid[j]].quat, ediamvalue, opacity);
-      if (estyle & 1) {
-        // restore previous settings
-        restore_lighting(saved, image);
+      if (avec_ellipsoid->bonus_super) {
+        auto *bonus = avec_ellipsoid->bonus_super;
+        e.draw(image, estyle, color, x[j], bonus[ellipsoid[j]].shape, bonus[ellipsoid[j]].quat,
+               ediamvalue, opacity, bonus[ellipsoid[j]].block);
+      } else {
+        auto *bonus = avec_ellipsoid->bonus;
+        e.draw(image, estyle, color, x[j], bonus[ellipsoid[j]].shape,bonus[ellipsoid[j]].quat,
+               ediamvalue, opacity, nullptr);
       }
       m += size_one;
     }

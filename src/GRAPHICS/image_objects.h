@@ -92,9 +92,9 @@ namespace ImageObjects {
     // construct (spherical) triangle mesh by refinining the triangles of an octahedron
     EllipsoidObj(int level = DEF_ELEVEL);
 
-    // draw ellipsoid from triangle mesh for ellipsoid particles
+    // draw ellipsoid from triangle mesh for ellipsoid and superellipsoid particles
     void draw(Image *, int, const double *, const double *, const double *, const double *, double,
-              double opacity = 1.0);
+              double opacity = 1.0, const double *block = nullptr);
 
     // draw ellipsoid from triangle mesh for ellipsoid regions
     void draw(Image *, int, const double *, const double *, const double *, Region *, double,
