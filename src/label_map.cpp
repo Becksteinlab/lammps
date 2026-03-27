@@ -860,7 +860,7 @@ void LabelMap::check_labels()
     if (comm->me == 0 && globally_perfect_labels == comm->nprocs)
       utils::logmesg(lmp, "All bonds in the simulation have self-consistent type labels\n");
   }
-  MPI_Barrier(world);
+
   // some angles are not symmetric, like class2
   perfect_labels = 1;
   if (check_which_labels[1]) {
@@ -899,7 +899,7 @@ void LabelMap::check_labels()
     if (comm->me == 0 && globally_perfect_labels == comm->nprocs)
       utils::logmesg(lmp, "All angles in the simulation have self-consistent type labels\n");
   }
-  MPI_Barrier(world);
+
   // some dihedrals are not symmetric, like class2
   perfect_labels = 1;
   if (check_which_labels[2]) {
@@ -941,7 +941,7 @@ void LabelMap::check_labels()
     if (comm->me == 0 && globally_perfect_labels == comm->nprocs)
       utils::logmesg(lmp, "All dihedrals in the simulation have self-consistent type labels\n");
   }
-  MPI_Barrier(world);
+
   // some impropers are not symmetric, like class2
   perfect_labels = 1;
   if (check_which_labels[3]) {
