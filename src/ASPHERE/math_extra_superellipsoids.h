@@ -429,6 +429,8 @@ inline bool MathExtraSuperellipsoids::check_intersection_axis(const int axis_id,
       R2 = b[0] * AbsC[2][1] + b[1] * AbsC[2][0];
       R = fabs(center_distance_box1[1] * C[0][2] - center_distance_box1[0] * C[1][2]);
       break;
+    default:    // should not happen
+      return false;
   }
 
   if (R > R1 + R2) {

@@ -50,7 +50,14 @@ static constexpr double MIN_CURVATURE = 1e-12;
 
 /* ---------------------------------------------------------------------- */
 
-PairGranularSuperellipsoid::PairGranularSuperellipsoid(LAMMPS *lmp) : Pair(lmp)
+PairGranularSuperellipsoid::PairGranularSuperellipsoid(LAMMPS *lmp) :
+    Pair(lmp), onerad_dynamic(nullptr), onerad_frozen(nullptr), maxrad_dynamic(nullptr),
+    maxrad_frozen(nullptr), fix_dummy(nullptr), fix_history(nullptr), fix_rigid(nullptr),
+    mass_rigid(nullptr), normal_model(nullptr), damping_model(nullptr), tangential_model(nullptr),
+    limit_damping(nullptr), kn(nullptr), gamman(nullptr), kt(nullptr), xt(nullptr), xmu(nullptr),
+    xi(nullptr), xj(nullptr), vi(nullptr), vj(nullptr), quati(nullptr), quatj(nullptr),
+    angmomi(nullptr), angmomj(nullptr), inertiai(nullptr), inertiaj(nullptr), history_data(nullptr),
+    xref(nullptr), cutoff_type(nullptr)
 {
   single_enable = 1;
   no_virial_fdotr_compute = 1;
@@ -243,12 +250,12 @@ void PairGranularSuperellipsoid::compute(int eflag, int vflag)
 
       MathExtra::copy3(bonus[ellipsoid[i]].shape, shapei0);
       MathExtra::copy3(bonus[ellipsoid[j]].shape, shapej0);
-      MathExtra::copy3(bonus[ellipsoid[i]].block, blocki0);
-      MathExtra::copy3(bonus[ellipsoid[j]].block, blockj0);
+      MathExtra::copy2(bonus[ellipsoid[i]].block, blocki0);
+      MathExtra::copy2(bonus[ellipsoid[j]].block, blockj0);
       MathExtra::copy3(bonus[ellipsoid[i]].shape, shapei);
       MathExtra::copy3(bonus[ellipsoid[j]].shape, shapej);
-      MathExtra::copy3(bonus[ellipsoid[i]].block, blocki);
-      MathExtra::copy3(bonus[ellipsoid[j]].block, blockj);
+      MathExtra::copy2(bonus[ellipsoid[i]].block, blocki);
+      MathExtra::copy2(bonus[ellipsoid[j]].block, blockj);
       MathExtra::quat_to_mat(bonus[ellipsoid[i]].quat, Ri);
       MathExtra::quat_to_mat(bonus[ellipsoid[j]].quat, Rj);
 
@@ -424,6 +431,7 @@ void PairGranularSuperellipsoid::coeff(int narg, char **arg)
   }
 
   damping_one = -1;
+  limit_one = 0;
 
   //Parse optional arguments
   while (iarg < narg) {
@@ -787,8 +795,9 @@ void PairGranularSuperellipsoid::reset_dt()
 
 /* ---------------------------------------------------------------------- */
 
-double PairGranularSuperellipsoid::single(int i, int j, int /*itype*/, int /*jtype*/, double /*rsq*/,
-                                          double /*factor_coul*/, double factor_lj, double &fforce)
+double PairGranularSuperellipsoid::single(int i, int j, int /*itype*/, int /*jtype*/,
+                                          double /*rsq*/, double /*factor_coul*/, double factor_lj,
+                                          double &fforce)
 {
   if (factor_lj == 0) {
     fforce = 0.0;
@@ -836,12 +845,12 @@ double PairGranularSuperellipsoid::single(int i, int j, int /*itype*/, int /*jty
 
   MathExtra::copy3(bonus[ellipsoid[i]].shape, shapei0);
   MathExtra::copy3(bonus[ellipsoid[j]].shape, shapej0);
-  MathExtra::copy3(bonus[ellipsoid[i]].block, blocki0);
-  MathExtra::copy3(bonus[ellipsoid[j]].block, blockj0);
+  MathExtra::copy2(bonus[ellipsoid[i]].block, blocki0);
+  MathExtra::copy2(bonus[ellipsoid[j]].block, blockj0);
   MathExtra::copy3(bonus[ellipsoid[i]].shape, shapei);
   MathExtra::copy3(bonus[ellipsoid[j]].shape, shapej);
-  MathExtra::copy3(bonus[ellipsoid[i]].block, blocki);
-  MathExtra::copy3(bonus[ellipsoid[j]].block, blockj);
+  MathExtra::copy2(bonus[ellipsoid[i]].block, blocki);
+  MathExtra::copy2(bonus[ellipsoid[j]].block, blockj);
   MathExtra::quat_to_mat(bonus[ellipsoid[i]].quat, Ri);
   MathExtra::quat_to_mat(bonus[ellipsoid[j]].quat, Rj);
 
