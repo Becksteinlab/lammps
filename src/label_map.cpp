@@ -40,7 +40,9 @@ static const char cite_type_label_framework[] =
     " pages =   {3282--3297}\n"
     "}\n\n";
 
-static const std::string empty;
+namespace {
+const std::string empty;
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -154,7 +156,8 @@ void LabelMap::modify_lmap(int narg, char **arg)
     write_map(arg[1]);
     return;
   } else if (tlabel == "check_labels") {
-    if (narg != 2) error->all(FLERR, "Incorrect number of arguments for labelmap check_labels command");
+    if (narg != 2)
+      error->all(FLERR, "Incorrect number of arguments for labelmap check_labels command");
     for (int j = 0; j < 4; j++) check_which_labels[j] = 0;
     int i = 0;
     char option;
@@ -537,9 +540,11 @@ int LabelMap::infer_dihedraltype(const std::vector<std::string> &mytypes)
     status = parse_typelabel(4, dtypelabel[i], dtypes);
     if (status != -1) {
       if (mytypes[0] == dtypes[0] && mytypes[1] == dtypes[1] && mytypes[2] == dtypes[2] &&
-           mytypes[3] == dtypes[3]) return i + 1;
+          mytypes[3] == dtypes[3])
+        return i + 1;
       if (mytypes[3] == dtypes[0] && mytypes[2] == dtypes[1] && mytypes[1] == dtypes[2] &&
-           mytypes[0] == dtypes[3]) out = -(i + 1);
+          mytypes[0] == dtypes[3])
+        out = -(i + 1);
     }
   }
   return out;
@@ -589,7 +594,8 @@ int LabelMap::infer_impropertype(const std::vector<std::string> &mytypes, std::a
     status = parse_typelabel(4, itypelabel[i], itypes);
     if (status != -1) {
       if (mytypes[0] == itypes[0] && mytypes[1] == itypes[1] && mytypes[2] == itypes[2] &&
-          mytypes[3] == itypes[3]) return i + 1;
+          mytypes[3] == itypes[3])
+        return i + 1;
       navail_types = 4;
       avail_types = mytypes;
       for (int j = 0; j < 4; j++) {
@@ -629,8 +635,8 @@ int LabelMap::infer_impropertype(const std::vector<std::string> &mytypes, std::a
 
 int LabelMap::parse_typelabel(int ntypes, const std::string &label, std::vector<std::string> &types)
 {
-  auto out = Tokenizer(label,"-").as_vector();
-  if ((int)out.size() != ntypes) return -1;
+  auto out = Tokenizer(label, "-").as_vector();
+  if ((int) out.size() != ntypes) return -1;
   types = std::move(out);
   return 1;
 }
@@ -836,10 +842,17 @@ void LabelMap::check_labels()
           std::string atom2_label = atom->lmap->find_label(type[atom2], Atom::ATOM);
           std::string blabel = atom->lmap->find_label(btype, Atom::BOND);
           if (inferred_type == -btype)
-            error->warning(FLERR, "Bond between atoms {}, {} has constituent atom types ({}, {}) in reverse order compared "
-                                  "to its bond type label ({})", tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
-          else error->warning(FLERR, "Bond between atoms {}, {} has constituent atom types ({}, {}) that do not match "
-                                     "its type label ({})", tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
+            error->warning(FLERR,
+                           "Bond between atoms {}, {} has constituent atom types ({}, {}) in "
+                           "reverse order compared "
+                           "to its bond type label ({})",
+                           tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
+          else
+            error->warning(
+                FLERR,
+                "Bond between atoms {}, {} has constituent atom types ({}, {}) that do not match "
+                "its type label ({})",
+                tag[atom1], tag[atom2], atom1_label, atom2_label, blabel);
         }
       }
     }
@@ -866,10 +879,19 @@ void LabelMap::check_labels()
           std::string atom3_label = atom->lmap->find_label(type[atom3], Atom::ATOM);
           std::string alabel = atom->lmap->find_label(atype, Atom::ANGLE);
           if (inferred_type == -atype)
-            error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) in reverse order compared "
-                                  "to its angle type label ({})", tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label, atom3_label, alabel);
-          else error->warning(FLERR, "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) that do not match its "
-                                     "type label ({})", tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label, atom3_label, alabel);
+            error->warning(FLERR,
+                           "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) "
+                           "in reverse order compared "
+                           "to its angle type label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label,
+                           atom3_label, alabel);
+          else
+            error->warning(FLERR,
+                           "Angle between atoms {}, {}, {} has constituent atom types ({}, {}, {}) "
+                           "that do not match its "
+                           "type label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], atom1_label, atom2_label,
+                           atom3_label, alabel);
         }
       }
     }
@@ -889,7 +911,8 @@ void LabelMap::check_labels()
         int atom2 = atom->map(atom->dihedral_atom2[i][j]);
         int atom3 = atom->map(atom->dihedral_atom3[i][j]);
         int atom4 = atom->map(atom->dihedral_atom4[i][j]);
-        int inferred_type = atom->lmap->infer_dihedraltype(type[atom1], type[atom2], type[atom3], type[atom4]);
+        int inferred_type =
+            atom->lmap->infer_dihedraltype(type[atom1], type[atom2], type[atom3], type[atom4]);
         if (inferred_type != dtype) {
           perfect_labels = 0;
           std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
@@ -898,10 +921,19 @@ void LabelMap::check_labels()
           std::string atom4_label = atom->lmap->find_label(type[atom4], Atom::ATOM);
           std::string dlabel = atom->lmap->find_label(dtype, Atom::DIHEDRAL);
           if (inferred_type == -dtype)
-            error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in reverse order compared to its "
-                                  "dihedral type label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
-          else error->warning(FLERR, "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                     "dihedral label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, dlabel);
+            error->warning(FLERR,
+                           "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, "
+                           "{}, {}, {}) in reverse order compared to its "
+                           "dihedral type label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label,
+                           atom3_label, atom4_label, dlabel);
+          else
+            error->warning(FLERR,
+                           "Dihedral between atoms {}, {}, {}, {} has constituent atom types ({}, "
+                           "{}, {}, {}) that do not match its "
+                           "dihedral label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label,
+                           atom3_label, atom4_label, dlabel);
         }
       }
     }
@@ -921,7 +953,8 @@ void LabelMap::check_labels()
         int atom2 = atom->map(atom->improper_atom2[i][j]);
         int atom3 = atom->map(atom->improper_atom3[i][j]);
         int atom4 = atom->map(atom->improper_atom4[i][j]);
-        int inferred_type = atom->lmap->infer_impropertype(type[atom1], type[atom2], type[atom3], type[atom4]);
+        int inferred_type =
+            atom->lmap->infer_impropertype(type[atom1], type[atom2], type[atom3], type[atom4]);
         if (inferred_type != itype) {
           perfect_labels = 0;
           std::string atom1_label = atom->lmap->find_label(type[atom1], Atom::ATOM);
@@ -930,10 +963,19 @@ void LabelMap::check_labels()
           std::string atom4_label = atom->lmap->find_label(type[atom4], Atom::ATOM);
           std::string ilabel = atom->lmap->find_label(itype, Atom::IMPROPER);
           if (inferred_type == -itype)
-            error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) in a different order compared to its "
-                                  "improper type label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
-          else error->warning(FLERR, "Improper containing atoms {}, {}, {}, {} has constituent atom types ({}, {}, {}, {}) that do not match its "
-                                     "improper label ({})", tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label, atom3_label, atom4_label, ilabel);
+            error->warning(FLERR,
+                           "Improper containing atoms {}, {}, {}, {} has constituent atom types "
+                           "({}, {}, {}, {}) in a different order compared to its "
+                           "improper type label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label,
+                           atom3_label, atom4_label, ilabel);
+          else
+            error->warning(FLERR,
+                           "Improper containing atoms {}, {}, {}, {} has constituent atom types "
+                           "({}, {}, {}, {}) that do not match its "
+                           "improper label ({})",
+                           tag[atom1], tag[atom2], tag[atom3], tag[atom4], atom1_label, atom2_label,
+                           atom3_label, atom4_label, ilabel);
         }
       }
     }
