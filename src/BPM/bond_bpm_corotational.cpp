@@ -63,7 +63,7 @@ static double wrap_2pi(double t)
 static void quat_average(double *qA, double *qB, double *q_out)
 {
   double qB_use[4] = {qB[0], qB[1], qB[2], qB[3]};
-  double dot = qA[0]*qB[0] + qA[1]*qB[1] + qA[2]*qB[2] + qA[3]*qB[3];
+  double dot = qA[0] * qB[0] + qA[1] * qB[1] + qA[2] * qB[2] + qA[3] * qB[3];
   if (dot < 0.0) {
     qB_use[0] = -qB[0]; qB_use[1] = -qB[1];
     qB_use[2] = -qB[2]; qB_use[3] = -qB[3];
@@ -82,7 +82,7 @@ static void quat_average(double *qA, double *qB, double *q_out)
 ------------------------------------------------------------------------- */
 static void decompose_swing_twist(double *quat, double *swing, double *twist)
 {
-  double tmp = sqrt(quat[0]*quat[0] + quat[3]*quat[3]);
+  double tmp = sqrt(quat[0] * quat[0] + quat[3] * quat[3]);
   double psi;
   if (tmp < EPSILON) {
     psi = 0.0;
