@@ -475,12 +475,9 @@ FixNH::FixNH(LAMMPS *lmp, int narg, char **arg) :
   }
 
   if (isochoric) {
-    for (int i; i < 3; i++) {
-      if (p_flag[i]) {
-        if (p_isoch[i]) {
-          error->all(FLERR,"Cannot use barostated dimension as isochoric dimension.");
-        }
-      }
+    for (int i = 0; i < 3; i++) {
+      if (p_flag[i] && p_isoch[i])
+        error->all(FLERR,"Cannot use barostated dimension as isochoric dimension.");
     }
     if (dimension == 3 && (p_flag[0] + p_flag[1] + p_flag[2] > 2)) {
       error->all(FLERR,"Cannot perform isochoric NPT with all dimensions barostated.");
@@ -1127,10 +1124,6 @@ void FixNH::remap()
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   double *h = domain->h;
-  double old_volume, new_volume;
-
-  if (dimension == 3) old_volume = domain->xprd * domain->yprd * domain->zprd;
-  else old_volume = domain->xprd * domain->yprd;
 
   // omega is not used, except for book-keeping
 
@@ -1439,9 +1432,9 @@ void FixNH::restart(char *buf)
 {
   int n = 0;
   auto *list = (double *) buf;
-  int flag = static_cast<int> (list[n++]);
+  int flag = static_cast<int>(list[n++]);
   if (flag) {
-    int m = static_cast<int> (list[n++]);
+    int m = static_cast<int>(list[n++]);
     if (tstat_flag && m == mtchain) {
       for (int ich = 0; ich < mtchain; ich++)
         eta[ich] = list[n++];
@@ -1449,7 +1442,7 @@ void FixNH::restart(char *buf)
         eta_dot[ich] = list[n++];
     } else n += 2*m;
   }
-  flag = static_cast<int> (list[n++]);
+  flag = static_cast<int>(list[n++]);
   if (flag) {
     omega[0] = list[n++];
     omega[1] = list[n++];
@@ -1465,14 +1458,14 @@ void FixNH::restart(char *buf)
     omega_dot[5] = list[n++];
     vol0 = list[n++];
     t0 = list[n++];
-    int m = static_cast<int> (list[n++]);
+    int m = static_cast<int>(list[n++]);
     if (pstat_flag && m == mpchain) {
       for (int ich = 0; ich < mpchain; ich++)
         etap[ich] = list[n++];
       for (int ich = 0; ich < mpchain; ich++)
         etap_dot[ich] = list[n++];
     } else n+=2*m;
-    flag = static_cast<int> (list[n++]);
+    flag = static_cast<int>(list[n++]);
     if (flag) {
       h0_inv[0] = list[n++];
       h0_inv[1] = list[n++];
@@ -1481,11 +1474,11 @@ void FixNH::restart(char *buf)
       h0_inv[4] = list[n++];
       h0_inv[5] = list[n++];
     }
-    flag = static_cast<int> (list[n++]);
+    flag = static_cast<int>(list[n++]);
     if (flag) {
-      p_isoch[0] = list[n++];
-      p_isoch[1] = list[n++];
-      p_isoch[2] = list[n++];
+      p_isoch[0] = static_cast<int>(list[n++]);
+      p_isoch[1] = static_cast<int>(list[n++]);
+      p_isoch[2] = static_cast<int>(list[n++]);
       vol_start = list[n++];
     }
   }
