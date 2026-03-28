@@ -28,6 +28,7 @@
 #include "neighbor.h"
 
 #include <cmath>
+#include <cstring>
 
 using namespace LAMMPS_NS;
 using namespace MathConst;
@@ -53,17 +54,17 @@ DihedralFourier::~DihedralFourier()
     memory->destroy(nterms);
 
     for (int i=1; i<= atom->ndihedraltypes; i++) {
-      delete [] k[i];
-      delete [] multiplicity[i];
-      delete [] shift[i];
-      delete [] cos_shift[i];
-      delete [] sin_shift[i];
+      delete[] k[i];
+      delete[] multiplicity[i];
+      delete[] shift[i];
+      delete[] cos_shift[i];
+      delete[] sin_shift[i];
     }
-    delete [] k;
-    delete [] multiplicity;
-    delete [] shift;
-    delete [] cos_shift;
-    delete [] sin_shift;
+    delete[] k;
+    delete[] multiplicity;
+    delete[] shift;
+    delete[] cos_shift;
+    delete[] sin_shift;
   }
 }
 
@@ -256,11 +257,13 @@ void DihedralFourier::allocate()
   int n = atom->ndihedraltypes;
 
   memory->create(nterms,n+1,"dihedral:nterms");
-  k = new double * [n+1];
-  multiplicity = new int * [n+1];
-  shift = new double * [n+1];
-  cos_shift = new double * [n+1];
-  sin_shift = new double * [n+1];
+  memset(nterms,0,sizeof(int)*(n+1));
+
+  k = new double *[n+1];
+  multiplicity = new int *[n+1];
+  shift = new double *[n+1];
+  cos_shift = new double *[n+1];
+  sin_shift = new double *[n+1];
   for (int i = 1; i <= n; i++) {
     k[i] = shift[i] = cos_shift[i] = sin_shift[i] = nullptr;
     multiplicity[i] = nullptr;
@@ -363,12 +366,12 @@ void DihedralFourier::read_restart(FILE *fp)
   MPI_Bcast(&nterms[1],atom->ndihedraltypes,MPI_INT,0,world);
 
   // allocate
-  for (int i=1; i<=atom->ndihedraltypes; i++) {
-    k[i] = new double [nterms[i]];
-    multiplicity[i] = new int [nterms[i]];
-    shift[i] = new double [nterms[i]];
-    cos_shift[i] = new double [nterms[i]];
-    sin_shift[i] = new double [nterms[i]];
+  for (int i = 1; i <= atom->ndihedraltypes; i++) {
+    k[i] = new double[nterms[i]];
+    multiplicity[i] = new int[nterms[i]];
+    shift[i] = new double[nterms[i]];
+    cos_shift[i] = new double[nterms[i]];
+    sin_shift[i] = new double[nterms[i]];
   }
 
   if (comm->me == 0) {
