@@ -518,6 +518,62 @@ EllipsoidObj::EllipsoidObj(int level)
 
   // refine the list of triangles to the desired level
   for (int i = 1; i < level; ++i) refine();
+
+  // Rotate the sphere mesh so that the Cartesian axes point through (or near)
+  // triangle face centers rather than through vertices or edges.  This improves
+  // the visual quality of ellipsoids and superellipsoids by making them appear
+  // less "pointy" along the three principal axes, especially with lower
+  // triangle counts.  The default orientation has the principal axes pass
+  // through corners or edges.  We prefer smooth geometries for simulations
+  // anyway and thus the rotation allows to get a better approximation from the
+  // triangulation with lower refinement levels and thus require less
+  // computational effort for creating an acceptable representation.  The
+  // rotation is constructed by finding the face centers closest to the +x and
+  // +y axes and building an orthonormal basis from them via Gram-Schmidt. This
+  // yields a rotation around a tilted axis that moves vertices off all three
+  // coordinate axes simultaneously.
+
+  if (!triangles.empty()) {
+
+    // Find the face centers (normalized to unit sphere) closest to +x and +y
+    const vec3 ax = {1.0, 0.0, 0.0};
+    const vec3 ay = {0.0, 1.0, 0.0};
+    double best_dx = -1.0, best_dy = -1.0;
+    vec3 cx = ax, cy = ay;
+
+    for (const auto &tri : triangles) {
+      vec3 c = vec3norm(tri[0] + tri[1] + tri[2]);
+      double dx = vec3dot(c, ax);
+      double dy = vec3dot(c, ay);
+      if (dx > best_dx) { best_dx = dx; cx = c; }
+      if (dy > best_dy) { best_dy = dy; cy = c; }
+    }
+
+    // Build orthonormal frame {e1, e2, e3} from the two face center directions
+    // using Gram-Schmidt orthogonalization.  The resulting rotation matrix has
+    // e1, e2, e3 as its rows so that e1 maps to +x, e2 maps to +y, and
+    // e3 = e1 x e2 maps to +z.
+    vec3 e1 = cx;
+    vec3 e2 = vec3norm(cy - vec3dot(cy, e1) * e1);
+    vec3 e3 = vec3cross(e1, e2);
+
+    // clang-format off
+    double R[3][3] = {{e1[0], e1[1], e1[2]},
+                      {e2[0], e2[1], e2[2]},
+                      {e3[0], e3[1], e3[2]}};
+    // clang-format on
+
+    // Apply rotation to all triangle vertices
+    for (auto &tri : triangles) {
+      for (auto &v : tri) {
+        vec3 rv;
+        rv[0] = R[0][0] * v[0] + R[0][1] * v[1] + R[0][2] * v[2];
+        rv[1] = R[1][0] * v[0] + R[1][1] * v[1] + R[1][2] * v[2];
+        rv[2] = R[2][0] * v[0] + R[2][1] * v[1] + R[2][2] * v[2];
+        v = rv;
+      }
+    }
+  }
 }
 
 // draw method for drawing ellipsoids from a region which has its own transformation function
