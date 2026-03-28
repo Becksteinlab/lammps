@@ -335,13 +335,16 @@ void DihedralFourier::coeff(int narg, char **arg)
 
 void DihedralFourier::write_restart(FILE *fp)
 {
+  // must store nterms_max in restart file in addition to the nterms array
+  // the KOKKOS version requires it to store the coefficients in a 2d view
+  fwrite(&nterms_max,sizeof(int),1,fp);
   fwrite(&nterms[1],sizeof(int),atom->ndihedraltypes,fp);
+
   for (int i = 1; i <= atom->ndihedraltypes; i++) {
     fwrite(k[i],sizeof(double),nterms[i],fp);
     fwrite(multiplicity[i],sizeof(int),nterms[i],fp);
     fwrite(shift[i],sizeof(double),nterms[i],fp);
   }
-
 }
 
 /* ----------------------------------------------------------------------
@@ -352,9 +355,11 @@ void DihedralFourier::read_restart(FILE *fp)
 {
   allocate();
 
-  if (comm->me == 0)
+  if (comm->me == 0) {
+    utils::sfread(FLERR,&nterms_max,sizeof(int),1,fp,nullptr,error);
     utils::sfread(FLERR,&nterms[1],sizeof(int),atom->ndihedraltypes,fp,nullptr,error);
-
+  }
+  MPI_Bcast(&nterms_max,1,MPI_INT,0,world);
   MPI_Bcast(&nterms[1],atom->ndihedraltypes,MPI_INT,0,world);
 
   // allocate
