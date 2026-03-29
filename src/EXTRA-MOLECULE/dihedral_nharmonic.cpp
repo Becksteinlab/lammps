@@ -50,9 +50,9 @@ DihedralNHarmonic::~DihedralNHarmonic()
   if (allocated) {
     memory->destroy(setflag);
     for (int i = 1; i <= atom->ndihedraltypes; i++)
-      delete [] a[i];
-    delete [] a;
-    delete [] nterms;
+      delete[] a[i];
+    delete[] a;
+    delete[] nterms;
   }
 }
 
