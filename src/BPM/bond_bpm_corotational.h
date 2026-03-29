@@ -42,9 +42,13 @@ class BondBPMCorotational : public BondBPM {
   double *Kr, *Ks, *Kt, *Kb, *gr, *gs, *gt, *gb;
   double *Fcr, *Fcs, *Tct, *Tcb;
   int smooth_flag, normalize_flag;
+  int frame_style, damping_style;
 
-  double calculate_forces(int, int, int, double *, double *, double *, double *,
-                          double *, double &, double &, double &, double &);
+  double corotational_forces(int, int, int, double *, double *, double *, double *,
+                                   double *, double &, double *);
+  double standard_forces(int, int, int, double *, double *, double *, double *,
+                                   double *, double &, double *);
+  void dem_damping_forces(int, int, int, double *, double *, double *, double *);
 
   void allocate();
   void store_data();
