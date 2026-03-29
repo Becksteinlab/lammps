@@ -40,6 +40,7 @@ DihedralNHarmonic::DihedralNHarmonic(LAMMPS *lmp) : Dihedral(lmp)
   writedata = 1;
   a = nullptr;
   born_matrix_enable = 1;
+  nterms_max = 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -259,8 +260,9 @@ void DihedralNHarmonic::coeff(int narg, char **arg)
 {
   if (narg < 3) error->all(FLERR,"Incorrect args for dihedral coefficients" + utils::errorurl(21));
 
-  int n = utils::inumeric(FLERR,arg[1],false,lmp);
-  if (narg != n + 2)
+  int nterms_one = utils::inumeric(FLERR,arg[1],false,lmp);
+  nterms_max = MAX(nterms_max,nterms_one);
+  if (narg != nterms_one + 2)
     error->all(FLERR,"Incorrect args for dihedral coefficients" + utils::errorurl(21));
 
   if (!allocated) allocate();
@@ -271,9 +273,9 @@ void DihedralNHarmonic::coeff(int narg, char **arg)
   int count = 0;
   for (int i = ilo; i <= ihi; i++) {
     delete[] a[i];
-    a[i] = new double [n];
-    nterms[i] = n;
-    for (int j = 0; j < n; j++) {
+    a[i] = new double [nterms_one];
+    nterms[i] = nterms_one;
+    for (int j = 0; j < nterms_one; j++) {
       a[i][j] = utils::numeric(FLERR,arg[2+j],false,lmp);
       setflag[i] = 1;
     }
