@@ -13,8 +13,8 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing author: Richard Berger (LANL)
-   [ based on dihedral_multi_harmonic_kokkos.cpp ]
+   Contributing author: Axel Kohlmeyer using Claude Opus 4.6
+   [ based on dihedral_multi_harmonic_kokkos.cpp and dihedral_fourier_kokkos.cpp]
 ------------------------------------------------------------------------- */
 
 #include "dihedral_nharmonic_kokkos.h"
@@ -340,20 +340,14 @@ void DihedralNHarmonicKokkos<DeviceType>::operator()(TagDihedralNHarmonicCompute
 template<class DeviceType>
 void DihedralNHarmonicKokkos<DeviceType>::allocate_kokkos()
 {
-  int nd = atom->ndihedraltypes;
-
-  // find maximum number of terms across all dihedral types
-
-  int max_nterms = 0;
-  for (int i = 1; i <= nd; i++)
-    if (nterms[i] > max_nterms) max_nterms = nterms[i];
+  int n = atom->ndihedraltypes;
 
   if (!allocated_kokkos) {
-    k_a = DAT::tdual_kkfloat_2d("DihedralNHarmonic::a",nd+1,max_nterms);
-    k_nterms = DAT::tdual_int_1d("DihedralNHarmonic::nterms",nd+1);
+    k_a = DAT::tdual_kkfloat_2d("DihedralNHarmonic::a",n+1,nterms_max);
+    k_nterms = DAT::tdual_int_1d("DihedralNHarmonic::nterms",n+1);
   } else {
-    k_a.resize(nd+1,max_nterms);
-    k_nterms.resize(nd+1);
+    k_a.resize(n+1,nterms_max);
+    k_nterms.resize(n+1);
   }
 
   d_a = k_a.template view<DeviceType>();
@@ -395,8 +389,8 @@ void DihedralNHarmonicKokkos<DeviceType>::read_restart(FILE *fp)
   DihedralNHarmonic::read_restart(fp);
   allocate_kokkos();
 
-  int nd = atom->ndihedraltypes;
-  for (int i = 1; i <= nd; i++) {
+  int n = atom->ndihedraltypes;
+  for (int i = 1; i <= n; i++) {
     k_nterms.view_host()[i] = nterms[i];
     for (int j = 0; j < nterms[i]; j++)
       k_a.view_host()(i,j) = a[i][j];
