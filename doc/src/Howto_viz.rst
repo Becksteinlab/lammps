@@ -673,7 +673,7 @@ commands to the ``in.ellipse.resquared`` input example:
         color map1 0.459 0.055 0.075 color map2 0.000 0.227 0.427 &
         amap min max cf 0.0 5 min map1 0.1 map1 0.5 white 0.9 map2 max map2
 
-.. versionadded:: TBD
+.. versionadded:: 30Mar2026
 
 The visualization of superellipsoids works exactly the same way as for
 ellipsoids by creating a triangle mesh of an icosahedron and refining
