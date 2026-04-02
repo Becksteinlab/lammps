@@ -13,21 +13,21 @@
 
 #ifdef BOND_CLASS
 // clang-format off
-BondStyle(bpm/rotational,BondBPMRotational);
+BondStyle(bpm/corotational,BondBPMCorotational);
 // clang-format on
 #else
 
-#ifndef LMP_BOND_BPM_ROTATIONAL_H
-#define LMP_BOND_BPM_ROTATIONAL_H
+#ifndef LMP_BOND_BPM_COROTATIONAL_H
+#define LMP_BOND_BPM_COROTATIONAL_H
 
 #include "bond_bpm.h"
 
 namespace LAMMPS_NS {
 
-class BondBPMRotational : public BondBPM {
+class BondBPMCorotational : public BondBPM {
  public:
-  BondBPMRotational(class LAMMPS *);
-  ~BondBPMRotational() override;
+  BondBPMCorotational(class LAMMPS *);
+  ~BondBPMCorotational() override;
   void compute(int, int) override;
   void coeff(int, char **) override;
   void init_style() override;
@@ -39,16 +39,20 @@ class BondBPMRotational : public BondBPM {
   double single(int, double, int, int, double &) override;
 
  protected:
-  double *Kr, *Ks, *Kt, *Kb, *gnorm, *gslide, *groll, *gtwist;
+  double *Kr, *Ks, *Kt, *Kb, *gr, *gs, *gt, *gb;
   double *Fcr, *Fcs, *Tct, *Tcb;
   int smooth_flag, normalize_flag;
+  int frame_style, damping_style;
 
-  double elastic_forces(int, int, int, double, double, double, double *, double *, double *,
-                        double *, double *, double *);
-  void damping_forces(int, int, int, double *, double *, double *, double *, double *);
+  double corotational_forces(int, int, int, double *, double *, double *, double *,
+                                   double *, double &, double *);
+  double standard_forces(int, int, int, double *, double *, double *, double *,
+                                   double *, double &, double *);
+  void dem_damping_forces(int, int, int, double *, double *, double *, double *);
 
   void allocate();
-  void store_data() override;
+  void store_data();
+  double store_bond(int, int, int);
 };
 
 }    // namespace LAMMPS_NS
