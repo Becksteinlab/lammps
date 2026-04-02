@@ -17,7 +17,7 @@
                         Teng Zhang (SyracuseU)
 ------------------------------------------------------------------------- */
 
-#include "bond_bpm_corotational.h"
+#include "bond_bpm_rotational.h"
 
 #include "atom.h"
 #include "comm.h"
@@ -106,7 +106,7 @@ static void decompose_swing_twist(double *quat, double *swing, double *twist)
 
 /* ---------------------------------------------------------------------- */
 
-BondBPMCorotational::BondBPMCorotational(LAMMPS *_lmp) :
+BondBPMRotational::BondBPMRotational(LAMMPS *_lmp) :
     BondBPM(_lmp), Kr(nullptr), Ks(nullptr), Kt(nullptr), Kb(nullptr), gr(nullptr),
     gs(nullptr), gt(nullptr), gb(nullptr), Fcr(nullptr), Fcs(nullptr), Tct(nullptr),
     Tcb(nullptr)
@@ -131,7 +131,7 @@ BondBPMCorotational::BondBPMCorotational(LAMMPS *_lmp) :
 
 /* ---------------------------------------------------------------------- */
 
-BondBPMCorotational::~BondBPMCorotational()
+BondBPMRotational::~BondBPMRotational()
 {
   delete[] svector;
 
@@ -156,7 +156,7 @@ BondBPMCorotational::~BondBPMCorotational()
   Store data for a single bond - if bond added after LAMMPS init
 ------------------------------------------------------------------------- */
 
-double BondBPMCorotational::store_bond(int n, int i, int j)
+double BondBPMRotational::store_bond(int n, int i, int j)
 {
   double delx, dely, delz, r, rinv;
   double **x = atom->x;
@@ -221,7 +221,7 @@ double BondBPMCorotational::store_bond(int n, int i, int j)
   Store data for all bonds called once
 ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::store_data()
+void BondBPMRotational::store_data()
 {
   int i, j, m, type;
   double delx, dely, delz, r, rinv;
@@ -271,7 +271,7 @@ void BondBPMCorotational::store_data()
     Alkuino 2026
 ------------------------------------------------------------------------- */
 
-double BondBPMCorotational::corotational_forces(int i1, int i2, int type,
+double BondBPMRotational::corotational_forces(int i1, int i2, int type,
                                                 double *ri, double *rf,
                                                 double *force1on2, double *torque1on2,
                                                 double *torque2on1, double &ebond,
@@ -503,7 +503,7 @@ double BondBPMCorotational::corotational_forces(int i1, int i2, int type,
     2) P. Mora & Y. Wang Advances in Geomcomputing 2009
 ------------------------------------------------------------------------- */
 
-double BondBPMCorotational::standard_forces(int i1, int i2, int type,
+double BondBPMRotational::standard_forces(int i1, int i2, int type,
                                             double *r0_neg, double *r,
                                             double *force1on2, double *torque1on2,
                                             double *torque2on1, double &ebond,
@@ -747,7 +747,7 @@ double BondBPMCorotational::standard_forces(int i1, int i2, int type,
   Note: n points towards 1 vs pointing towards 2
 ---------------------------------------------------------------------- */
 
-void BondBPMCorotational::dem_damping_forces(int i1, int i2, int type, double *r,
+void BondBPMRotational::dem_damping_forces(int i1, int i2, int type, double *r,
                                              double *force1on2, double *torque1on2, double *torque2on1)
 {
   double v1dotr, v2dotr, w1dotr, w2dotr;
@@ -824,7 +824,7 @@ void BondBPMCorotational::dem_damping_forces(int i1, int i2, int type, double *r
 
 /* ---------------------------------------------------------------------- */
 
-void BondBPMCorotational::compute(int eflag, int vflag)
+void BondBPMRotational::compute(int eflag, int vflag)
 {
   if (!fix_bond_history->stored_flag) {
     fix_bond_history->stored_flag = true;
@@ -933,7 +933,7 @@ void BondBPMCorotational::compute(int eflag, int vflag)
 
 /* ---------------------------------------------------------------------- */
 
-void BondBPMCorotational::allocate()
+void BondBPMRotational::allocate()
 {
   allocated = 1;
   const int np1 = atom->nbondtypes + 1;
@@ -960,7 +960,7 @@ void BondBPMCorotational::allocate()
    args: Kr Ks Kt Kb Fcr Fcs Tct Tcb gr gs gt gb
 ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::coeff(int narg, char **arg)
+void BondBPMRotational::coeff(int narg, char **arg)
 {
   if (narg != 13) error->all(FLERR, "Incorrect args for bond coefficients: "
                             "expected Kr Ks Kt Kb Fcr Fcs Tct Tcb gr gs gt gb");
@@ -1009,7 +1009,7 @@ void BondBPMCorotational::coeff(int narg, char **arg)
    check for correct settings and create fix
 ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::init_style()
+void BondBPMRotational::init_style()
 {
   BondBPM::init_style();
 
@@ -1024,7 +1024,7 @@ void BondBPMCorotational::init_style()
 
 /* ---------------------------------------------------------------------- */
 
-void BondBPMCorotational::settings(int narg, char **arg)
+void BondBPMRotational::settings(int narg, char **arg)
 {
   BondBPM::settings(narg, arg);
 
@@ -1073,7 +1073,7 @@ void BondBPMCorotational::settings(int narg, char **arg)
    proc 0 writes out coeffs to restart file
 ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::write_restart(FILE *fp)
+void BondBPMRotational::write_restart(FILE *fp)
 {
   BondBPM::write_restart(fp);
   write_restart_settings(fp);
@@ -1096,7 +1096,7 @@ void BondBPMCorotational::write_restart(FILE *fp)
    proc 0 reads coeffs from restart file, bcasts them
 ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::read_restart(FILE *fp)
+void BondBPMRotational::read_restart(FILE *fp)
 {
   BondBPM::read_restart(fp);
   read_restart_settings(fp);
@@ -1136,7 +1136,7 @@ void BondBPMCorotational::read_restart(FILE *fp)
    proc 0 writes to restart file
  ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::write_restart_settings(FILE *fp)
+void BondBPMRotational::write_restart_settings(FILE *fp)
 {
   fwrite(&smooth_flag, sizeof(int), 1, fp);
   fwrite(&normalize_flag, sizeof(int), 1, fp);
@@ -1148,7 +1148,7 @@ void BondBPMCorotational::write_restart_settings(FILE *fp)
     proc 0 reads from restart file, bcasts
  ------------------------------------------------------------------------- */
 
-void BondBPMCorotational::read_restart_settings(FILE *fp)
+void BondBPMRotational::read_restart_settings(FILE *fp)
 {
   if (comm->me == 0) {
     utils::sfread(FLERR, &smooth_flag, sizeof(int), 1, fp, nullptr, error);
@@ -1164,7 +1164,7 @@ void BondBPMCorotational::read_restart_settings(FILE *fp)
 
 /* ---------------------------------------------------------------------- */
 
-double BondBPMCorotational::single(int type, double rsq, int i, int j, double &fforce)
+double BondBPMRotational::single(int type, double rsq, int i, int j, double &fforce)
 {
   if (type <= 0) return 0.0;
 

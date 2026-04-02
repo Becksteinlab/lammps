@@ -13,21 +13,21 @@
 
 #ifdef BOND_CLASS
 // clang-format off
-BondStyle(bpm/corotational,BondBPMCorotational);
+BondStyle(bpm/rotational,BondBPMRotational);
 // clang-format on
 #else
 
-#ifndef LMP_BOND_BPM_COROTATIONAL_H
-#define LMP_BOND_BPM_COROTATIONAL_H
+#ifndef LMP_BOND_BPM_ROTATIONAL_H
+#define LMP_BOND_BPM_ROTATIONAL_H
 
 #include "bond_bpm.h"
 
 namespace LAMMPS_NS {
 
-class BondBPMCorotational : public BondBPM {
+class BondBPMRotational : public BondBPM {
  public:
-  BondBPMCorotational(class LAMMPS *);
-  ~BondBPMCorotational() override;
+  BondBPMRotational(class LAMMPS *);
+  ~BondBPMRotational() override;
   void compute(int, int) override;
   void coeff(int, char **) override;
   void init_style() override;
