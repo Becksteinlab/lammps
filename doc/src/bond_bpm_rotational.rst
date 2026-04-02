@@ -336,7 +336,7 @@ p 117-127 (2009).
 
 .. _Wang2009b:
 
-**(Wang and Mora)** Wang, and Mora, Advances in Geocomputing,
+**(Wang and Mora)** Wang and Mora, Advances in Geocomputing,
 119, p 183-228 (2009).
 
 .. _Alkuino2026:
