@@ -10,7 +10,7 @@ Syntax
 
    bond_style bpm/rotational keyword value attribute1 attribute2 ...
 
-* optional keyword = *overlay/pair* or *store/local* or *smooth* or *break*
+* optional keyword = *store/local* or *overlay/pair* or *smooth* or *normalize* or *break* or *frame* or *damping*
 
   .. parsed-literal::
 
@@ -36,12 +36,26 @@ Syntax
        *break* value = *yes* or *no*
           indicates whether bonds break during a run
 
+       *frame* value = *average* or *particle*
+          what frame is used for calculating rotations
+
+       *damping* value = *derivative* or *dem*
+          damping construction
+
+.. note::
+
+   In versions of LAMMPS before .. versionadded:: TBD, the bond style
+   was equivalent to using *frame* *particle* and *damping* *dem*.
+
 Examples
 """"""""
 
 .. code-block:: LAMMPS
 
    bond_style bpm/rotational
+   bond_coeff 1 1.0 0.2 0.02 0.02 0.20 0.04 0.04 0.04 0.1 0.02 0.002 0.002
+
+   bond_style bpm/rotational frame particle damping derivative
    bond_coeff 1 1.0 0.2 0.02 0.02 0.20 0.04 0.04 0.04 0.1 0.02 0.002 0.002
 
    bond_style bpm/rotational store/local myfix 1000 time id1 id2
@@ -65,20 +79,23 @@ has a magnitude of
 
 .. math::
 
-   f_r = k_r (r - r_0)
+   f_\mathrm{radial} = k_\mathrm{radial} (r - r_0)
 
-where :math:`k_r` is a stiffness and :math:`r` is the current distance and
-:math:`r_0` is the initial distance between the two particles.
+where :math:`k_\mathrm{radial}` is a stiffness and :math:`r` is the
+current distance and :math:`r_0` is the initial distance between the
+two particles.
 
 A tangential force is applied perpendicular to the normal direction
 which is proportional to the tangential shear displacement with a
-stiffness of :math:`k_s`. This tangential force also induces a torque.
-In addition, bending and twisting torques are also applied to
-particles which are proportional to angular bending and twisting
-displacements with stiffnesses of :math:`k_b` and :math:`k_t`,
-respectively.  Details on the calculations of shear displacements and
-angular displacements can be found in :ref:`(Wang) <Wang2009>` and
-:ref:`(Wang and Mora) <Wang2009b>`.
+stiffness of :math:`k_\mathrm{shear}`. This tangential force also
+induces a torque. In addition, bending and twisting torques are also
+applied to particles which are proportional to angular bending and
+twisting displacements with stiffnesses of :math:`k_\mathrm{bend}`
+and :math:`k_\mathrm{twist}`, respectively.  Details on the calculations
+of shear displacements and angular displacements can be found in
+:ref:`(Wang) <Wang2009>`, :ref:`(Wang and Mora) <Wang2009b>`, and/or
+:ref:`(Alkuino et al.) <Alkuino2026>` depending on the *frame*
+(discussed below).
 
 Bonds will break under sufficient stress. A breaking criterion is calculated
 
@@ -89,12 +106,18 @@ Bonds will break under sufficient stress. A breaking criterion is calculated
 
 where :math:`|f_s|` is the magnitude of the shear force and
 :math:`|\tau_b|` and :math:`|\tau_t|` are the magnitudes of the
-bending and twisting torques, respectively. The corresponding variables
-:math:`f_{r,c}` :math:`f_{s,c}`, :math:`\tau_{b,c}`, and
+bending and twisting torques, respectively, and *r*, *s*, *t* and *b*
+are short hand for radial, shear, bend, and twist. The corresponding
+variables :math:`f_{r,c}` :math:`f_{s,c}`, :math:`\tau_{b,c}`, and
 :math:`\tau_{t,c}` are critical limits to each force or torque.  If
 :math:`B` is ever equal to or exceeds one, the bond will break.  This
 is done by setting the bond type to 0 such that forces and
-torques are no longer computed.
+torques are no longer computed. 
+
+.. note::
+   The breaking criterion uses undamped forces and torques for *frame* *average*
+   and damped forces and torques for *frame* *particle* to maintain backwards 
+   compatibility with previous versions of this bond style.
 
 After computing the base magnitudes of the forces and torques, they
 can be optionally multiplied by an extra factor :math:`w` to smoothly
@@ -109,35 +132,56 @@ dissipative particle dynamics :ref:`(Groot) <Groot3>`:
 
 .. math::
 
-   F_D = - \gamma_n w (\hat{r} \bullet \vec{v})
+   F_D = - \gamma_\mathrm{radial} w (\hat{r} \bullet \vec{v})
 
-where :math:`\gamma_n` is the damping strength, :math:`\hat{r}` is the
-radial normal vector, and :math:`\vec{v}` is the velocity difference
-between the two particles. Similarly, tangential forces are applied to
-each atom proportional to the relative differences in sliding
-velocities with a constant prefactor :math:`\gamma_s` :ref:`(Wang et
-al.) <Wang20152>` along with their associated torques. The rolling and
-twisting components of the relative angular velocities of the two
-atoms are also damped by applying torques with prefactors of
-:math:`\gamma_r` and :math:`\gamma_t`, respectively.
+where :math:`\gamma_\mathrm{radial}` is the damping strength, :math:`\hat{r}`
+is the radial normal vector, and :math:`\vec{v}` is the velocity difference
+between the two particles. Similarly, additional damping forces/torques
+are applied to other modes. These details depend on the *damping*
+setting.
+
+.. versionadded:: TBD
+
+For *damping* style *derivative* (the default), additional forces/torques
+are applied on shear, twisting, and bending modes. These are simply
+proportional to the rate of change of the shear, bend, and twisting angle,
+respectively with prefactors of :math:`\gamma_\mathrm{shear}`,
+:math:`\gamma_\mathrm{twist}`, and :math:`\gamma_\mathrm{bend}`. Details
+are described in :ref:`(Alkuino et al.) <Alkuino2026>`.
+
+For the *dem* style, forces are applied to each atom proportional to the
+relative differences in sliding velocities with a constant prefactor
+:math:`\gamma_\mathrm{slide}` :ref:`(Wang et al.) <Wang20152>` along with
+the associated torques. The rolling and twisting components of the relative
+angular velocities of the two atoms are also damped by applying torques with
+prefactors of :math:`\gamma_\mathrm{roll}` and :math:`\gamma_\mathrm{twist}`,
+respectively. These modes are commonly used in the discrete element method
+(DEM) as in :doc:`pair granular <pair_granular>`.
 
 The following coefficients must be defined for each bond type via the
 :doc:`bond_coeff <bond_coeff>` command as in the example above, or in
 the data file or restart files read by the :doc:`read_data <read_data>`
 or :doc:`read_restart <read_restart>` commands:
 
-* :math:`k_r`           (force/distance units)
-* :math:`k_s`           (force/distance units)
-* :math:`k_t`           (force*distance/radians units)
-* :math:`k_b`           (force*distance/radians units)
-* :math:`f_{r,c}`       (force units)
-* :math:`f_{s,c}`       (force units)
-* :math:`\tau_{t,c}`    (force*distance units)
-* :math:`\tau_{b,c}`    (force*distance units)
-* :math:`\gamma_n`      (force/velocity units)
-* :math:`\gamma_s`      (force/velocity units)
-* :math:`\gamma_r`      (force*distance/velocity units)
-* :math:`\gamma_t`      (force*distance/velocity units)
+* :math:`k_\mathrm{radial}`        (force/distance units)
+* :math:`k_\mathrm{shear}`         (force/distance units)
+* :math:`k_\mathrm{twist}`         (force*distance/radians units)
+* :math:`k_\mathrm{bend}`          (force*distance/radians units)
+* :math:`f_{\mathrm{radial},c}`    (force units)
+* :math:`f_{\mathrm{shear},c}`     (force units)
+* :math:`\tau_{\mathrm{twist},c}`  (force*distance units)
+* :math:`\tau_{\mathrm{bend},c}`   (force*distance units)
+* :math:`\gamma_\mathrm{radial}`   (force/velocity units)
+* :math:`\gamma_\mathrm{shear}`    (force/velocity units)
+* :math:`\gamma_\mathrm{twist}`    (force*distance/velocity units)
+* :math:`\gamma_\mathrm{bend}`     (force*distance/velocity units)
+
+For damping style *dem*, the last three coefficients are replaced with
+(note that the position of the twisting coefficient is swapped)
+
+* :math:`\gamma_\mathrm{slide}`    (force/velocity units)
+* :math:`\gamma_\mathrm{roll}`     (force*distance/velocity units)
+* :math:`\gamma_\mathrm{twist}`    (force*distance/velocity units)
 
 If the *normalize* keyword is set to *yes*, the radial and shear forces
 will be normalized by :math:`r_0` such that :math:`k_r` and :math:`k_s`
@@ -159,6 +203,18 @@ coefficients (which are ignored) but instead corresponds to the typical heuristi
 maximum strain used by typical non-bpm bond styles. Similar behavior to *break no*
 can also be attained by setting arbitrarily high values for all four failure
 coefficients. One cannot use *break no* with *smooth yes*.
+
+.. versionadded:: TBD
+
+The *frame* setting determines the reference used to calculate relative
+rotations. The *particle* option uses the frame of one particle as
+described in :ref:`(Wang) <Wang2009>` and :ref:`(Wang and Mora) <Wang2009b>`.
+This determination is based on particle ID in LAMMPS.
+The *average* option (the default) defines a central frame across
+the two particles as described in :ref:`(Alkuino et al.) <Alkuino2026>`.
+The latter option implies forces do not depend on particle IDs and can be
+more stable, particularly in simulations of thin or high distorted
+structures such as the wire example in /examples/bpm.
 
 If the *store/local* keyword is used, an internal fix will track bonds that
 break during the simulation. Whenever a bond breaks, data is processed
@@ -269,7 +325,7 @@ Related commands
 Default
 """""""
 
-The option defaults are *overlay/pair* = *no*, *smooth* = *yes*, *normalize* = *no*, and *break* = *yes*
+The option defaults are *overlay/pair* = *no*, *smooth* = *yes*, *normalize* = *no*, *break* = *yes*, *frame* = *average*, and *damping* = *derivative*
 
 ----------
 
@@ -280,8 +336,13 @@ p 117-127 (2009).
 
 .. _Wang2009b:
 
-**(Wang and Mora)** Wang, Mora, Advances in Geocomputing,
+**(Wang and Mora)** Wang and Mora, Advances in Geocomputing,
 119, p 183-228 (2009).
+
+.. _Alkuino2026:
+
+**(Alkuino)** Alkuino, Clemmer, Santangelo, and Zhang, arXiv:2603.27279
+(2026).
 
 .. _Groot3:
 
