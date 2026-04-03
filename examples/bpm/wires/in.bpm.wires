@@ -70,7 +70,7 @@ thermo_style    custom step ke pe pxx pyy pzz
 compute         quat all property/atom quatw quati quatj quatk
 compute         tq all property/atom tqx tqy tqz
 
-dump            atomDump all custom 400 dump id radius xs ys zs c_quat[*] mux muy muz
+#dump            1 all custom 400 atomDump id radius xs ys zs c_quat[*] mux muy muz
 
 run             200000
 
