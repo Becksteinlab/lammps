@@ -37,14 +37,14 @@ Syntax
           indicates whether bonds break during a run
 
        *frame* value = *average* or *particle*
-          what frame is used for calculating rotations
+          what frame is used for calculating the relative displacement and rotation
 
        *damping* value = *derivative* or *dem*
           damping construction
 
 .. note::
 
-   In versions of LAMMPS before .. versionadded:: TBD, the bond style
+   In versions of LAMMPS before (versionadded:: TBD), the bond style
    was equivalent to using *frame* *particle* and *damping* *dem*.
 
 Examples
@@ -85,16 +85,16 @@ where :math:`k_\mathrm{radial}` is a stiffness and :math:`r` is the
 current distance and :math:`r_0` is the initial distance between the
 two particles.
 
-A tangential force is applied perpendicular to the normal direction
-which is proportional to the tangential shear displacement with a
-stiffness of :math:`k_\mathrm{shear}`. This tangential force also
-induces a torque. In addition, bending and twisting torques are also
-applied to particles which are proportional to angular bending and
-twisting displacements with stiffnesses of :math:`k_\mathrm{bend}`
-and :math:`k_\mathrm{twist}`, respectively.  Details on the calculations
-of shear displacements and angular displacements can be found in
+A tangential force, proportional to the tangential shear displacement
+with a stiffness of :math:`k_\mathrm{shear}`, is applied perpendicular
+to the normal direction. This tangential force also induces a torque. 
+In addition, bending and twisting torques, proportional to angular
+bending and twisting displacements with stiffnesses of
+:math:`k_\mathrm{bend}` and :math:`k_\mathrm{twist}`, respectively,
+are also applied to particles. Details on the calculations
+of shear and angular displacements can be found in
 :ref:`(Wang) <Wang2009>`, :ref:`(Wang and Mora) <Wang2009b>`, and/or
-:ref:`(Alkuino et al.) <Alkuino2026>` depending on the *frame*
+:ref:`(Alkuino et al) <Alkuino2026>` depending on the *frame*
 (discussed below).
 
 Bonds will break under sufficient stress. A breaking criterion is calculated
@@ -102,15 +102,15 @@ Bonds will break under sufficient stress. A breaking criterion is calculated
 .. math::
 
    B = \mathrm{max}\left\{0, \frac{f_r}{f_{r,c}} + \frac{|f_s|}{f_{s,c}} +
-       \frac{|\tau_b|}{\tau_{b,c}} + \frac{|\tau_t|}{\tau_{t,c}} \right\}
+       \frac{|\tau_t|}{\tau_{t,c}} + \frac{|\tau_b|}{\tau_{b,c}} \right\}
 
 where :math:`|f_s|` is the magnitude of the shear force and
-:math:`|\tau_b|` and :math:`|\tau_t|` are the magnitudes of the
-bending and twisting torques, respectively, and *r*, *s*, *t* and *b*
-are short hand for radial, shear, bend, and twist. The corresponding
-variables :math:`f_{r,c}` :math:`f_{s,c}`, :math:`\tau_{b,c}`, and
-:math:`\tau_{t,c}` are critical limits to each force or torque.  If
-:math:`B` is ever equal to or exceeds one, the bond will break.  This
+:math:`|\tau_t|` and :math:`|\tau_b|` are the magnitudes of the
+twisting and bending torques, respectively, and *r*, *s*, *t* and *b*
+are shorthand for radial, shear, twist, and bend. The corresponding
+variables :math:`f_{r,c}`, :math:`f_{s,c}`, :math:`\tau_{t,c}`, and
+:math:`\tau_{b,c}` are critical limits to each force or torque.  If
+:math:`B` ever equals or exceeds one, the bond will break.  This
 is done by setting the bond type to 0 such that forces and
 torques are no longer computed. 
 
@@ -127,8 +127,8 @@ or removed by setting the *smooth* keyword to *yes* or *no*, respectively.
 
 Finally, additional damping forces and torques are applied to the two
 particles. A force is applied proportional to the difference in the
-normal velocity of particles using a similar construction as
-dissipative particle dynamics :ref:`(Groot) <Groot3>`:
+normal velocity of particles using a similar construction to that of
+dissipative particle dynamics :ref:`(Groot and Warren) <Groot3>`:
 
 .. math::
 
@@ -144,17 +144,17 @@ setting.
 
 For *damping* style *derivative* (the default), additional forces/torques
 are applied on shear, twisting, and bending modes. These are simply
-proportional to the rate of change of the shear, bend, and twisting angle,
-respectively with prefactors of :math:`\gamma_\mathrm{shear}`,
+proportional to the rate of change of the shear, bend, and twist angles,
+respectively, with prefactors of :math:`\gamma_\mathrm{shear}`,
 :math:`\gamma_\mathrm{twist}`, and :math:`\gamma_\mathrm{bend}`. Details
-are described in :ref:`(Alkuino et al.) <Alkuino2026>`.
+are described in :ref:`(Alkuino et al) <Alkuino2026>`.
 
 For the *dem* style, forces are applied to each atom proportional to the
 relative differences in sliding velocities with a constant prefactor
-:math:`\gamma_\mathrm{slide}` :ref:`(Wang et al.) <Wang20152>` along with
-the associated torques. The rolling and twisting components of the relative
+:math:`\gamma_\mathrm{slide}` :ref:`(Wang et al, 2015) <Wang20152>` along with
+the associated torques. The twisting and rolling components of the relative
 angular velocities of the two atoms are also damped by applying torques with
-prefactors of :math:`\gamma_\mathrm{roll}` and :math:`\gamma_\mathrm{twist}`,
+prefactors of :math:`\gamma_\mathrm{twist}` and :math:`\gamma_\mathrm{roll}`,
 respectively. These modes are commonly used in the discrete element method
 (DEM) as in :doc:`pair granular <pair_granular>`.
 
@@ -172,16 +172,9 @@ or :doc:`read_restart <read_restart>` commands:
 * :math:`\tau_{\mathrm{twist},c}`  (force*distance units)
 * :math:`\tau_{\mathrm{bend},c}`   (force*distance units)
 * :math:`\gamma_\mathrm{radial}`   (force/velocity units)
-* :math:`\gamma_\mathrm{shear}`    (force/velocity units)
+* :math:`\gamma_\mathrm{shear/slide}`    (force/velocity units)
 * :math:`\gamma_\mathrm{twist}`    (force*distance/velocity units)
-* :math:`\gamma_\mathrm{bend}`     (force*distance/velocity units)
-
-For damping style *dem*, the last three coefficients are replaced with
-(note that the position of the twisting coefficient is swapped)
-
-* :math:`\gamma_\mathrm{slide}`    (force/velocity units)
-* :math:`\gamma_\mathrm{roll}`     (force*distance/velocity units)
-* :math:`\gamma_\mathrm{twist}`    (force*distance/velocity units)
+* :math:`\gamma_\mathrm{bend/roll}`     (force*distance/velocity units)
 
 If the *normalize* keyword is set to *yes*, the radial and shear forces
 will be normalized by :math:`r_0` such that :math:`k_r` and :math:`k_s`
@@ -206,14 +199,14 @@ coefficients. One cannot use *break no* with *smooth yes*.
 
 .. versionadded:: TBD
 
-The *frame* setting determines the reference used to calculate relative
-rotations. The *particle* option uses the frame of one particle as
+The *frame* setting determines the reference used to calculate the relative
+displacement and rotation. The *particle* option uses the frame of one particle as
 described in :ref:`(Wang) <Wang2009>` and :ref:`(Wang and Mora) <Wang2009b>`.
 This determination is based on particle ID in LAMMPS.
 The *average* option (the default) defines a central frame across
-the two particles as described in :ref:`(Alkuino et al.) <Alkuino2026>`.
+the two particles as described in :ref:`(Alkuino et al) <Alkuino2026>`.
 The latter option implies forces do not depend on particle IDs and can be
-more stable, particularly in simulations of thin or high distorted
+more stable, particularly in simulations of thin or highly distorted
 structures such as the wire example in /examples/bpm.
 
 If the *store/local* keyword is used, an internal fix will track bonds that
@@ -228,7 +221,7 @@ center of mass position of the two atoms.
 Data is continuously accumulated over intervals of *N*
 timesteps. At the end of each interval, all of the saved accumulated
 data is deleted to make room for new data. Individual datum may
-therefore persist anywhere between *1* to *N* timesteps depending on
+therefore persist anywhere between *1* and *N* timesteps depending on
 when they are saved. This data can be accessed using the *fix_ID* and a
 :doc:`dump local <dump>` command. To ensure all data is output,
 the dump frequency should correspond to the same interval of *N*
@@ -341,12 +334,12 @@ p 117-127 (2009).
 
 .. _Alkuino2026:
 
-**(Alkuino)** Alkuino, Clemmer, Santangelo, and Zhang, arXiv:2603.27279
+**(Alkuino et al)** Alkuino, Clemmer, Santangelo, and Zhang, arXiv:2603.27279
 (2026).
 
 .. _Groot3:
 
-**(Groot)** Groot and Warren, J Chem Phys, 107, 4423-35 (1997).
+**(Groot and Warren)** Groot and Warren, J Chem Phys, 107, 4423-35 (1997).
 
 .. _Wang20152:
 
