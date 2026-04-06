@@ -369,7 +369,7 @@ double PairCoulCutSoftGapsys::single(int i, int j, int itype, int jtype,
     return 0.0;
   }
 
-  cut_inner = (1.0 + sigmaq * abs(atom->q[i] * atom->q[j])) * alphaq * pow(lambda[itype][jtype], 1.0 / 6.0);
+  cut_inner = (1.0 + sigmaq * fabs(atom->q[i] * atom->q[j])) * alphaq * pow(lambda[itype][jtype], 1.0 / 6.0);
 
   if (rsq > cut_inner * cut_inner) {
 
