@@ -112,7 +112,7 @@ variables :math:`f_{r,c}`, :math:`f_{s,c}`, :math:`\tau_{t,c}`, and
 :math:`\tau_{b,c}` are critical limits to each force or torque.  If
 :math:`B` ever equals or exceeds one, the bond will break.  This
 is done by setting the bond type to 0 such that forces and
-torques are no longer computed. 
+torques are no longer computed.
 
 .. note::
    The breaking criterion uses undamped forces and torques for *frame* *average*
