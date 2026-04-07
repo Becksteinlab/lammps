@@ -732,9 +732,9 @@ double BondBPMRotational::particle_frame_forces(int i1, int i2, int type,
 
   // Approximate bond energy:
   ebond = 0.5 * (Kr_type * (r_mag - r0_mag) * (r_mag - r0_mag) +
-                  Ks_type * r_mag * r_mag * gamma * gamma +
-                  Kt[type] * psi * psi +
-                  Kb[type] * theta * theta);
+                 Ks_type * r_mag * r_mag * gamma * gamma +
+                 Kt[type] * psi * psi +
+                 Kb[type] * theta * theta);
 
   return breaking;
 
