@@ -50,10 +50,10 @@ FixNVEBPMSphere::FixNVEBPMSphere(LAMMPS *_lmp, int narg, char **arg) : FixNVE(_l
 
   int iarg = 3;
   while (iarg < narg) {
-    if (strcmp(arg[iarg],"update") == 0) {
-      if (iarg+2 > narg) utils::missing_cmd_args(FLERR, "fix nve/bpm/sphere update", error);
-      if (strcmp(arg[iarg+1],"dipole") == 0) extra = DIPOLE;
-      else if (strcmp(arg[iarg+1],"dipole/dlm") == 0) {
+    if (strcmp(arg[iarg], "update") == 0) {
+      if (iarg + 2 > narg) utils::missing_cmd_args(FLERR, "fix nve/bpm/sphere update", error);
+      if (strcmp(arg[iarg + 1], "dipole") == 0) extra = DIPOLE;
+      else if (strcmp(arg[iarg + 1], "dipole/dlm") == 0) {
         extra = DIPOLE;
         dlm = DLM;
       } else error->all(FLERR, "Unknown keyword in fix nve/bpm/sphere update command: {}", arg[iarg+1]);

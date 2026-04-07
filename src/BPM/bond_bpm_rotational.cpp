@@ -28,7 +28,6 @@
 #include "math_const.h"
 #include "math_extra.h"
 #include "memory.h"
-#include "modify.h"
 #include "neighbor.h"
 #include "update.h"
 
@@ -260,8 +259,6 @@ void BondBPMRotational::store_data()
           fix_bond_history->update_atom_value(i, m, a, 0.0);
     }
   }
-
-  fix_bond_history->post_neighbor();
 }
 
 /* ----------------------------------------------------------------------
