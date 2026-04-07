@@ -51,6 +51,7 @@ negotiate an appropriate license for such distribution."
 #include "fix_imd.h"
 
 #include "atom.h"
+#include "atom_masks.h"
 #include "comm.h"
 #include "domain.h"
 #include "error.h"
@@ -609,6 +610,35 @@ FixIMD::FixIMD(LAMMPS *lmp, int narg, char **arg) :
   /* storage required to communicate a single coordinate, velocity, or force. */
   size_one = sizeof(struct commdata);
 
+  /* Setting Kokkos datamasks */
+  if (imd_version == 3) {
+    /* Streaming (end_of_step) is READ-ONLY from GPU
+     * Force application (post_force) READS tag/mask/f and WRITES (modifies) f.
+     * Sync operations between CPU and GPU done accordingly.
+     *
+     * datamask_read_streaming: arrays needed for streaming output.
+     * datamask_read_force: arrays needed to apply forces received from IMD client.
+     * Streaming masks are toggled into datamask_read only on trate steps under
+     * post_force, which is called at the beginning of each time step.
+     * Read force masks are set by end_of_step if forces were recieved in the
+     * post_force call at the ebginning of the step. 
+     * Then, first force modification (datamask_modify) is done with a single timestep delay. 
+     * Thus, end_of_step sets masks for the next timesteps's post_force
+     * and post_force sets masks for the current timestep's end_of_step. */
+    datamask_read_streaming = TAG_MASK | MASK_MASK;
+    datamask_read_force = datamask_read_streaming | F_MASK;
+    if (imdsinfo->coords)     datamask_read_streaming |= X_MASK;
+    if (imdsinfo->unwrap)     datamask_read_streaming |= IMAGE_MASK;
+    if (imdsinfo->velocities) datamask_read_streaming |= V_MASK;
+    if (imdsinfo->forces)     datamask_read_streaming |= F_MASK;
+    /* No syncing at startup */
+    datamask_read = EMPTY_MASK;
+    datamask_modify = EMPTY_MASK;
+    force_masks_ready = 0;
+  }
+
+  nevery = 1;
+
 #if defined(LAMMPS_ASYNC_IMD)
   /* set up for i/o worker thread on MPI rank 0.*/
   if (me == 0) {
@@ -771,7 +801,7 @@ void FixIMD::setup(int)
 {
   if (imd_version == 2) {
     setup_v2();
-  } else {
+  } else if (imd_version == 3) {
     setup_v3();
   }
 }
@@ -1028,9 +1058,14 @@ void FixIMD::post_force(int /*vflag*/)
     handle_step_v2();
   } else if (imd_version == 3) {
     handle_client_input_v3();
+    /* Only modify if forces are received and updated on synced Host force values. */
+    datamask_modify = (imd_forces > 0 && force_masks_ready) ? F_MASK : EMPTY_MASK;
+    /* Set datamask_read for the upcoming end_of_step sync. */
+    if (update->ntimestep % imd_trate == 0) {
+      datamask_read = datamask_read_streaming;
+    }
   }
-
-  }
+}
 
 /* ---------------------------------------------------------------------- */
 
@@ -1044,8 +1079,23 @@ void FixIMD::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 
 void FixIMD::end_of_step()
 {
-  if (imd_version == 3 && update->ntimestep % imd_trate == 0) {
-    handle_output_v3();
+  if (imd_version == 3) {
+    if (update->ntimestep % imd_trate == 0) {
+      handle_output_v3();
+    }
+
+  /* Streaming is read-only: no atom arrays were modified.
+   * Set datamask_read for next step's post_force sync:
+   * If forces are active, post_force needs updated f/tag/mask on Host, then
+   * set read masks to datamask_read_force and force_masks_ready accordingly */
+    datamask_modify = EMPTY_MASK;
+    if (imd_forces > 0) {
+      datamask_read = datamask_read_force;
+      force_masks_ready = 1;
+    } else {
+      datamask_read = EMPTY_MASK;
+      force_masks_ready = 0;
+    }
   }
 }
 
@@ -1389,10 +1439,6 @@ void FixIMD::handle_client_input_v3() {
   }
 
   struct commdata *buf;
-  int nlocal = atom->nlocal;
-  int *mask  = atom->mask;
-  tagint *tag = atom->tag;
-  double **f = atom->f;
 
   if (me == 0) {
     /* process all pending incoming data. */
@@ -1536,7 +1582,16 @@ void FixIMD::handle_client_input_v3() {
    *
    * If we don't communicate, only check if we have forces
    * stored away and apply them. */
-  if (imd_forces > 0) {
+  /* Apply stored IMD forces to atoms.
+   * Skip if !force_masks_ready: on the first step forces arrive,
+   * Kokkos synced with EMPTY_MASK so f[] on Host is not accurate.
+   * end_of_step will set force_masks_ready=1 and pre-load the
+   * correct masks; forces apply cleanly from next time step. */
+  if (imd_forces > 0 && force_masks_ready) {
+    int nlocal = atom->nlocal;
+    int *mask  = atom->mask;
+    tagint *tag = atom->tag;
+    double **f = atom->f;
     buf = static_cast<struct commdata *>(recv_force_buf);
 
     /* XXX. this is in principle O(N**2) == not good.

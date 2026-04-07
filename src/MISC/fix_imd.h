@@ -114,6 +114,10 @@ class FixIMD : public Fix {
   int msglen;
   char *msgdata;
 
+  uint64_t datamask_read_streaming;  // full mask needed on streaming steps
+  uint64_t datamask_read_force;      // full mask needed to apply forces
+  int force_masks_ready;   // true after force masks are pre-loaded for next time step
+
  private:
   void setup_v2();
   void setup_v3();
