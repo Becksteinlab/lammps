@@ -1060,8 +1060,8 @@ void FixIMD::post_force(int /*vflag*/)
     handle_client_input_v3();
     /* Only modify if forces are received and updated on synced Host force values. */
     datamask_modify = (imd_forces > 0 && force_masks_ready) ? F_MASK : EMPTY_MASK;
-    /* Set datamask_read for the upcoming end_of_step sync. */
-    if (update->ntimestep % imd_trate == 0) {
+    /* Set datamask_read for the upcoming end_of_step sync if imd is active. */
+    if (update->ntimestep % imd_trate == 0 && !imd_inactive) {
       datamask_read = datamask_read_streaming;
     }
   }
@@ -1080,7 +1080,7 @@ void FixIMD::post_force_respa(int vflag, int ilevel, int /*iloop*/)
 void FixIMD::end_of_step()
 {
   if (imd_version == 3) {
-    if (update->ntimestep % imd_trate == 0) {
+    if (update->ntimestep % imd_trate == 0 && !imd_inactive) {
       handle_output_v3();
     }
 
