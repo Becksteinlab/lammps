@@ -392,6 +392,23 @@ The inner cutoff :math:`r_{inner}` is given by
 where :math:`q_i` and :math:`q_j` are the charges on the two atoms. For :math:`\lambda = 0`,
 :math:`r_{inner} = 0` and the potential recovers the full electrostatic interactions.
 
+For distances larger than :math:`r_{inner}`, the energy is computed by the full coulomb
+potential
+
+.. math::
+
+   E = \frac{ C q_i q_j}{\epsilon r} \qquad r_{inner} < r < r_c
+
+where :math:`C` is an energy-conversion constant, and epsilon is the dielectric
+constant which can be set by the :doc:`dielectric <dielectric>` command.
+
+For distances shorter than :math:`r_{inner}`, the energy is computed by a quadratic relationship
+
+.. math::
+
+   E = \frac{q_i q_j}{r_{inner}^3}r^2 - \frac{3q_i q_j}{r_{inner}^2}r + \frac{3q_i q_j}{r_{inner}}
+             \qquad r < r_{inner} < r_c
+
 The *coul/cut/soft/gapsys* style requires the following pair coefficients:
 
 * :math:`\sigma_q` (inverse squared charge units)
@@ -399,6 +416,7 @@ The *coul/cut/soft/gapsys* style requires the following pair coefficients:
 * :math:`\lambda` (unitless, between 0.0 and 1.0)
 * cutoff (distance units)
 
+The recommended value for :math:`\sigma_q` is 1.0.
 
 ----------
 
