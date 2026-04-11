@@ -383,6 +383,23 @@ used.
 
 A place to include the functional form of the pair_style gapsys :ref:`(Gapsys) <Gapsys>`
 
+The inner cutoff :math:`r_{inner}` is given by
+
+.. math::
+
+   r_{inner} = \alpha_q \left( 1 + \sigma_q \left| q_i q_j \right| \right) \lambda^{1 / 6}
+
+where :math:`q_i` and :math:`q_j` are the charges on the two atoms. For :math:`\lambda = 0`,
+:math:`r_{inner} = 0` and the potential recovers the full electrostatic interactions.
+
+The *coul/cut/soft/gapsys* style requires the following pair coefficients:
+
+* :math:`\sigma_q` (inverse squared charge units)
+* :math:`\alpha_q` (distance units)
+* :math:`\lambda` (unitless, between 0.0 and 1.0)
+* cutoff (distance units)
+
+
 ----------
 
 .. include:: accel_styles.rst
