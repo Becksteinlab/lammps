@@ -381,19 +381,25 @@ used.
 
 .. versionadded:: TBD
 
-A place to include the functional form of the pair_style gapsys :ref:`(Gapsys) <Gapsys>`
+The pair style *coul/cut/soft/gapsys* implements the pair potential for Coulombic interactions
+which was proposed by Gapsys et al :ref:`(Gapsys) <Gapsys>`. The main idea behind this potential
+is the definition of an distance :math:`r_{inner}`, which is smaller than the cutoff distance
+:math:`r_c`: for distances shorter than :math:`r_{inner}` the forces are computed based on a
+linearized expression while for distances larger than :math:`r_{inner}` the forces are computed
+based on the standard Coulombic potential. The linearized expression ensures continuity of forces
+as well as of the first derivative of the forces.
 
-The inner cutoff :math:`r_{inner}` is given by
+The distance :math:`r_{inner}` is given by
 
 .. math::
 
    r_{inner} = \alpha_q \left( 1 + \sigma_q \left| q_i q_j \right| \right) \lambda^{1 / 6}
 
 where :math:`q_i` and :math:`q_j` are the charges on the two atoms. For :math:`\lambda = 0`,
-:math:`r_{inner} = 0` and the potential recovers the full electrostatic interactions.
+:math:`r_{inner} = 0`, which implies that the standard Coulombic potential is employed for all
+distances.
 
-For distances larger than :math:`r_{inner}`, the energy is computed by the full coulomb
-potential
+For distances larger than :math:`r_{inner}`, the energy is computed by"
 
 .. math::
 
@@ -402,21 +408,21 @@ potential
 where :math:`C` is an energy-conversion constant, and epsilon is the dielectric
 constant which can be set by the :doc:`dielectric <dielectric>` command.
 
-For distances shorter than :math:`r_{inner}`, the energy is computed by a quadratic relationship
+For distances shorter than :math:`r_{inner}`, the energy is computed by
 
 .. math::
 
    E = \frac{q_i q_j}{r_{inner}^3}r^2 - \frac{3q_i q_j}{r_{inner}^2}r + \frac{3q_i q_j}{r_{inner}}
              \qquad r < r_{inner} < r_c
 
-The *coul/cut/soft/gapsys* style requires the following pair coefficients:
+This pair style requires the following pair coefficients:
 
-* :math:`\sigma_q` (inverse squared charge units)
-* :math:`\alpha_q` (distance units)
+* :math:`\sigma_q` (inverse squared charge units, positive real number)
+* :math:`\alpha_q` (distance units, positive real number)
 * :math:`\lambda` (unitless, between 0.0 and 1.0)
 * cutoff (distance units)
 
-The recommended value for :math:`\sigma_q` is 1.0.
+The recommended values for :math:`\sigma_q` and :math:`\alpha_q` are 1.0 and 0.3 :math:`r_c` respectively.
 
 ----------
 
