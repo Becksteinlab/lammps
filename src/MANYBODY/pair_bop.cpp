@@ -754,7 +754,7 @@ double PairBOP::SigmaBo(int itmp, int jtmp)
   // FF is the Beta_sigma^2 term
 
   FF = betaS_ij * betaS_ij;
-  if (FF <= 0.000001) return(sigB);
+  if (FF <= 0.000001) return sigB;
 
   // agpdpr1 is derivative of FF w.r.t. r_ij
 
