@@ -328,10 +328,10 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   if (num_mol_types < 1) error->all(FLERR, "[MBX] Illegal fix mbx command");
 
-  num_atoms_per_mol = NULL;
-  mol_names = NULL;
-  lower_atom_type_index_in_mol = NULL;
-  higher_atom_type_index_in_mol = NULL;
+  num_atoms_per_mol = nullptr;
+  mol_names = nullptr;
+  lower_atom_type_index_in_mol = nullptr;
+  higher_atom_type_index_in_mol = nullptr;
 
   memory->create(num_atoms_per_mol, num_mol_types, "fixmbx:num_atoms_per_mol");
   memory->create(mol_names, num_mol_types, _MAX_SIZE_MOL_NAME, "fixmbx:mol_names");
@@ -429,11 +429,11 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   pair_mbx = (PairMBX *) force->pair_match("^mbx", 0);
   if (!pair_mbx) error->all(FLERR, "[MBX] Pair mbx is missing");
 
-  array_atom = NULL;
-  mbx_dip = NULL;
-  mol_type = NULL;
-  mol_anchor = NULL;
-  mol_local = NULL;
+  array_atom = nullptr;
+  mbx_dip = nullptr;
+  mol_type = nullptr;
+  mol_anchor = nullptr;
+  mol_local = nullptr;
 
   grow_arrays(atom->nmax);
 
@@ -484,7 +484,7 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
     if (me == 0) {
       // Test if file present
       SafeFilePtr fp = fopen(json_file.c_str(), "r");
-      if (fp == NULL) {
+      if (fp == nullptr) {
         error->one(FLERR, "Cannot open file " + json_file);
       }
 
@@ -517,7 +517,7 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   if (sizeof(tagint) != sizeof(int)) error->all(FLERR, "[MBX] Tagints required to be of type int.");
 
-  aspc_dip_hist = NULL;
+  aspc_dip_hist = nullptr;
   aspc_order = 6;    // hard-coded in MBX
   aspc_max_num_hist = aspc_order + 2;
   aspc_per_atom_size = aspc_max_num_hist * 3;    // (# of histories) * (# of dimensions)
@@ -620,7 +620,6 @@ void FixMBX::init()
 
   ngroup = group->count(igroup);
   if (ngroup == 0) error->all(FLERR, "[MBX] Fix mbx group has no atoms");
-
 }
 
 /* ---------------------------------------------------------------------- */
