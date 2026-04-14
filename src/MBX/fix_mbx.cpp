@@ -493,13 +493,13 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
       size = t.tellg();
       json_settings.resize(size);
       t.seekg(0);
-      t.read(&json_settings[0], size);
+      t.read(json_settings.data(), size);
     }
 
     MPI_Bcast(&size, 1, MPI_INT, 0, world);
     if (me) json_settings.resize(size);
 
-    MPI_Bcast(&json_settings[0], size + 1, MPI_CHAR, 0, world);
+    MPI_Bcast(json_settings.data(), size + 1, MPI_CHAR, 0, world);
   }
 
   memory->create(mbxt_count, FixMBX::MBXT_LABELS::NUM_TIMERS, "fixmbx:mbxt_count");
