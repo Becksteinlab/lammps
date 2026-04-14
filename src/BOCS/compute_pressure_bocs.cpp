@@ -230,9 +230,9 @@ double ComputePressureBocs::get_cg_p_corr(double ** grid, int basis_type,
   double deltax = vCG - grid[0][i];
 
   if (basis_type == BASIS_LINEAR_SPLINE)
-    return grid[1][i] + (deltax) * ( grid[1][i+1] - grid[1][i] ) / ( grid[0][i+1] - grid[0][i] );
+    return grid[1][i] + deltax * (grid[1][i+1] - grid[1][i]) / (grid[0][i+1] - grid[0][i]);
   else if (basis_type == BASIS_CUBIC_SPLINE)
-    return grid[1][i] + (grid[2][i] * deltax) + (grid[3][i] * pow(deltax,2)) + (grid[4][i] * pow(deltax,3));
+    return grid[1][i] + (grid[2][i] * deltax) + (grid[3][i] * powint(deltax,2)) + (grid[4][i] * powint(deltax,3));
   else error->all(FLERR, Error::NOLASTLINE, "bad spline type passed to get_cg_p_corr()");
   return 0.0;
 }
@@ -319,10 +319,10 @@ double ComputePressureBocs::compute_scalar()
     if (keflag)
       scalar = (temperature->dof * boltz * t +
                 virial[0] + virial[1] + virial[2]) / 3.0 *
-                inv_volume * nktv2p + (correction);
+                inv_volume * nktv2p + correction;
     else
       scalar = (virial[0] + virial[1] + virial[2]) / 3.0 *
-               inv_volume * nktv2p + (correction);
+               inv_volume * nktv2p + correction;
   } else {
     if (p_match_flag) {
       error->all(FLERR, Error::NOLASTLINE, "Pressure matching not implemented in 2-d.");
