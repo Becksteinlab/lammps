@@ -814,6 +814,7 @@ and fix styles:
 
    * :doc:`compute hbond/local <compute_hbond_local>`
    * :doc:`fix graphics/arrows <fix_graphics_arrows>`
+   * :doc:`fix graphics/chunk <fix_graphics_chunk>`
    * :doc:`fix graphics/isosurface <fix_graphics_isosurface>`
    * :doc:`fix graphics/labels <fix_graphics_labels>`
    * :doc:`fix graphics/lines <fix_graphics_lines>`
