@@ -44,9 +44,11 @@ using MathConst::MY_ISPI4;
 using MathConst::THIRD;
 using MathSpecial::powint;
 
+namespace {
 enum { NONE, RLINEAR, RSQ, BMP };
-static const std::string mixing_rule_names[Pair::SIXTHPOWER + 1] = {"geometric", "arithmetic",
-                                                                    "sixthpower"};
+// NOLIINTNEXTLINE
+const std::vector<std::string> mixing_rule_names{"geometric", "arithmetic", "sixthpower"};
+}    // namespace
 
 // allocate space for static class instance variable and initialize it
 
