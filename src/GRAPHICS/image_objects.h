@@ -120,6 +120,33 @@ namespace ImageObjects {
     std::vector<triangle> triangles;
     void refine();
   };
+  class ConvexHullObj {
+   public:
+    // build convex hull from a set of points with optional radius inflation
+    // smooth=true: per-vertex normals for smooth shading
+    // smooth=false: flat normals (face normal used for all three vertices)
+    void build(const std::vector<vec3> &points, double radius = 0.0, bool smooth = true);
+
+    // draw the convex hull using Image draw calls with per-vertex normals and colors
+    void draw(Image *img, const std::vector<vec3> &colors, double opacity = 1.0);
+
+    // get list of triangles and normals for external use
+    const std::vector<triangle> &get_triangles() const { return hull_triangles; }
+    const std::vector<triangle> &get_normals() const { return hull_normals; }
+    const std::vector<std::array<int, 3>> &get_color_indices() const { return hull_color_idx; }
+
+   private:
+    std::vector<triangle> hull_triangles;
+    std::vector<triangle> hull_normals;
+    std::vector<std::array<int, 3>> hull_color_idx;    // index into colors per vertex
+
+    void build_sphere(const vec3 &center, double radius,
+                      const std::vector<vec3> &points, bool smooth);
+    void build_cylinder(const vec3 &p1, const vec3 &p2, double radius,
+                        const std::vector<vec3> &points, bool smooth);
+    void build_hull(const std::vector<vec3> &points, double radius, bool smooth);
+    void assign_colors(const std::vector<vec3> &points);
+  };
 }    // namespace ImageObjects
 }    // namespace LAMMPS_NS
 

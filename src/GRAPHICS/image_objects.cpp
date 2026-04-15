@@ -18,6 +18,7 @@
 #include "math_extra.h"
 #include "region.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <utility>
@@ -825,5 +826,495 @@ void PlaneObj::draw(Image *img, int flag, const double *color, const double *cen
       img->draw_cylinder(tri[0].data(), tri[2].data(), color, diameter, 3, opacity);
       img->draw_cylinder(tri[1].data(), tri[2].data(), color, diameter, 3, opacity);
     }
+  }
+}
+
+// ======================================================================
+// ConvexHullObj: build and draw convex hulls from a set of 3D points
+// ======================================================================
+
+// Build a convex hull from a set of 3D points with optional radius inflation.
+// Handles special cases: 0 points (empty), 1 point (sphere), 2 points (cylinder),
+// 3+ points (incremental convex hull algorithm).
+
+void ConvexHullObj::build(const std::vector<vec3> &points, double radius, bool smooth)
+{
+  hull_triangles.clear();
+  hull_normals.clear();
+  hull_color_idx.clear();
+
+  if (points.empty()) return;
+
+  if (points.size() == 1) {
+    build_sphere(points[0], radius, points, smooth);
+    return;
+  }
+
+  if (points.size() == 2) {
+    build_cylinder(points[0], points[1], radius, points, smooth);
+    return;
+  }
+
+  build_hull(points, radius, smooth);
+}
+
+// Special case: 1 point -> sphere using icosahedron approximation
+
+void ConvexHullObj::build_sphere(const vec3 &center, double radius,
+                                 const std::vector<vec3> &points, bool smooth)
+{
+  if (radius <= 0.0) radius = 0.1;    // minimum visible radius for point particles
+
+  // Create icosahedron-based sphere with 2 refinement levels
+  constexpr double A = 0.5257311121191336;
+  constexpr double B = 0.8506508083520399;
+  // clang-format off
+  constexpr vec3 ICO00 = { -A,   B, 0.0};
+  constexpr vec3 ICO01 = {  A,   B, 0.0};
+  constexpr vec3 ICO02 = { -A,  -B, 0.0};
+  constexpr vec3 ICO03 = {  A,  -B, 0.0};
+  constexpr vec3 ICO04 = {0.0,  -A,   B};
+  constexpr vec3 ICO05 = {0.0,   A,   B};
+  constexpr vec3 ICO06 = {0.0,  -A,  -B};
+  constexpr vec3 ICO07 = {0.0,   A,  -B};
+  constexpr vec3 ICO08 = {  B, 0.0,  -A};
+  constexpr vec3 ICO09 = {  B, 0.0,   A};
+  constexpr vec3 ICO10 = { -B, 0.0,  -A};
+  constexpr vec3 ICO11 = { -B, 0.0,   A};
+  // clang-format on
+
+  std::vector<triangle> tris = {
+      {ICO00, ICO05, ICO11}, {ICO00, ICO01, ICO05}, {ICO00, ICO07, ICO01}, {ICO00, ICO10, ICO07},
+      {ICO00, ICO11, ICO10}, {ICO01, ICO09, ICO05}, {ICO05, ICO04, ICO11}, {ICO11, ICO02, ICO10},
+      {ICO10, ICO06, ICO07}, {ICO07, ICO08, ICO01}, {ICO03, ICO04, ICO09}, {ICO03, ICO02, ICO04},
+      {ICO03, ICO06, ICO02}, {ICO03, ICO08, ICO06}, {ICO03, ICO09, ICO08}, {ICO04, ICO05, ICO09},
+      {ICO02, ICO11, ICO04}, {ICO06, ICO10, ICO02}, {ICO08, ICO07, ICO06}, {ICO09, ICO01, ICO08}};
+
+  // refine twice
+  for (int iter = 0; iter < 2; ++iter) {
+    std::vector<triangle> newlist;
+    for (const auto &tri : tris) {
+      vec3 posa = vec3norm(tri[0] + tri[2]);
+      vec3 posb = vec3norm(tri[0] + tri[1]);
+      vec3 posc = vec3norm(tri[1] + tri[2]);
+      newlist.push_back({tri[0], posb, posa});
+      newlist.push_back({posb, tri[1], posc});
+      newlist.push_back({posa, posb, posc});
+      newlist.push_back({posa, posc, tri[2]});
+    }
+    tris = std::move(newlist);
+  }
+
+  // scale and translate
+  hull_triangles.reserve(tris.size());
+  hull_normals.reserve(tris.size());
+  hull_color_idx.reserve(tris.size());
+
+  for (const auto &tri : tris) {
+    vec3 p0 = radius * tri[0] + center;
+    vec3 p1 = radius * tri[1] + center;
+    vec3 p2 = radius * tri[2] + center;
+    hull_triangles.push_back({p0, p1, p2});
+
+    // normals point outward from center
+    if (smooth) {
+      hull_normals.push_back({tri[0], tri[1], tri[2]});
+    } else {
+      vec3 n = vec3norm(vec3cross(p1 - p0, p2 - p0));
+      hull_normals.push_back({n, n, n});
+    }
+    hull_color_idx.push_back({0, 0, 0});
+  }
+}
+
+// Special case: 2 points -> capped cylinder
+
+void ConvexHullObj::build_cylinder(const vec3 &p1, const vec3 &p2, double radius,
+                                   const std::vector<vec3> &points, bool smooth)
+{
+  if (radius <= 0.0) radius = 0.1;    // minimum visible radius for point particles
+
+  constexpr int resolution = 24;
+  vec3 axis = p2 - p1;
+  double len = vec3len(axis);
+  if (len < SMALL) {
+    // degenerate: two coincident points, just draw a sphere at their midpoint
+    build_sphere(0.5 * (p1 + p2), radius, points, smooth);
+    return;
+  }
+  vec3 u = (1.0 / len) * axis;
+
+  // construct orthonormal basis
+  vec3 a = (std::fabs(u[0]) < 0.9) ? vec3{1.0, 0.0, 0.0} : vec3{0.0, 1.0, 0.0};
+  vec3 v = vec3norm(vec3cross(u, a));
+  vec3 w = vec3cross(u, v);
+
+  const double radinc = MY_2PI / resolution;
+
+  // side triangles
+  for (int i = 0; i < resolution; ++i) {
+    double s1 = sin(radinc * i);
+    double c1 = cos(radinc * i);
+    double s2 = sin(radinc * (i + 1));
+    double c2 = cos(radinc * (i + 1));
+
+    vec3 r1 = radius * (s1 * v + c1 * w);
+    vec3 r2 = radius * (s2 * v + c2 * w);
+
+    vec3 b1 = p1 + r1;
+    vec3 b2 = p1 + r2;
+    vec3 t1 = p2 + r1;
+    vec3 t2 = p2 + r2;
+
+    vec3 n1 = vec3norm(r1);
+    vec3 n2 = vec3norm(r2);
+
+    if (smooth) {
+      hull_triangles.push_back({b1, t1, t2});
+      hull_normals.push_back({n1, n1, n2});
+      hull_color_idx.push_back({0, 1, 1});
+
+      hull_triangles.push_back({b1, t2, b2});
+      hull_normals.push_back({n1, n2, n2});
+      hull_color_idx.push_back({0, 1, 1});
+    } else {
+      vec3 fn1 = vec3norm(vec3cross(t1 - b1, t2 - b1));
+      hull_triangles.push_back({b1, t1, t2});
+      hull_normals.push_back({fn1, fn1, fn1});
+      hull_color_idx.push_back({0, 1, 1});
+
+      vec3 fn2 = vec3norm(vec3cross(t2 - b1, b2 - b1));
+      hull_triangles.push_back({b1, t2, b2});
+      hull_normals.push_back({fn2, fn2, fn2});
+      hull_color_idx.push_back({0, 1, 1});
+    }
+
+    // bottom cap
+    vec3 nbot = -1.0 * u;
+    hull_triangles.push_back({b2, p1, b1});
+    hull_normals.push_back({nbot, nbot, nbot});
+    hull_color_idx.push_back({0, 0, 0});
+
+    // top cap
+    vec3 ntop = u;
+    hull_triangles.push_back({t1, p2, t2});
+    hull_normals.push_back({ntop, ntop, ntop});
+    hull_color_idx.push_back({1, 1, 1});
+  }
+}
+
+// 3D incremental convex hull algorithm
+
+void ConvexHullObj::build_hull(const std::vector<vec3> &original_points, double radius, bool smooth)
+{
+  const int npts = static_cast<int>(original_points.size());
+
+  // compute centroid
+  vec3 centroid = {0.0, 0.0, 0.0};
+  for (const auto &p : original_points) {
+    centroid[0] += p[0];
+    centroid[1] += p[1];
+    centroid[2] += p[2];
+  }
+  centroid[0] /= npts;
+  centroid[1] /= npts;
+  centroid[2] /= npts;
+
+  // if radius > 0, inflate points outward from centroid by radius
+  std::vector<vec3> points;
+  if (radius > 0.0) {
+    points.reserve(original_points.size());
+    for (const auto &p : original_points) {
+      vec3 dir = p - centroid;
+      double len = vec3len(dir);
+      if (len > SMALL) {
+        points.push_back(p + radius * ((1.0 / len) * dir));
+      } else {
+        points.push_back(p);
+      }
+    }
+  } else {
+    points = original_points;
+  }
+
+  // Find initial tetrahedron from 4 non-coplanar points
+  // Start by finding the two most distant points
+
+  int i0 = 0, i1 = 1;
+  double maxdist = 0.0;
+  for (int i = 0; i < npts; ++i) {
+    for (int j = i + 1; j < npts; ++j) {
+      vec3 d = points[j] - points[i];
+      double dist = vec3dot(d, d);
+      if (dist > maxdist) {
+        maxdist = dist;
+        i0 = i;
+        i1 = j;
+      }
+    }
+  }
+
+  if (maxdist < SMALL * SMALL) {
+    // all points are coincident -> sphere
+    build_sphere(centroid, radius > 0.0 ? radius : 0.1, original_points, smooth);
+    return;
+  }
+
+  // Find the point farthest from the line i0-i1
+
+  vec3 line = points[i1] - points[i0];
+  int i2 = -1;
+  maxdist = 0.0;
+  for (int i = 0; i < npts; ++i) {
+    if (i == i0 || i == i1) continue;
+    vec3 d = points[i] - points[i0];
+    vec3 cr = vec3cross(line, d);
+    double dist = vec3dot(cr, cr);
+    if (dist > maxdist) {
+      maxdist = dist;
+      i2 = i;
+    }
+  }
+
+  if (i2 < 0 || maxdist < SMALL * SMALL) {
+    // all points are collinear -> cylinder
+    build_cylinder(points[i0], points[i1], radius > 0.0 ? radius : 0.1, original_points, smooth);
+    return;
+  }
+
+  // Find the point farthest from the plane defined by i0, i1, i2
+
+  vec3 normal = vec3cross(points[i1] - points[i0], points[i2] - points[i0]);
+  double nlen = vec3len(normal);
+  if (nlen > SMALL) normal = (1.0 / nlen) * normal;
+
+  int i3 = -1;
+  maxdist = 0.0;
+  for (int i = 0; i < npts; ++i) {
+    if (i == i0 || i == i1 || i == i2) continue;
+    double dist = std::fabs(vec3dot(points[i] - points[i0], normal));
+    if (dist > maxdist) {
+      maxdist = dist;
+      i3 = i;
+    }
+  }
+
+  if (i3 < 0 || maxdist < SMALL) {
+    // all points are coplanar -> create a flat convex polygon from the planar hull
+
+    // Project all points onto the plane
+    vec3 pu = vec3norm(points[i1] - points[i0]);
+    vec3 pv = vec3cross(normal, pu);
+
+    struct ProjPt {
+      double angle;
+      int idx;
+    };
+    std::vector<ProjPt> proj;
+    proj.reserve(npts);
+    for (int i = 0; i < npts; ++i) {
+      vec3 d = points[i] - centroid;
+      double px = vec3dot(d, pu);
+      double py = vec3dot(d, pv);
+      proj.push_back({atan2(py, px), i});
+    }
+    // sort by angle
+    std::sort(proj.begin(), proj.end(),
+              [](const ProjPt &a, const ProjPt &b) { return a.angle < b.angle; });
+
+    // remove duplicate angles (keep the one farthest from centroid)
+    std::vector<ProjPt> unique_proj;
+    unique_proj.push_back(proj[0]);
+    for (size_t i = 1; i < proj.size(); ++i) {
+      if (std::fabs(proj[i].angle - unique_proj.back().angle) < 1e-10) {
+        // keep the one farthest from centroid
+        vec3 d1 = points[unique_proj.back().idx] - centroid;
+        vec3 d2 = points[proj[i].idx] - centroid;
+        if (vec3dot(d2, d2) > vec3dot(d1, d1)) unique_proj.back() = proj[i];
+      } else {
+        unique_proj.push_back(proj[i]);
+      }
+    }
+
+    // build triangles as a fan from centroid (both sides for visibility)
+    int np = static_cast<int>(unique_proj.size());
+    for (int i = 0; i < np; ++i) {
+      int j = (i + 1) % np;
+      const vec3 &pa = points[unique_proj[i].idx];
+      const vec3 &pb = points[unique_proj[j].idx];
+
+      // front face
+      hull_triangles.push_back({centroid, pa, pb});
+      hull_normals.push_back({normal, normal, normal});
+      hull_color_idx.push_back({unique_proj[i].idx, unique_proj[i].idx, unique_proj[j].idx});
+
+      // back face
+      vec3 bnorm = -1.0 * normal;
+      hull_triangles.push_back({centroid, pb, pa});
+      hull_normals.push_back({bnorm, bnorm, bnorm});
+      hull_color_idx.push_back({unique_proj[j].idx, unique_proj[j].idx, unique_proj[i].idx});
+    }
+    return;
+  }
+
+  // We have 4 non-coplanar points. Build initial tetrahedron.
+  // Ensure outward-facing normals by checking orientation
+
+  double orient = vec3dot(points[i3] - points[i0], normal);
+
+  // face structure: stores which point indices form each face
+  struct Face {
+    int v[3];
+  };
+
+  std::vector<Face> faces;
+  if (orient > 0.0) {
+    // i3 is above the plane of (i0,i1,i2): reverse winding of base
+    faces.push_back({i0, i2, i1});
+    faces.push_back({i0, i1, i3});
+    faces.push_back({i1, i2, i3});
+    faces.push_back({i2, i0, i3});
+  } else {
+    faces.push_back({i0, i1, i2});
+    faces.push_back({i0, i3, i1});
+    faces.push_back({i1, i3, i2});
+    faces.push_back({i2, i3, i0});
+  }
+
+  // incremental convex hull: add remaining points one by one
+
+  for (int i = 0; i < npts; ++i) {
+    if (i == i0 || i == i1 || i == i2 || i == i3) continue;
+
+    // find visible faces (those whose outward normal points toward the new point)
+    std::vector<bool> visible(faces.size(), false);
+    bool any_visible = false;
+    for (size_t f = 0; f < faces.size(); ++f) {
+      vec3 fn = vec3cross(points[faces[f].v[1]] - points[faces[f].v[0]],
+                          points[faces[f].v[2]] - points[faces[f].v[0]]);
+      double d = vec3dot(fn, points[i] - points[faces[f].v[0]]);
+      if (d > SMALL) {
+        visible[f] = true;
+        any_visible = true;
+      }
+    }
+
+    if (!any_visible) continue;    // point is inside the current hull
+
+    // find horizon edges: edges shared between one visible and one non-visible face
+    // an edge is represented as a pair of vertex indices (ordered by the visible face)
+    struct Edge {
+      int v0, v1;
+    };
+    std::vector<Edge> horizon;
+
+    for (size_t f = 0; f < faces.size(); ++f) {
+      if (!visible[f]) continue;
+      for (int e = 0; e < 3; ++e) {
+        int ea = faces[f].v[e];
+        int eb = faces[f].v[(e + 1) % 3];
+        // check if the adjacent face sharing edge (ea, eb) is not visible
+        bool found_adjacent_invisible = false;
+        for (size_t g = 0; g < faces.size(); ++g) {
+          if (g == f || visible[g]) continue;
+          // check if face g shares edge (eb, ea) - reverse order
+          for (int e2 = 0; e2 < 3; ++e2) {
+            if (faces[g].v[e2] == eb && faces[g].v[(e2 + 1) % 3] == ea) {
+              found_adjacent_invisible = true;
+              break;
+            }
+          }
+          if (found_adjacent_invisible) break;
+        }
+        if (found_adjacent_invisible) horizon.push_back({ea, eb});
+      }
+    }
+
+    // remove visible faces
+    std::vector<Face> newfaces;
+    for (size_t f = 0; f < faces.size(); ++f) {
+      if (!visible[f]) newfaces.push_back(faces[f]);
+    }
+
+    // add new faces connecting horizon edges to the new point
+    for (const auto &edge : horizon) {
+      newfaces.push_back({edge.v0, edge.v1, i});
+    }
+
+    faces = std::move(newfaces);
+  }
+
+  // Convert faces to triangles with normals
+  hull_triangles.reserve(faces.size());
+  hull_normals.reserve(faces.size());
+  hull_color_idx.reserve(faces.size());
+
+  // compute per-vertex normals if smooth shading is requested
+  // each vertex normal is the average of adjacent face normals
+
+  if (smooth) {
+    // compute face normals
+    std::vector<vec3> face_normals(faces.size());
+    for (size_t f = 0; f < faces.size(); ++f) {
+      face_normals[f] = vec3norm(vec3cross(points[faces[f].v[1]] - points[faces[f].v[0]],
+                                           points[faces[f].v[2]] - points[faces[f].v[0]]));
+    }
+
+    // accumulate normals per vertex
+    std::vector<vec3> vertex_normals(npts, {0.0, 0.0, 0.0});
+    for (size_t f = 0; f < faces.size(); ++f) {
+      for (int k = 0; k < 3; ++k) {
+        vertex_normals[faces[f].v[k]] = vertex_normals[faces[f].v[k]] + face_normals[f];
+      }
+    }
+    for (int i = 0; i < npts; ++i) vertex_normals[i] = vec3norm(vertex_normals[i]);
+
+    for (size_t f = 0; f < faces.size(); ++f) {
+      hull_triangles.push_back(
+          {points[faces[f].v[0]], points[faces[f].v[1]], points[faces[f].v[2]]});
+      hull_normals.push_back({vertex_normals[faces[f].v[0]], vertex_normals[faces[f].v[1]],
+                              vertex_normals[faces[f].v[2]]});
+      hull_color_idx.push_back({faces[f].v[0], faces[f].v[1], faces[f].v[2]});
+    }
+  } else {
+    // flat shading: each triangle uses the face normal for all three vertices
+    for (size_t f = 0; f < faces.size(); ++f) {
+      const vec3 &p0 = points[faces[f].v[0]];
+      const vec3 &p1 = points[faces[f].v[1]];
+      const vec3 &p2 = points[faces[f].v[2]];
+      vec3 fn = vec3norm(vec3cross(p1 - p0, p2 - p0));
+      hull_triangles.push_back({p0, p1, p2});
+      hull_normals.push_back({fn, fn, fn});
+      hull_color_idx.push_back({faces[f].v[0], faces[f].v[1], faces[f].v[2]});
+    }
+  }
+}
+
+// assign color indices based on closest atom to each vertex
+
+void ConvexHullObj::assign_colors(const std::vector<vec3> & /*points*/)
+{
+  // hull_color_idx already stores the point index for each vertex
+  // no additional assignment needed since build_hull() sets this up
+  // This method is a placeholder for potential future extensions
+}
+
+// draw the convex hull using per-vertex normals and colors
+
+void ConvexHullObj::draw(Image *img, const std::vector<vec3> &colors, double opacity)
+{
+  for (size_t i = 0; i < hull_triangles.size(); ++i) {
+    const auto &tri = hull_triangles[i];
+    const auto &nrm = hull_normals[i];
+    const auto &cidx = hull_color_idx[i];
+
+    // pick colors for each vertex (clamped to available colors)
+    int c0 = (cidx[0] >= 0 && cidx[0] < (int) colors.size()) ? cidx[0] : 0;
+    int c1 = (cidx[1] >= 0 && cidx[1] < (int) colors.size()) ? cidx[1] : 0;
+    int c2 = (cidx[2] >= 0 && cidx[2] < (int) colors.size()) ? cidx[2] : 0;
+
+    img->draw_trinorm(tri[0].data(), tri[1].data(), tri[2].data(), nrm[0].data(), nrm[1].data(),
+                      nrm[2].data(), colors[c0].data(), colors[c1].data(), colors[c2].data(),
+                      opacity);
   }
 }
