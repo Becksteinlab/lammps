@@ -62,7 +62,7 @@ class FixMBX : public Fix {
   bool first_step;
   bool has_gcmc;
 
-  int use_json;
+  bool use_json;
   std::string json_settings;
 
   int print_verbose;

@@ -396,7 +396,7 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
 
   // process remaining optional keywords
 
-  use_json = 0;
+  use_json = false;
   std::string json_file;
   print_verbose = false;
   print_dipoles = true;    // dipoles are now always printed by default
@@ -405,11 +405,11 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
   while (iarg < narg) {
     if (strcmp(arg[iarg], "json") == 0) {
       json_file = std::string(arg[++iarg]);
-      use_json = 1;
+      use_json = true;
     } else if (strcmp(arg[iarg], "print/verbose") == 0) {
-      print_verbose = 1;
+      print_verbose = true;
     } else if (strcmp(arg[iarg], "print/dipoles") == 0) {
-      print_dipoles = 1;    // dipoles are now always printed by default
+      print_dipoles = true;    // dipoles are now always printed by default
     } else if (strcmp(arg[iarg], "aspc/reset") == 0) {
       aspc_step_reset = atoi(arg[++iarg]);
     } else {
