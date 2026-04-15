@@ -100,8 +100,8 @@ void PairCoulCutSoftGapsys::compute(int eflag, int vflag)
 
       if (rsq < cut_inner * cut_inner) {
 
-        double slope = - 2.0 * qtmp * q[j] / pow(cut_inner, 3);
-	double constant = 3.0 * qtmp * q[j] / pow(cut_inner, 2);
+        double slope = - 2.0 * qqrd2e * qtmp * q[j] / pow(cut_inner, 3);
+        double constant = 3.0 * qqrd2e * qtmp * q[j] / pow(cut_inner, 2);
 
         f[i][0] += delx*slope + constant;
         f[i][1] += dely*slope + constant;
