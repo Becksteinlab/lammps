@@ -188,7 +188,7 @@ bool FixMBX::validateMBXFixParameters(int narg, char **arg)
       error->all(FLERR, "[MBX] Invalid monomer name {}", current_monomer_name);
     }
 
-    if ((int)expected_monomer_atom_ids.size() != n_atoms)
+    if ((int) expected_monomer_atom_ids.size() != n_atoms)
       error->all(FLERR, "[MBX] Wrong number of atoms: expected {}, got {}",
                  expected_monomer_atom_ids.size(), n_atoms);
 
@@ -818,7 +818,7 @@ void FixMBX::pre_exchange()
 
   // save copy of dipole history
 
-  aspc_num_hist = (int)mbx_impl->ptr_mbx_local->GetNumDipoleHistory();
+  aspc_num_hist = (int) mbx_impl->ptr_mbx_local->GetNumDipoleHistory();
 
   //  printf("# of histories= %i\n",aspc_num_hist);
 
@@ -1030,9 +1030,9 @@ int FixMBX::pack_exchange(int i, double *buf)
 int FixMBX::unpack_exchange(int nlocal, double *buf)
 {
   int n = 0;
-  mol_type[nlocal] = (int)buf[n++];
-  mol_anchor[nlocal] = (int)buf[n++];
-  mol_local[nlocal] = (int)buf[n++];
+  mol_type[nlocal] = (int) buf[n++];
+  mol_anchor[nlocal] = (int) buf[n++];
+  mol_local[nlocal] = (int) buf[n++];
 
   if (mbx_aspc_enabled)
     for (int j = 0; j < aspc_per_atom_size; ++j) aspc_dip_hist[nlocal][j] = buf[n++];
@@ -1412,7 +1412,7 @@ void FixMBX::mbx_init_local()
     error->all(FLERR,
                "[MBX] Dispersion Ewald parameters set (alpha_ewald_disp = " +
                    std::to_string(disp_alpha) + "), but system is not periodic");
-  if ((elec_alpha == 0.0 || disp_alpha == 0.0) &&
+  if ((me == 0) && (elec_alpha == 0.0 || disp_alpha == 0.0) &&
       (domain->xperiodic || domain->yperiodic || domain->zperiodic))
     error->warning(FLERR, "[MBX] System is periodic, but Ewald alpha parameters not set");
 
@@ -1550,10 +1550,10 @@ void FixMBX::mbx_update_xyz()
 
   }    // for(i<nall)
 
-  if ((int)xyz.size() != indx * 3) error->one(FLERR, "Inconsistent # of atoms");
+  if ((int) xyz.size() != indx * 3) error->one(FLERR, "Inconsistent # of atoms");
   mbx_impl->ptr_mbx->SetRealXyz(xyz);
 
-  if ((int)xyz_ext.size() != indx_ext * 3) error->one(FLERR, "Inconsistent # of external charges");
+  if ((int) xyz_ext.size() != indx_ext * 3) error->one(FLERR, "Inconsistent # of external charges");
   if (mbx_num_ext > 0) { mbx_impl->ptr_mbx->SetExternalChargesAndPositions(chg_ext, xyz_ext); }
 
   mbxt_stop(MBXT_LABELS::UPDATE_XYZ);
@@ -1691,10 +1691,10 @@ void FixMBX::mbx_update_xyz_local()
 
   }    // for(i<nall)
 
-  if ((int)xyz.size() != indx * 3) error->one(FLERR, "Inconsistent # of atoms");
+  if ((int) xyz.size() != indx * 3) error->one(FLERR, "Inconsistent # of atoms");
   mbx_impl->ptr_mbx_local->SetRealXyz(xyz);
 
-  if ((int)xyz_ext.size() != indx_ext * 3) error->one(FLERR, "Inconsistent # of external charges");
+  if ((int) xyz_ext.size() != indx_ext * 3) error->one(FLERR, "Inconsistent # of external charges");
   if (mbx_num_ext_local > 0) {
     mbx_impl->ptr_mbx_local->SetExternalChargesAndPositions(chg_ext, xyz_ext);
   }
