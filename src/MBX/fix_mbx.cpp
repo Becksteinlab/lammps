@@ -481,18 +481,17 @@ FixMBX::FixMBX(LAMMPS *lmp, int narg, char **arg) : Fix(lmp, narg, arg)
     if (me == 0) {
       // Test if file present
       SafeFilePtr fp = fopen(json_file.c_str(), "r");
-      if (fp == nullptr) error->one(FLERR, "Cannot open file " + json_file);
-
-      std::ifstream t(json_file);
-      t.seekg(0, std::ios::end);
-      size = t.tellg();
+      if (fp == nullptr) error->one(FLERR, "Cannot open file {}", json_file);
+      (void) platform::fseek(fp, platform::END_OF_FILE);
+      size = platform::ftell(fp);
       json_settings.resize(size);
-      t.seekg(0);
-      t.read(json_settings.data(), size);
+      platform::fseek(fp, 0);
+      (void) fread(json_settings.data(), size, 1, fp);
+      json_settings += '\0';    // ensure NULL termination
     }
 
     MPI_Bcast(&size, 1, MPI_INT, 0, world);
-    if (me) json_settings.resize(size);
+    if (me) json_settings.resize(size + 1);
 
     MPI_Bcast(json_settings.data(), size + 1, MPI_CHAR, 0, world);
   }
@@ -1800,8 +1799,8 @@ void FixMBX::mbxt_print_time(const char *name, int T, double *d)
 
   double p = tmax / d[MBXT_LABELS::NUM_TIMERS * 3] * 100.0;
 
-  utils::logmesg(lmp, "[MBX] {:<20}:  {:<12.5g}  {:<12.5g}  {:<12.5g}  {:8d} {:8.2f}%\n", name, tmin,
-                 tavg, tmax, mbxt_count[T], p);
+  utils::logmesg(lmp, "[MBX] {:<20}:  {:<12.5g}  {:<12.5g}  {:<12.5g}  {:8d} {:8.2f}%\n", name,
+                 tmin, tavg, tmax, mbxt_count[T], p);
 }
 
 void FixMBX::mbxt_write_summary()
