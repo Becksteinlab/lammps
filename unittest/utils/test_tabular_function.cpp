@@ -13,6 +13,8 @@
 
 #include "tabular_function.h"
 
+#include "math_const.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -20,6 +22,7 @@
 #include <vector>
 
 using namespace LAMMPS_NS;
+using MathConst::MY_PI;
 
 // =========================================================================
 // TabularFunction tests
@@ -114,7 +117,7 @@ TEST_F(TabularFunctionTest, sinusoidal_function)
     // Tabulate f(x) = sin(x) on [0, pi]
     const int n = 501;
     std::vector<double> values(n);
-    double xmin = 0.0, xmax = M_PI;
+    double xmin = 0.0, xmax = MY_PI;
     for (int i = 0; i < n; i++) {
         double x = xmin + (xmax - xmin) * i / (n - 1);
         values[i] = std::sin(x);
@@ -124,7 +127,7 @@ TEST_F(TabularFunctionTest, sinusoidal_function)
 
     // Check at midpoint: sin(pi/2) = 1
     double y, y1;
-    tab.value(M_PI / 2.0, y, 1, y1, 1);
+    tab.value(MY_PI / 2.0, y, 1, y1, 1);
     EXPECT_NEAR(y, 1.0, 0.001);
     EXPECT_NEAR(y1, 0.0, 0.02);    // cos(pi/2) = 0
 }
