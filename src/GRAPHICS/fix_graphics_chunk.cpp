@@ -21,11 +21,13 @@
 #include "force.h"
 #include "graphics.h"
 #include "image_objects.h"
+#include "math_extra.h"
 #include "memory.h"
 #include "modify.h"
 #include "pair.h"
 #include "update.h"
 
+#include <algorithm>
 #include <cstring>
 
 using namespace LAMMPS_NS;
@@ -137,6 +139,7 @@ void FixGraphicsChunk::end_of_step()
   const int nlocal = atom->nlocal;
   const int *const mask = atom->mask;
   const int *const type = atom->type;
+  const imageint *const image = atom->image;
   const double *const *const x = atom->x;
   const int *const ichunk = cchunk->ichunk;
 
@@ -163,6 +166,7 @@ void FixGraphicsChunk::end_of_step()
     double aradius;
   };
   std::vector<std::vector<AtomInfo>> chunk_atoms(nchunk);
+  vec3 unwrapped;
 
   for (int i = 0; i < nlocal; ++i) {
     if (!(mask[i] & groupbit)) continue;
@@ -173,10 +177,10 @@ void FixGraphicsChunk::end_of_step()
       if (has_peratom_radius)
         atom_radius = atom->radius[i];
       else if (has_pertype_radius)
-        atom_radius = sigma[type[i]][type[i]];
+        atom_radius = 0.5 * sigma[type[i]][type[i]];
     }
-
-    chunk_atoms[ic - 1].push_back({{x[i][0], x[i][1], x[i][2]}, type[i], atom_radius});
+    domain->unmap(x[i], image[i], unwrapped.data());
+    chunk_atoms[ic - 1].push_back({unwrapped, type[i], atom_radius});
   }
 
   // build convex hulls for each chunk and collect all TRINORM objects
@@ -193,31 +197,91 @@ void FixGraphicsChunk::end_of_step()
   ImageObjects::ConvexHullObj hull;
 
   for (int c = 0; c < nchunk; ++c) {
-    const auto &ichunkatoms = chunk_atoms[c];
-    if (ichunkatoms.empty()) continue;
+    const auto &iatoms = chunk_atoms[c];
+    if (iatoms.empty()) continue;
 
-    if (ichunkatoms.size() == 1) {
+    vec3 wrapped{iatoms[0].pos};
+    domain->remap(wrapped.data());
+    vec3 offset{iatoms[0].pos[0] - wrapped[0], iatoms[0].pos[1] - wrapped[1],
+                iatoms[0].pos[2] - wrapped[2]};
+
+    if (iatoms.size() == 1) {
+      // special case: a single atom cluster -> draw a sphere
       ObjData od;
       od.objtype = Graphics::SPHERE;
-      od.v0 = ichunkatoms[0].pos;
-      od.radius = ichunkatoms[0].aradius;
+      od.type0 = iatoms[0].atype;
+      od.v0 = wrapped;
+      od.radius = iatoms[0].aradius;
       all_objs.push_back(od);
-      fprintf(stderr, "single atom\n");
-    } else if (ichunkatoms.size() == 2) {
+    } else if (iatoms.size() == 2) {
+      // special case: a two atom cluster -> draw a cylinder
       ObjData od;
       od.objtype = Graphics::CYLINDER;
-      od.v0 = ichunkatoms[0].pos;
-      od.v1 = ichunkatoms[1].pos;
-      od.radius = ichunkatoms[0].aradius;
+      od.type0 = std::min(iatoms[0].atype, iatoms[1].atype);
+      od.v0 = wrapped;
+      od.v1 = vec3{iatoms[1].pos[0] - offset[0], iatoms[1].pos[1] - offset[1],
+                   iatoms[1].pos[2] - offset[2]};
+      od.radius = std::max(iatoms[0].aradius, iatoms[1].aradius);
       all_objs.push_back(od);
-      fprintf(stderr, "stick\n");
+    } else if (iatoms.size() == 3) {
+      // special case: a three atom cluster -> draw three cylinders and two triangles
+      ObjData od;
+      od.objtype = Graphics::CYLINDER;
+      od.type0 = std::min({iatoms[0].atype, iatoms[1].atype, iatoms[2].atype});
+      // atom 1 to atom 2
+      od.v0 = wrapped;
+      od.v1 = vec3{iatoms[1].pos[0] - offset[0], iatoms[1].pos[1] - offset[1],
+                   iatoms[1].pos[2] - offset[2]};
+      od.radius = std::max({iatoms[0].aradius, iatoms[1].aradius, iatoms[2].aradius});
+      all_objs.push_back(od);
+      // atom 1 to atom 3
+      od.v1 = vec3{iatoms[2].pos[0] - offset[0], iatoms[2].pos[1] - offset[1],
+                   iatoms[2].pos[2] - offset[2]};
+      all_objs.push_back(od);
+      // atom 2 to atom 3
+      od.v0 = vec3{iatoms[1].pos[0] - offset[0], iatoms[1].pos[1] - offset[1],
+                   iatoms[1].pos[2] - offset[2]};
+      all_objs.push_back(od);
+
+      od.objtype = Graphics::TRIANGLE;
+      od.v2 = wrapped;
+
+      // construct triangle normal for shifting the triangles
+      vec3 edge1{od.v2[0] - od.v0[0], od.v2[1] - od.v0[0], od.v2[2] - od.v0[2]};
+      vec3 edge2{od.v2[0] - od.v1[0], od.v2[1] - od.v1[0], od.v2[2] - od.v1[2]};
+      vec3 shift;
+      MathExtra::cross3(edge2.data(), edge1.data(), shift.data());
+      MathExtra::norm3(shift.data());
+      od.radius *= 0.5;
+      od.v0[0] -= od.radius * shift[0];
+      od.v0[1] -= od.radius * shift[1];
+      od.v0[2] -= od.radius * shift[2];
+      od.v1[0] -= od.radius * shift[0];
+      od.v1[1] -= od.radius * shift[1];
+      od.v1[2] -= od.radius * shift[2];
+      od.v2[0] -= od.radius * shift[0];
+      od.v2[1] -= od.radius * shift[1];
+      od.v2[2] -= od.radius * shift[2];
+      all_objs.push_back(od);
+      od.radius *= 2.0;
+      od.v0[0] += od.radius * shift[0];
+      od.v0[1] += od.radius * shift[1];
+      od.v0[2] += od.radius * shift[2];
+      od.v1[0] += od.radius * shift[0];
+      od.v1[1] += od.radius * shift[1];
+      od.v1[2] += od.radius * shift[2];
+      od.v2[0] += od.radius * shift[0];
+      od.v2[1] += od.radius * shift[1];
+      od.v2[2] += od.radius * shift[2];
+      all_objs.push_back(od);
     } else {
+      // use convex hull triangulation
       // collect positions and determine effective radius
       std::vector<vec3> pts;
-      pts.reserve(ichunkatoms.size());
+      pts.reserve(iatoms.size());
       double max_radius = 0.0;
-      for (const auto &ai : ichunkatoms) {
-        pts.push_back(ai.pos);
+      for (const auto &ai : iatoms) {
+        pts.push_back(vec3{ai.pos[0] - offset[0], ai.pos[1] - offset[1], ai.pos[2] - offset[2]});
         if (ai.aradius > max_radius) max_radius = ai.aradius;
       }
 
@@ -234,13 +298,13 @@ void FixGraphicsChunk::end_of_step()
         od.objtype = Graphics::TRINORM;
 
         // get atom type for each vertex color based on closest atom index
-        int ci0 = (cidx[t][0] >= 0 && cidx[t][0] < (int) ichunkatoms.size()) ? cidx[t][0] : 0;
-        int ci1 = (cidx[t][1] >= 0 && cidx[t][1] < (int) ichunkatoms.size()) ? cidx[t][1] : 0;
-        int ci2 = (cidx[t][2] >= 0 && cidx[t][2] < (int) ichunkatoms.size()) ? cidx[t][2] : 0;
+        int ci0 = (cidx[t][0] >= 0 && cidx[t][0] < (int) iatoms.size()) ? cidx[t][0] : 0;
+        int ci1 = (cidx[t][1] >= 0 && cidx[t][1] < (int) iatoms.size()) ? cidx[t][1] : 0;
+        int ci2 = (cidx[t][2] >= 0 && cidx[t][2] < (int) iatoms.size()) ? cidx[t][2] : 0;
 
-        od.type0 = ichunkatoms[ci0].atype;
-        od.type1 = ichunkatoms[ci1].atype;
-        od.type2 = ichunkatoms[ci2].atype;
+        od.type0 = iatoms[ci0].atype;
+        od.type1 = iatoms[ci1].atype;
+        od.type2 = iatoms[ci2].atype;
         od.v0 = tris[t][0];
         od.v1 = tris[t][1];
         od.v2 = tris[t][2];
@@ -267,7 +331,7 @@ void FixGraphicsChunk::end_of_step()
         imgparms[n][1] = od.v0[0];
         imgparms[n][2] = od.v0[1];
         imgparms[n][3] = od.v0[2];
-        imgparms[n][4] = od.radius * 2.0;
+        imgparms[n][4] = od.radius;
       } else if (od.objtype == Graphics::CYLINDER) {
         imgobjs[n] = od.objtype;
         imgparms[n][0] = od.type0;
@@ -277,7 +341,19 @@ void FixGraphicsChunk::end_of_step()
         imgparms[n][4] = od.v1[0];
         imgparms[n][5] = od.v1[1];
         imgparms[n][6] = od.v1[2];
-        imgparms[n][7] = od.radius * 2.0;
+        imgparms[n][7] = od.radius;
+      } else if (od.objtype == Graphics::TRIANGLE) {
+        imgobjs[n] = od.objtype;
+        imgparms[n][0] = od.type0;
+        imgparms[n][1] = od.v0[0];
+        imgparms[n][2] = od.v0[1];
+        imgparms[n][3] = od.v0[2];
+        imgparms[n][4] = od.v1[0];
+        imgparms[n][5] = od.v1[1];
+        imgparms[n][6] = od.v1[2];
+        imgparms[n][7] = od.v2[0];
+        imgparms[n][8] = od.v2[1];
+        imgparms[n][9] = od.v2[2];
       } else {
         imgobjs[n] = od.objtype;
         imgparms[n][0] = od.type0;
