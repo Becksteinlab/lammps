@@ -11,6 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "math_const.h"
 #include "math_special.h"
 
 #include "gmock/gmock.h"
@@ -20,6 +21,8 @@
 #include <limits>
 
 using namespace LAMMPS_NS;
+using MathConst::MY_PI;
+using MathConst::MY_PI2;
 
 // -------------------------------------------------------------------------
 // factorial()
@@ -147,7 +150,8 @@ TEST(MathSpecial, powint_consistency_with_pow)
     // Check that powint matches std::pow for various cases
     for (int n = -5; n <= 10; n++) {
         double base = 1.7;
-        EXPECT_NEAR(MathSpecial::powint(base, n), std::pow(base, n), std::abs(std::pow(base, n)) * 1e-14)
+        EXPECT_NEAR(MathSpecial::powint(base, n), std::pow(base, n),
+                    std::abs(std::pow(base, n)) * 1e-14)
             << "powint(" << base << ", " << n << ")";
     }
 }
@@ -166,7 +170,7 @@ TEST(MathSpecial, powsinxx_zero_argument)
 TEST(MathSpecial, powsinxx_known_values)
 {
     // (sin(pi/2)/(pi/2))^1 = 2/pi
-    double x = M_PI / 2.0;
+    double x        = MY_PI2;
     double expected = sin(x) / x;
     EXPECT_NEAR(MathSpecial::powsinxx(x, 1), expected, 1e-15);
 
@@ -192,8 +196,7 @@ TEST(MathSpecial, fm_exp_range_of_values)
     // Test a range of values match std::exp closely
     for (double x = -10.0; x <= 10.0; x += 0.5) {
         double expected = std::exp(x);
-        EXPECT_NEAR(MathSpecial::fm_exp(x), expected, expected * 1e-10)
-            << "fm_exp(" << x << ")";
+        EXPECT_NEAR(MathSpecial::fm_exp(x), expected, expected * 1e-10) << "fm_exp(" << x << ")";
     }
 }
 
@@ -221,7 +224,7 @@ TEST(MathSpecial, expmsq_known_values)
 {
     EXPECT_NEAR(MathSpecial::expmsq(0.0), 1.0, 1e-14);
     EXPECT_NEAR(MathSpecial::expmsq(1.0), std::exp(-1.0), 1e-12);
-    EXPECT_NEAR(MathSpecial::expmsq(-1.0), std::exp(-1.0), 1e-12);    // symmetric
+    EXPECT_NEAR(MathSpecial::expmsq(-1.0), std::exp(-1.0), 1e-12); // symmetric
     EXPECT_NEAR(MathSpecial::expmsq(2.0), std::exp(-4.0), std::exp(-4.0) * 1e-10);
 }
 
@@ -251,8 +254,8 @@ TEST(MathSpecial, my_erfcx_known_values)
     EXPECT_NEAR(MathSpecial::my_erfcx(0.0), 1.0, 1e-12);
 
     // For large positive x, erfcx(x) ~ 1/(x*sqrt(pi))
-    double x = 10.0;
-    double approx = 1.0 / (x * std::sqrt(M_PI));
+    double x      = 10.0;
+    double approx = 1.0 / (x * std::sqrt(MY_PI));
     EXPECT_NEAR(MathSpecial::my_erfcx(x), approx, approx * 0.01);
 }
 

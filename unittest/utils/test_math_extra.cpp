@@ -11,6 +11,7 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+#include "math_const.h"
 #include "math_extra.h"
 
 #include "gmock/gmock.h"
@@ -19,13 +20,17 @@
 #include <cmath>
 #include <cstring>
 
+using namespace LAMMPS_NS;
+using MathConst::MY_PI;
+using MathConst::MY_PI2;
+
 // =========================================================================
 // 3-vector operations
 // =========================================================================
 
 TEST(MathExtraVec3, copy2)
 {
-    double v[2] = {1.5, -2.3};
+    double v[2]   = {1.5, -2.3};
     double ans[2] = {0.0, 0.0};
     MathExtra::copy2(v, ans);
     EXPECT_DOUBLE_EQ(ans[0], 1.5);
@@ -34,7 +39,7 @@ TEST(MathExtraVec3, copy2)
 
 TEST(MathExtraVec3, copy3)
 {
-    double v[3] = {1.0, 2.0, 3.0};
+    double v[3]   = {1.0, 2.0, 3.0};
     double ans[3] = {0.0, 0.0, 0.0};
     MathExtra::copy3(v, ans);
     EXPECT_DOUBLE_EQ(ans[0], 1.0);
@@ -325,13 +330,12 @@ TEST(MathExtraMat3, minus3)
     MathExtra::minus3(m1, m2, ans);
     for (int i = 0; i < 3; i++)
         for (int j = 0; j < 3; j++)
-            EXPECT_DOUBLE_EQ(ans[i][j], (i * 3 + j + 1) * 9.0)
-                << "at [" << i << "][" << j << "]";
+            EXPECT_DOUBLE_EQ(ans[i][j], (i * 3 + j + 1) * 9.0) << "at [" << i << "][" << j << "]";
 }
 
 TEST(MathExtraMat3, times3_identity)
 {
-    double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
+    double m[3][3]  = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     double id[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
     double ans[3][3];
     MathExtra::times3(m, id, ans);
@@ -400,7 +404,7 @@ TEST(MathExtraMat3, times3_transpose)
 
 TEST(MathExtraMat3, diag_times3)
 {
-    double d[3] = {2.0, 3.0, 4.0};
+    double d[3]    = {2.0, 3.0, 4.0};
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     double ans[3][3];
     MathExtra::diag_times3(d, m, ans);
@@ -418,7 +422,7 @@ TEST(MathExtraMat3, diag_times3)
 TEST(MathExtraMat3, times3_diag)
 {
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    double d[3] = {2.0, 3.0, 4.0};
+    double d[3]    = {2.0, 3.0, 4.0};
     double ans[3][3];
     MathExtra::times3_diag(m, d, ans);
     EXPECT_DOUBLE_EQ(ans[0][0], 2.0);
@@ -464,7 +468,7 @@ TEST(MathExtraMat3, invert3_identity)
 TEST(MathExtraMat3, matvec_array)
 {
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    double v[3] = {1.0, 0.0, 0.0};
+    double v[3]    = {1.0, 0.0, 0.0};
     double ans[3];
     MathExtra::matvec(m, v, ans);
     EXPECT_DOUBLE_EQ(ans[0], 1.0);
@@ -477,7 +481,7 @@ TEST(MathExtraMat3, matvec_columns)
     double ex[3] = {1, 4, 7};
     double ey[3] = {2, 5, 8};
     double ez[3] = {3, 6, 9};
-    double v[3] = {1.0, 1.0, 1.0};
+    double v[3]  = {1.0, 1.0, 1.0};
     double ans[3];
     MathExtra::matvec(ex, ey, ez, v, ans);
     EXPECT_DOUBLE_EQ(ans[0], 6.0);
@@ -488,7 +492,7 @@ TEST(MathExtraMat3, matvec_columns)
 TEST(MathExtraMat3, transpose_matvec_array)
 {
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    double v[3] = {1.0, 1.0, 1.0};
+    double v[3]    = {1.0, 1.0, 1.0};
     double ans[3];
     MathExtra::transpose_matvec(m, v, ans);
     // M^T * v: col0 dot v = 1+4+7=12, col1 dot v = 2+5+8=15, col2 dot v = 3+6+9=18
@@ -502,7 +506,7 @@ TEST(MathExtraMat3, transpose_matvec_columns)
     double ex[3] = {1, 2, 3};
     double ey[3] = {4, 5, 6};
     double ez[3] = {7, 8, 9};
-    double v[3] = {1.0, 0.0, 0.0};
+    double v[3]  = {1.0, 0.0, 0.0};
     double ans[3];
     MathExtra::transpose_matvec(ex, ey, ez, v, ans);
     // ex . v, ey . v, ez . v
@@ -514,7 +518,7 @@ TEST(MathExtraMat3, transpose_matvec_columns)
 TEST(MathExtraMat3, transpose_diag3)
 {
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
-    double d[3] = {2.0, 3.0, 4.0};
+    double d[3]    = {2.0, 3.0, 4.0};
     double ans[3][3];
     MathExtra::transpose_diag3(m, d, ans);
     // ans = M^T * diag(d)
@@ -531,7 +535,7 @@ TEST(MathExtraMat3, transpose_diag3)
 
 TEST(MathExtraMat3, vecmat)
 {
-    double v[3] = {1.0, 2.0, 3.0};
+    double v[3]    = {1.0, 2.0, 3.0};
     double m[3][3] = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     double ans[3];
     MathExtra::vecmat(v, m, ans);
@@ -576,7 +580,7 @@ TEST(MathExtraSolver, mldivide3_simple)
 {
     // Solve [[2,0,0],[0,3,0],[0,0,4]] * x = [6,9,12] => x = [3,3,3]
     double m[3][3] = {{2, 0, 0}, {0, 3, 0}, {0, 0, 4}};
-    double v[3] = {6.0, 9.0, 12.0};
+    double v[3]    = {6.0, 9.0, 12.0};
     double ans[3];
     int ret = MathExtra::mldivide3(m, v, ans);
     EXPECT_EQ(ret, 0);
@@ -590,7 +594,7 @@ TEST(MathExtraSolver, mldivide3_general)
     // Solve [[1,2,3],[0,1,4],[5,6,0]] * x = [1,0,0]
     // det = 1 (from earlier test)
     double m[3][3] = {{1, 2, 3}, {0, 1, 4}, {5, 6, 0}};
-    double v[3] = {1.0, 0.0, 0.0};
+    double v[3]    = {1.0, 0.0, 0.0};
     double ans[3];
     int ret = MathExtra::mldivide3(m, v, ans);
     EXPECT_EQ(ret, 0);
@@ -607,7 +611,7 @@ TEST(MathExtraSolver, mldivide3_singular)
 {
     // Singular matrix should return 1
     double m[3][3] = {{1, 2, 3}, {2, 4, 6}, {1, 1, 1}};
-    double v[3] = {1.0, 2.0, 3.0};
+    double v[3]    = {1.0, 2.0, 3.0};
     double ans[3];
     int ret = MathExtra::mldivide3(m, v, ans);
     EXPECT_EQ(ret, 1);
@@ -649,7 +653,7 @@ TEST(MathExtraQuat, qconjugate)
 TEST(MathExtraQuat, quatquat_identity)
 {
     // q * identity = q
-    double q[4] = {0.5, 0.5, 0.5, 0.5};
+    double q[4]  = {0.5, 0.5, 0.5, 0.5};
     double id[4] = {1.0, 0.0, 0.0, 0.0};
     double c[4];
     MathExtra::quatquat(q, id, c);
@@ -686,9 +690,9 @@ TEST(MathExtraQuat, quatrotvec_identity)
 TEST(MathExtraQuat, quatrotvec_90deg_z)
 {
     // 90-degree rotation around z: (1,0,0) -> (0,1,0)
-    double angle = M_PI / 2.0;
-    double q[4] = {std::cos(angle / 2), 0.0, 0.0, std::sin(angle / 2)};
-    double v[3] = {1.0, 0.0, 0.0};
+    double angle = MY_PI2;
+    double q[4]  = {std::cos(angle / 2.0), 0.0, 0.0, std::sin(angle / 2.0)};
+    double v[3]  = {1.0, 0.0, 0.0};
     double c[3];
     MathExtra::quatrotvec(q, v, c);
     EXPECT_NEAR(c[0], 0.0, 1e-14);
@@ -698,7 +702,7 @@ TEST(MathExtraQuat, quatrotvec_90deg_z)
 
 TEST(MathExtraQuat, quatrotvec_preserves_length)
 {
-    double angle = 1.23;
+    double angle   = 1.23;
     double axis[3] = {1.0, 1.0, 1.0};
     MathExtra::norm3(axis);
     double q[4];
@@ -718,11 +722,11 @@ TEST(MathExtraQuat, axisangle_to_quat)
     // 180-degree rotation around z
     double axis[3] = {0.0, 0.0, 1.0};
     double q[4];
-    MathExtra::axisangle_to_quat(axis, M_PI, q);
-    EXPECT_NEAR(q[0], std::cos(M_PI / 2), 1e-15);
+    MathExtra::axisangle_to_quat(axis, MY_PI, q);
+    EXPECT_NEAR(q[0], std::cos(MY_PI2), 1e-15);
     EXPECT_NEAR(q[1], 0.0, 1e-15);
     EXPECT_NEAR(q[2], 0.0, 1e-15);
-    EXPECT_NEAR(q[3], std::sin(M_PI / 2), 1e-15);
+    EXPECT_NEAR(q[3], std::sin(MY_PI2), 1e-15);
 }
 
 TEST(MathExtraQuat, axisangle_to_quat_zero_angle)
@@ -743,7 +747,7 @@ TEST(MathExtraQuat, vecquat_quatvec_consistency)
     // These are NOT the same in general, but let's test each works correctly
 
     double a[3] = {1.0, 0.0, 0.0};
-    double b[4] = {1.0, 0.0, 0.0, 0.0};    // identity
+    double b[4] = {1.0, 0.0, 0.0, 0.0}; // identity
     double c1[4], c2[4];
 
     // vecquat: (0,a)*b where b is identity
@@ -782,7 +786,7 @@ TEST(MathExtraQuatConvert, quat_to_mat_identity)
 TEST(MathExtraQuatConvert, quat_to_mat_is_rotation)
 {
     // Check that the resulting matrix is a proper rotation (det=1, R^T R = I)
-    double angle = 1.234;
+    double angle   = 1.234;
     double axis[3] = {1.0, 2.0, 3.0};
     MathExtra::norm3(axis);
     double q[4];
@@ -804,7 +808,7 @@ TEST(MathExtraQuatConvert, quat_to_mat_is_rotation)
 
 TEST(MathExtraQuatConvert, quat_to_mat_trans_is_transpose)
 {
-    double angle = 0.789;
+    double angle   = 0.789;
     double axis[3] = {0.0, 1.0, 0.0};
     double q[4];
     MathExtra::axisangle_to_quat(axis, angle, q);
@@ -824,7 +828,7 @@ TEST(MathExtraQuatConvert, quat_to_mat_trans_is_transpose)
 TEST(MathExtraQuatConvert, quat_to_mat_roundtrip)
 {
     // quat -> mat -> quat should give equivalent quaternion
-    double angle = 1.5;
+    double angle   = 1.5;
     double axis[3] = {1.0, -1.0, 0.5};
     MathExtra::norm3(axis);
     double q_orig[4];
@@ -860,7 +864,7 @@ TEST(MathExtraQuatConvert, q_to_exyz_identity)
 
 TEST(MathExtraQuatConvert, q_to_exyz_and_back)
 {
-    double angle = 0.567;
+    double angle   = 0.567;
     double axis[3] = {0.0, 0.0, 1.0};
     double q_orig[4];
     MathExtra::axisangle_to_quat(axis, angle, q_orig);
@@ -878,7 +882,7 @@ TEST(MathExtraQuatConvert, q_to_exyz_and_back)
 
 TEST(MathExtraQuatConvert, quat_to_mat_matches_q_to_exyz)
 {
-    double angle = 2.1;
+    double angle   = 2.1;
     double axis[3] = {1.0, 0.0, 0.0};
     double q[4];
     MathExtra::axisangle_to_quat(axis, angle, q);
@@ -1051,16 +1055,16 @@ TEST(MathExtraRotation, rotation_generator_z)
 TEST(MathExtraUtil, volume_ellipsoid_sphere)
 {
     double shape[3] = {2.0, 2.0, 2.0};
-    double vol = MathExtra::volume_ellipsoid(shape);
-    double expected = (4.0 / 3.0) * M_PI * 8.0;
+    double vol      = MathExtra::volume_ellipsoid(shape);
+    double expected = (4.0 / 3.0) * MY_PI * 8.0;
     EXPECT_NEAR(vol, expected, 1e-10);
 }
 
 TEST(MathExtraUtil, volume_ellipsoid_general)
 {
     double shape[3] = {1.0, 2.0, 3.0};
-    double vol = MathExtra::volume_ellipsoid(shape);
-    double expected = (4.0 / 3.0) * M_PI * 6.0;
+    double vol      = MathExtra::volume_ellipsoid(shape);
+    double expected = (4.0 / 3.0) * MY_PI * 6.0;
     EXPECT_NEAR(vol, expected, 1e-10);
 }
 
@@ -1069,8 +1073,8 @@ TEST(MathExtraUtil, volume_ellipsoid_sphere_super)
     // With blockiness [2,2] and flag_super=0, same as regular ellipsoid
     double shape[3] = {2.0, 2.0, 2.0};
     double block[2] = {2.0, 2.0};
-    double vol = MathExtra::volume_ellipsoid(shape, block, 0);
-    double expected = (4.0 / 3.0) * M_PI * 8.0;
+    double vol      = MathExtra::volume_ellipsoid(shape, block, 0);
+    double expected = (4.0 / 3.0) * MY_PI * 8.0;
     EXPECT_NEAR(vol, expected, 1e-10);
 }
 
@@ -1084,7 +1088,7 @@ TEST(MathExtraUtil, beta_function)
     EXPECT_NEAR(MathExtra::beta(2.0, 3.0), 1.0 / 12.0, 1e-14);
 
     // Beta(0.5, 0.5) = pi
-    EXPECT_NEAR(MathExtra::beta(0.5, 0.5), M_PI, 1e-12);
+    EXPECT_NEAR(MathExtra::beta(0.5, 0.5), MY_PI, 1e-12);
 }
 
 TEST(MathExtraUtil, multiply_shape_shape)

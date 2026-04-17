@@ -12,6 +12,7 @@
 ------------------------------------------------------------------------- */
 
 #include "lammps.h"
+#include "math_const.h"
 #include "random_mars.h"
 #include "random_park.h"
 
@@ -22,6 +23,7 @@
 #include <vector>
 
 using namespace LAMMPS_NS;
+using MathConst::MY_PI2;
 
 // =========================================================================
 // Test fixture that creates a minimal LAMMPS instance for RNG tests
@@ -38,13 +40,13 @@ protected:
         int flag;
         MPI_Initialized(&flag);
         if (!flag) {
-            int argc    = 1;
+            int argc     = 1;
             char *args[] = {(char *)"RNGTest", nullptr};
             MPI_Init(&argc, (char ***)&args);
         }
 
-        LAMMPS::argv args = {"RNGTest", "-log", "none", "-echo", "none", "-screen", "none",
-                              "-nocite"};
+        LAMMPS::argv args = {"RNGTest", "-log",    "none", "-echo",
+                             "none",    "-screen", "none", "-nocite"};
 
         lmp = new LAMMPS(args, MPI_COMM_WORLD);
     }
@@ -73,7 +75,7 @@ TEST_F(RNGTest, RanMars_uniform_range)
 TEST_F(RNGTest, RanMars_uniform_not_constant)
 {
     RanMars rng(lmp, 54321);
-    double first = rng.uniform();
+    double first   = rng.uniform();
     bool different = false;
     for (int i = 0; i < 100; i++) {
         if (rng.uniform() != first) {
@@ -90,11 +92,13 @@ TEST_F(RNGTest, RanMars_uniform_reproducible)
 
     {
         RanMars rng(lmp, 42);
-        for (int i = 0; i < 100; i++) seq1[i] = rng.uniform();
+        for (int i = 0; i < 100; i++)
+            seq1[i] = rng.uniform();
     }
     {
         RanMars rng(lmp, 42);
-        for (int i = 0; i < 100; i++) seq2[i] = rng.uniform();
+        for (int i = 0; i < 100; i++)
+            seq2[i] = rng.uniform();
     }
 
     for (int i = 0; i < 100; i++) {
@@ -129,7 +133,7 @@ TEST_F(RNGTest, RanMars_gaussian_statistics)
         sumsq += val * val;
     }
 
-    double mean = sum / N;
+    double mean     = sum / N;
     double variance = sumsq / N - mean * mean;
 
     // Mean should be close to 0, variance close to 1
@@ -150,11 +154,12 @@ TEST_F(RNGTest, RanMars_gaussian_with_params)
         sumsq += val * val;
     }
 
-    double mean = sum / N;
+    double mean     = sum / N;
     double variance = sumsq / N - mean * mean;
 
     EXPECT_NEAR(mean, mu, 0.1) << "Gaussian(mu,sigma) mean should be near mu";
-    EXPECT_NEAR(variance, sigma * sigma, 0.2) << "Gaussian(mu,sigma) variance should be near sigma^2";
+    EXPECT_NEAR(variance, sigma * sigma, 0.2)
+        << "Gaussian(mu,sigma) variance should be near sigma^2";
 }
 
 TEST_F(RNGTest, RanMars_rayleigh_positive)
@@ -169,9 +174,9 @@ TEST_F(RNGTest, RanMars_rayleigh_positive)
 TEST_F(RNGTest, RanMars_rayleigh_statistics)
 {
     RanMars rng(lmp, 44444);
-    const int N = 50000;
+    const int N  = 50000;
     double sigma = 2.0;
-    double sum = 0.0;
+    double sum   = 0.0;
 
     for (int i = 0; i < N; i++) {
         sum += rng.rayleigh(sigma);
@@ -179,7 +184,7 @@ TEST_F(RNGTest, RanMars_rayleigh_statistics)
 
     double mean = sum / N;
     // Rayleigh mean = sigma * sqrt(pi/2)
-    double expected_mean = sigma * std::sqrt(M_PI / 2.0);
+    double expected_mean = sigma * std::sqrt(MY_PI2);
     EXPECT_NEAR(mean, expected_mean, 0.1) << "Rayleigh mean should be sigma*sqrt(pi/2)";
 }
 
@@ -188,7 +193,8 @@ TEST_F(RNGTest, RanMars_state_save_restore)
     RanMars rng(lmp, 55555);
 
     // Advance the RNG some steps
-    for (int i = 0; i < 100; i++) rng.uniform();
+    for (int i = 0; i < 100; i++)
+        rng.uniform();
 
     // Save state
     double state[103];
@@ -196,7 +202,8 @@ TEST_F(RNGTest, RanMars_state_save_restore)
 
     // Generate a sequence
     std::vector<double> seq1(50);
-    for (int i = 0; i < 50; i++) seq1[i] = rng.uniform();
+    for (int i = 0; i < 50; i++)
+        seq1[i] = rng.uniform();
 
     // Restore state
     rng.set_state(state);
@@ -227,11 +234,13 @@ TEST_F(RNGTest, RanPark_uniform_reproducible)
 
     {
         RanPark rng(lmp, 42);
-        for (int i = 0; i < 100; i++) seq1[i] = rng.uniform();
+        for (int i = 0; i < 100; i++)
+            seq1[i] = rng.uniform();
     }
     {
         RanPark rng(lmp, 42);
-        for (int i = 0; i < 100; i++) seq2[i] = rng.uniform();
+        for (int i = 0; i < 100; i++)
+            seq2[i] = rng.uniform();
     }
 
     for (int i = 0; i < 100; i++) {
@@ -266,7 +275,7 @@ TEST_F(RNGTest, RanPark_gaussian_statistics)
         sumsq += val * val;
     }
 
-    double mean = sum / N;
+    double mean     = sum / N;
     double variance = sumsq / N - mean * mean;
 
     EXPECT_NEAR(mean, 0.0, 0.05) << "Gaussian mean should be near 0";
@@ -277,7 +286,8 @@ TEST_F(RNGTest, RanPark_reset_int)
 {
     RanPark rng(lmp, 12345);
     // Generate some values
-    for (int i = 0; i < 50; i++) rng.uniform();
+    for (int i = 0; i < 50; i++)
+        rng.uniform();
 
     // Reset with a new seed
     rng.reset(67890);
@@ -287,8 +297,7 @@ TEST_F(RNGTest, RanPark_reset_int)
 
     // They should produce the same sequence
     for (int i = 0; i < 100; i++) {
-        EXPECT_DOUBLE_EQ(rng.uniform(), rng2.uniform())
-            << "Reset sequence mismatch at index " << i;
+        EXPECT_DOUBLE_EQ(rng.uniform(), rng2.uniform()) << "Reset sequence mismatch at index " << i;
     }
 }
 
