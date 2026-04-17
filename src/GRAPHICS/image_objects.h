@@ -29,6 +29,7 @@ namespace ImageObjects {
 
   // custom data types for positions and triangles based on std::array
   using vec3 = std::array<double, 3>;
+  using vec4 = std::array<double, 4>;
   using triangle = std::array<vec3, 3>;
 
   // some basic math operations for positions/vectors
@@ -126,7 +127,7 @@ namespace ImageObjects {
     // build convex hull from a set of points with optional radius inflation
     // smooth=true: per-vertex normals for smooth shading
     // smooth=false: flat normals (face normal used for all three vertices)
-    void build(const std::vector<vec3> &points, double radius = 0.0, bool smooth = true);
+    void build(const std::vector<vec4> &points, bool smooth = true);
 
     // draw the convex hull using Image draw calls with per-vertex normals and colors
     void draw(Image *img, const std::vector<vec3> &colors, double opacity = 1.0);
@@ -141,7 +142,7 @@ namespace ImageObjects {
     std::vector<triangle> hull_normals;
     std::vector<std::array<int, 3>> hull_color_idx;    // index into colors per vertex
 
-    void build_hull(const std::vector<vec3> &points, double radius, bool smooth);
+    void build_hull(const std::vector<vec4> &points, bool smooth);
   };
 }    // namespace ImageObjects
 }    // namespace LAMMPS_NS

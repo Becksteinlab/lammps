@@ -844,19 +844,19 @@ constexpr double MIN_VISIBLE_RADIUS = 0.1;    // minimum visible radius for poin
 // Build a convex hull from a set of 3D points with optional radius inflation.
 // Requires at least 4 points.
 
-void ConvexHullObj::build(const std::vector<vec3> &points, double radius, bool smooth)
+void ConvexHullObj::build(const std::vector<vec4> &points, bool smooth)
 {
   hull_triangles.clear();
   hull_normals.clear();
   hull_color_idx.clear();
 
   if (points.size() < 4) return;
-  build_hull(points, radius, smooth);
+  build_hull(points, smooth);
 }
 
 // 3D incremental convex hull algorithm
 
-void ConvexHullObj::build_hull(const std::vector<vec3> &original_points, double radius, bool smooth)
+void ConvexHullObj::build_hull(const std::vector<vec4> &original_points, bool smooth)
 {
   const int npts = static_cast<int>(original_points.size());
 
@@ -871,21 +871,18 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &original_points, double 
   centroid[1] /= npts;
   centroid[2] /= npts;
 
-  // if radius > 0, inflate points outward from centroid by radius
+  // inflate points outward from centroid by radius
   std::vector<vec3> points;
-  if (radius > 0.0) {
-    points.reserve(original_points.size());
-    for (const auto &p : original_points) {
-      vec3 dir = p - centroid;
-      double len = vec3len(dir);
-      if (len > SMALL) {
-        points.push_back(p + radius * ((1.0 / len) * dir));
-      } else {
-        points.push_back(p);
-      }
+  points.reserve(original_points.size());
+  for (const auto &p : original_points) {
+    vec3 pos{p[0], p[1], p[2]};
+    vec3 dir = pos - centroid;
+    double len = vec3len(dir);
+    if (len > SMALL) {
+      points.push_back(pos + p[3] * ((1.0 / len) * dir));
+    } else {
+      points.push_back(pos);
     }
-  } else {
-    points = original_points;
   }
 
   // Find initial tetrahedron from 4 non-coplanar points

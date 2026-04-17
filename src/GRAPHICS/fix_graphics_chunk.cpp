@@ -122,6 +122,7 @@ void FixGraphicsChunk::init()
 void FixGraphicsChunk::end_of_step()
 {
   using ImageObjects::vec3;
+  using ImageObjects::vec4;
 
   memory->destroy(imgobjs);
   memory->destroy(imgparms);
@@ -161,12 +162,11 @@ void FixGraphicsChunk::end_of_step()
   // chunks are 1-based, ichunk[i] == 0 means atom is not in any chunk
 
   struct AtomInfo {
-    vec3 pos;
+    vec4 pos;
     int atype;
-    double aradius;
   };
   std::vector<std::vector<AtomInfo>> chunk_atoms(nchunk);
-  vec3 unwrapped;
+  vec4 unwrapped;
 
   for (int i = 0; i < nlocal; ++i) {
     if (!(mask[i] & groupbit)) continue;
@@ -180,7 +180,8 @@ void FixGraphicsChunk::end_of_step()
         atom_radius = sigma[type[i]][type[i]];
     }
     domain->unmap(x[i], image[i], unwrapped.data());
-    chunk_atoms[ic - 1].push_back({unwrapped, type[i], atom_radius});
+    unwrapped[3] = atom_radius;
+    chunk_atoms[ic - 1].push_back({unwrapped, type[i]});
   }
 
   // build convex hulls for each chunk and collect all TRINORM objects
@@ -200,7 +201,7 @@ void FixGraphicsChunk::end_of_step()
     const auto &iatoms = chunk_atoms[c];
     if (iatoms.empty()) continue;
 
-    vec3 wrapped{iatoms[0].pos};
+    vec3 wrapped{iatoms[0].pos[0], iatoms[0].pos[1], iatoms[0].pos[2]};
     domain->remap(wrapped.data());
     vec3 offset{iatoms[0].pos[0] - wrapped[0], iatoms[0].pos[1] - wrapped[1],
                 iatoms[0].pos[2] - wrapped[2]};
@@ -211,17 +212,17 @@ void FixGraphicsChunk::end_of_step()
       od.objtype = Graphics::SPHERE;
       od.type0 = iatoms[0].atype;
       od.v0 = wrapped;
-      od.radius = 0.5 * iatoms[0].aradius;
+      od.radius = 0.5 * iatoms[0].pos[3];
       all_objs.push_back(od);
     } else if (iatoms.size() == 2) {
-      // special case: a two atom cluster -> draw a cylinder
+      // special case: a two atom cluster -> draw a cylinder and two spheres
       ObjData od;
       od.objtype = Graphics::STICK;
       od.type0 = std::min(iatoms[0].atype, iatoms[1].atype);
       od.v0 = wrapped;
       od.v1 = vec3{iatoms[1].pos[0] - offset[0], iatoms[1].pos[1] - offset[1],
                    iatoms[1].pos[2] - offset[2]};
-      od.radius = 0.5 * std::max(iatoms[0].aradius, iatoms[1].aradius);
+      od.radius = 0.5 * std::min(iatoms[0].pos[3], iatoms[1].pos[3]);
       all_objs.push_back(od);
     } else if (iatoms.size() == 3) {
       // special case: a three atom cluster -> draw three cylinders and two triangles
@@ -232,7 +233,7 @@ void FixGraphicsChunk::end_of_step()
       od.v0 = wrapped;
       od.v1 = vec3{iatoms[1].pos[0] - offset[0], iatoms[1].pos[1] - offset[1],
                    iatoms[1].pos[2] - offset[2]};
-      od.radius = 0.5 * std::max({iatoms[0].aradius, iatoms[1].aradius, iatoms[2].aradius});
+      od.radius = 0.5 * std::max({iatoms[0].pos[3], iatoms[1].pos[3], iatoms[2].pos[3]});
       all_objs.push_back(od);
       // atom 1 to atom 3
       od.v1 = vec3{iatoms[2].pos[0] - offset[0], iatoms[2].pos[1] - offset[1],
@@ -277,16 +278,14 @@ void FixGraphicsChunk::end_of_step()
     } else {
       // use convex hull triangulation
       // collect positions and determine effective radius
-      std::vector<vec3> pts;
+      std::vector<vec4> pts;
       pts.reserve(iatoms.size());
-      double max_radius = 0.0;
       for (const auto &ai : iatoms) {
-        pts.push_back(vec3{ai.pos[0] - offset[0], ai.pos[1] - offset[1], ai.pos[2] - offset[2]});
-        if (ai.aradius > max_radius) max_radius = ai.aradius;
+        pts.push_back(vec4{ai.pos[0] - offset[0], ai.pos[1] - offset[1], ai.pos[2] - offset[2], ai.pos[3]});
       }
 
       // build convex hull with radius inflation
-      hull.build(pts, max_radius, smooth);
+      hull.build(pts, smooth);
 
       const auto &tris = hull.get_triangles();
       const auto &norms = hull.get_normals();
