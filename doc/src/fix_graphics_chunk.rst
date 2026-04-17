@@ -124,6 +124,11 @@ was built with that package.  See the :doc:`Build package
 
 This fix is not compatible with 2d simulations.
 
+When running in parallel, the chunks and corresponding graphics objects
+are currently computed separately for each subdomain, so that the graphics
+will be different for all chunks that are distributed across sub-domains
+depending on the number of processors used.
+
 Related commands
 """"""""""""""""
 
