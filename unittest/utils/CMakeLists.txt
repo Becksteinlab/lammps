@@ -162,6 +162,10 @@ if(PKG_ASPHERE)
   add_test(NAME MathExtraSuperellipsoids COMMAND test_math_extra_superellipsoids)
 endif()
 
+add_executable(test_math_extra test_math_extra.cpp)
+target_link_libraries(test_math_extra PRIVATE lammps GTest::GMockMain)
+add_test(NAME MathExtra COMMAND test_math_extra)
+
 add_executable(test_math_special test_math_special.cpp)
 target_link_libraries(test_math_special PRIVATE lammps GTest::GMockMain)
 add_test(NAME MathSpecial COMMAND test_math_special)
