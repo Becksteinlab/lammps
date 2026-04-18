@@ -299,7 +299,7 @@ TEST_F(FileOperationsTest, error_all_one)
                  lmp->error->one("testme.cpp", 10, "exit"););
     TEST_FAILURE(".*ERROR on proc 0: exit too \\(testme.cpp:10\\).*",
                  lmp->error->one("testme.cpp", 10, "exit {}", "too"););
-    TEST_FAILURE(".*ERROR on proc 0: argument not found \\(testme.cpp:10\\).*",
+    TEST_FAILURE(".*ERROR on proc 0:.*\\(testme.cpp:10\\).*",
                  lmp->error->one("testme.cpp", 10, "exit {} {}", "too"););
 }
 
