@@ -40,13 +40,12 @@ Description
 .. versionadded:: TBD
 
 This fix generates graphics objects from chunks of atoms defined by the
-:doc:`compute chunk/atom <compute_chunk_atom>` command.  For chunks with
-more than three atoms a triangulated convex hull is created, chunks with
-a single atom are represented by a sphere, chunks with two atoms by a
-cylinder connecting the two atoms, and chunks with three atoms by three
-cylinders connecting the atoms and by two triangles on the sides.  The
-resulting list of graphics objects is passed to :doc:`dump image
-<dump_image>` for rendering via the *fix* keyword.
+:doc:`compute chunk/atom <compute_chunk_atom>` command.  Each chunck is
+represented by a point cloud created by replacing each atom position
+with the corners of an octahedron scaled to the radius of the atom.  A
+triangulated convex hull is created from that point cloud. The resulting
+list of graphics objects is passed to :doc:`dump image <dump_image>` for
+rendering via the *fix* keyword.
 
 The positions used for the generation of the graphics are based on
 unwrapped coordinates which are then mapped back into the simulation
@@ -67,19 +66,17 @@ selected in :doc:`dump image <dump_image>` command.  With the *type* or
 *element* coloring scheme the color is based on atom type as described
 below, with the *const* coloring scheme a uniform color is used instead.
 This color can be set with the *fcolor* keyword of the :doc:`dump modify
-<dump_image>` command.  When using atom type based colors, the objects
-in the special cases of up to three atoms the graphics objects are
-colored uniformly based on the smallest atom type of the cluster, while
-for the convex hull the triangles are colored per vertex using the atom
-type of the closest atom.
+<dump_image>` command.  When using atom type based colors the vertices
+of the convex hull are colored using the atom type of the closest atom
+and the color between vertices is interpolated.
 
 The optional *radius* keyword allows to override the radius value used
-to determine the size of the represented graphics, either by setting the
-radius of the objects directly or by inflating the convex hull.  If
-available, the per-atom radius (e.g. for simulations using :doc:`atom
-style sphere <atom_style>`) is used, otherwise half of the value of the
-Lennard-Jones *sigma* parameter for the atom type. The fallback value is
-0.1 length units.
+to determine the size of the represented graphics by scaling the
+octahedron positions that represents each atom for computing the convex
+hull.  If available, the per-atom radius (e.g. for simulations using
+:doc:`atom style sphere <atom_style>`) is used, otherwise half of the
+value of the Lennard-Jones *sigma* parameter for the atom type is
+used.  The fallback value is 0.1 length units.
 
 The optional *shading* keyword selects how triangle normals are
 determined for rendering convex hulls.  The *smooth* setting (the
@@ -102,8 +99,6 @@ The *fflag1* setting of *dump image fix* determines whether the hull is
 rendered as connected rounded triangles (1) or as a wireframe mesh of
 cylinders (2).  If using a wireframe mesh, the *fflag2* setting
 determines the diameter of the cylinders.
-
-For small clusters with 3 atoms or less both flags are ignored.
 
 ----------
 

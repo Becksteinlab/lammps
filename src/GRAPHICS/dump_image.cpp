@@ -1845,9 +1845,6 @@ void DumpImage::create_image()
         image->draw_cylinder(&objarray[i][1], &objarray[i][4], color, objarray[i][7] + iobj.flag2,
                              (int) iobj.flag1, opacity);
 
-      } else if (objvec[i] == Graphics::STICK) {
-        image->draw_cylinder(&objarray[i][1], &objarray[i][4], color, objarray[i][7], 3, opacity);
-
       } else if (objvec[i] == Graphics::TRIANGLE) {
         image->draw_triangle(&objarray[i][1], &objarray[i][4], &objarray[i][7], color, opacity);
 
