@@ -38,9 +38,16 @@ namespace {
 using ImageObjects::triangle;
 using ImageObjects::vec3;
 
-// define octahedron positions for a sphere with radius 1.0
-const std::vector<vec3> octahedron = {{-1.0, 0.0, 0.0}, {1.0, 0.0, 0.0},  {0.0, -1.0, 0.0},
-                                      {0.0, 1.0, 0.0},  {0.0, 0.0, -1.0}, {0.0, 0.0, 1.0}};
+// Define vertices of an icosahedron to approximate a sphere of radius 1 around the origin.
+// A and B are the normalized coordinates derived from the golden ratio:
+// phi = (1 + sqrt(5)) / 2; A = 1 / sqrt(1 + phi^2); B = phi / sqrt(1 + phi^2)
+constexpr double A = 0.5257311121191336;
+constexpr double B = 0.8506508083520399;
+const std::vector<vec3> icosahedron = {
+    {-A, B, 0.0},  {A, B, 0.0},  {-A, -B, 0.0}, {A, -B, 0.0}, {0.0, -A, B},  {0.0, A, B},
+    {0.0, -A, -B}, {0.0, A, -B}, {B, 0.0, -A},  {B, 0.0, A},  {-B, 0.0, -A}, {-B, 0.0, A},
+};
+constexpr int NUM_POINTS = 12;
 }    // namespace
 
 /* ---------------------------------------------------------------------- */
@@ -220,14 +227,14 @@ void FixGraphicsChunk::end_of_step()
     vec3 offset{iatoms[0].pos[0] - wrapped[0], iatoms[0].pos[1] - wrapped[1],
                 iatoms[0].pos[2] - wrapped[2]};
 
-    // replace atom positions with octahedron scaled to radius
+    // replace atom positions with icosahedron scaled to radius
     std::vector<vec3> pts;
     pts.reserve(6 * natoms);
     for (const auto &ai : iatoms) {
-      for (const auto &oct : octahedron) {
-        pts.push_back({ai.rad * oct[0] + ai.pos[0] - offset[0],
-                       ai.rad * oct[1] + ai.pos[1] - offset[1],
-                       ai.rad * oct[2] + ai.pos[2] - offset[2]});
+      for (const auto &ico : icosahedron) {
+        pts.push_back({ai.rad * ico[0] + ai.pos[0] - offset[0],
+                       ai.rad * ico[1] + ai.pos[1] - offset[1],
+                       ai.rad * ico[2] + ai.pos[2] - offset[2]});
       }
     }
 
@@ -241,9 +248,9 @@ void FixGraphicsChunk::end_of_step()
     for (size_t t = 0; t < tris.size(); ++t) {
 
       // get index into original atoms array for access to atom type
-      int ci0 = cidx[t][0] / 6;
-      int ci1 = cidx[t][1] / 6;
-      int ci2 = cidx[t][2] / 6;
+      int ci0 = cidx[t][0] / NUM_POINTS;
+      int ci1 = cidx[t][1] / NUM_POINTS;
+      int ci2 = cidx[t][2] / NUM_POINTS;
       if ((ci0 < 0) || (ci0 >= (int) iatoms.size())) ci0 = 0;
       if ((ci1 < 0) || (ci1 >= (int) iatoms.size())) ci1 = 0;
       if ((ci2 < 0) || (ci2 >= (int) iatoms.size())) ci2 = 0;
