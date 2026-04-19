@@ -222,10 +222,20 @@ void FixGraphicsChunk::end_of_step()
     const auto natoms = iatoms.size();
     if (iatoms.empty()) continue;
 
-    vec3 wrapped{iatoms[0].pos};
+    vec3 center{0.0, 0.0, 0.0};
+
+    for (const auto &ai : iatoms) {
+      center[0] += ai.pos[0];
+      center[1] += ai.pos[1];
+      center[2] += ai.pos[2];
+    }
+    center[0] /= double(natoms);
+    center[1] /= double(natoms);
+    center[2] /= double(natoms);
+
+    vec3 wrapped{center};
     domain->remap(wrapped.data());
-    vec3 offset{iatoms[0].pos[0] - wrapped[0], iatoms[0].pos[1] - wrapped[1],
-                iatoms[0].pos[2] - wrapped[2]};
+    vec3 offset{center[0] - wrapped[0], center[1] - wrapped[1], center[2] - wrapped[2]};
 
     // replace atom positions with icosahedron scaled to radius
     std::vector<vec3> pts;
