@@ -898,44 +898,57 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
 {
   const int npts = static_cast<int>(points.size());
 
-  // compute centroid
+  // compute centroid and bounding box in a single pass
+
   vec3 centroid = {0.0, 0.0, 0.0};
+  vec3 bbmin = points[0], bbmax = points[0];
   for (const auto &p : points) {
     centroid[0] += p[0];
     centroid[1] += p[1];
     centroid[2] += p[2];
+    for (int d = 0; d < 3; ++d) {
+      bbmin[d] = std::min(bbmin[d], p[d]);
+      bbmax[d] = std::max(bbmax[d], p[d]);
+    }
   }
   centroid[0] /= npts;
   centroid[1] /= npts;
   centroid[2] /= npts;
 
-  // Find initial tetrahedron from 4 non-coplanar points
-  // Start by finding the two most distant points
+  double maxext = std::max({bbmax[0] - bbmin[0], bbmax[1] - bbmin[1], bbmax[2] - bbmin[2]});
 
-  int i0 = 0, i1 = 1;
-  double maxdist = 0.0;
-  for (int i = 0; i < npts; ++i) {
-    for (int j = i + 1; j < npts; ++j) {
-      vec3 d = points[j] - points[i];
-      double dist = vec3dot(d, d);
-      if (dist > maxdist) {
-        maxdist = dist;
+  // Find initial tetrahedron from 4 non-coplanar points.
+  // Use bounding box extremes to find well-separated seed points in O(n).
+
+  int i0 = 0, i1 = 0;
+  {
+    int axis = 0;
+    if (bbmax[1] - bbmin[1] > bbmax[axis] - bbmin[axis]) axis = 1;
+    if (bbmax[2] - bbmin[2] > bbmax[axis] - bbmin[axis]) axis = 2;
+    double lo = bbmax[axis], hi = bbmin[axis];
+    for (int i = 0; i < npts; ++i) {
+      if (points[i][axis] < lo) {
+        lo = points[i][axis];
         i0 = i;
-        i1 = j;
+      }
+      if (points[i][axis] > hi) {
+        hi = points[i][axis];
+        i1 = i;
       }
     }
   }
 
-  if (maxdist < SMALL * SMALL) {
-    // all points are coincident -> cannot construct hull
-    return;
+  if (i0 == i1) i1 = (i0 + 1) % npts;
+  {
+    vec3 d = points[i1] - points[i0];
+    if (vec3dot(d, d) < SMALL * SMALL) return;    // all points coincident
   }
 
   // Find the point farthest from the line i0-i1
 
   vec3 line = points[i1] - points[i0];
   int i2 = -1;
-  maxdist = 0.0;
+  double maxdist = 0.0;
   for (int i = 0; i < npts; ++i) {
     if (i == i0 || i == i1) continue;
     vec3 d = points[i] - points[i0];
@@ -1030,16 +1043,6 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
 
   // === 3D Bowyer-Watson Delaunay Triangulation ===
 
-  // Compute bounding box extent for super-tetrahedron sizing
-  vec3 bbmin = points[0], bbmax = points[0];
-  for (const auto &p : points) {
-    for (int d = 0; d < 3; ++d) {
-      bbmin[d] = std::min(bbmin[d], p[d]);
-      bbmax[d] = std::max(bbmax[d], p[d]);
-    }
-  }
-  double maxext = std::max({bbmax[0] - bbmin[0], bbmax[1] - bbmin[1], bbmax[2] - bbmin[2]});
-
   // Create extended point list: original points + 4 super-tetrahedron vertices.
   // The super-tetrahedron is a regular tetrahedron much larger than the bounding box.
 
@@ -1114,21 +1117,27 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
   }
 
   // Bowyer-Watson: insert original points one by one.
-  // The in-circumsphere test uses strict less-than (no tolerance) to
-  // avoid a pathological O(n^2) blowup in tetrahedra count when many
-  // points are co-spherical (e.g. the 12 vertices of each icosahedron
-  // all lie on the same sphere).  A relative tolerance would force ALL
-  // tetrahedra sharing that circumsphere to be marked "bad", creating
-  // a massive cavity at each insertion and cascading the tet count.
-  // Without tolerance, floating-point arithmetic resolves the ambiguity
-  // naturally, producing an O(n) triangulation.
+  // The in-circumsphere test uses a small relative tolerance combined with
+  // the deterministic point perturbation above.  The perturbation breaks
+  // co-spherical degeneracies so that the tolerance does not cause the
+  // pathological O(n^2) blowup that would occur with unperturbed points.
 
   constexpr double INSPHERE_REL_EPS = 1.0e-7;
+
+  // Pre-allocate work vectors outside the loop to avoid per-iteration allocations
+
+  std::vector<int> bad;
+  struct CavityFace {
+    int v[3];    // face vertices (unsorted order from tet)
+    int count;
+  };
+  std::map<std::array<int, 3>, CavityFace> face_map;
+
   for (int i = 0; i < npts; ++i) {
     const vec3 &p = pts[i];
 
-    // Find all tetrahedra whose circumsphere strictly contains p
-    std::vector<int> bad;
+    // Find all tetrahedra whose circumsphere contains p
+    bad.clear();
     for (int t = 0; t < static_cast<int>(tets.size()); ++t) {
       if (!tets[t].valid) continue;
       vec3 diff = p - tets[t].cc;
@@ -1141,11 +1150,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
     // Find boundary faces of the cavity formed by the bad tetrahedra.
     // A boundary face appears in exactly one bad tetrahedron.
 
-    struct CavityFace {
-      int v[3];    // face vertices (unsorted order from tet)
-      int count;
-    };
-    std::map<std::array<int, 3>, CavityFace> face_map;
+    face_map.clear();
 
     for (int t_idx : bad) {
       const auto &tet = tets[t_idx];
@@ -1215,20 +1220,79 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
     alpha_sq = alpha * alpha;
   } else {
     // Auto-compute alpha from the average nearest-neighbor distance.
-    // This adapts to the local point density.
+    // Use a 3D grid to accelerate the search from O(n^2) to O(n)
+    // for larger point clouds.
 
-    double sum_nn = 0.0;
-    for (int i = 0; i < npts; ++i) {
-      double min_dsq = 1.0e30;
-      for (int j = 0; j < npts; ++j) {
-        if (i == j) continue;
-        vec3 d = points[j] - points[i];
-        double dsq = vec3dot(d, d);
-        if (dsq < min_dsq) min_dsq = dsq;
+    double avg_nn;
+    constexpr int MIN_GRID_PTS = 64;
+
+    if (npts < MIN_GRID_PTS) {
+      // brute-force for small point clouds
+      double sum_nn = 0.0;
+      for (int i = 0; i < npts; ++i) {
+        double min_dsq = 1.0e30;
+        for (int j = 0; j < npts; ++j) {
+          if (i == j) continue;
+          vec3 d = points[j] - points[i];
+          double dsq = vec3dot(d, d);
+          if (dsq < min_dsq) min_dsq = dsq;
+        }
+        sum_nn += std::sqrt(min_dsq);
       }
-      sum_nn += std::sqrt(min_dsq);
+      avg_nn = sum_nn / npts;
+    } else {
+      // Grid-based nearest-neighbor: estimate cell size from density
+      double vol = (bbmax[0] - bbmin[0]) * (bbmax[1] - bbmin[1]) * (bbmax[2] - bbmin[2]);
+      if (vol < SMALL) vol = maxext * maxext * maxext;
+      double cell_size = std::cbrt(vol / npts) * 2.0;
+      if (cell_size < SMALL) cell_size = maxext;
+
+      int nx = std::max(1, static_cast<int>((bbmax[0] - bbmin[0]) / cell_size) + 1);
+      int ny = std::max(1, static_cast<int>((bbmax[1] - bbmin[1]) / cell_size) + 1);
+      int nz = std::max(1, static_cast<int>((bbmax[2] - bbmin[2]) / cell_size) + 1);
+
+      constexpr int MAX_CELLS = 256;
+      nx = std::min(nx, MAX_CELLS);
+      ny = std::min(ny, MAX_CELLS);
+      nz = std::min(nz, MAX_CELLS);
+
+      std::vector<std::vector<int>> grid(nx * ny * nz);
+      for (int i = 0; i < npts; ++i) {
+        int cx = std::min(static_cast<int>((points[i][0] - bbmin[0]) / cell_size), nx - 1);
+        int cy = std::min(static_cast<int>((points[i][1] - bbmin[1]) / cell_size), ny - 1);
+        int cz = std::min(static_cast<int>((points[i][2] - bbmin[2]) / cell_size), nz - 1);
+        grid[cx * ny * nz + cy * nz + cz].push_back(i);
+      }
+
+      double sum_nn = 0.0;
+      for (int i = 0; i < npts; ++i) {
+        int cx = std::min(static_cast<int>((points[i][0] - bbmin[0]) / cell_size), nx - 1);
+        int cy = std::min(static_cast<int>((points[i][1] - bbmin[1]) / cell_size), ny - 1);
+        int cz = std::min(static_cast<int>((points[i][2] - bbmin[2]) / cell_size), nz - 1);
+
+        double min_dsq = 1.0e30;
+        for (int dx = -1; dx <= 1; ++dx) {
+          int gx = cx + dx;
+          if (gx < 0 || gx >= nx) continue;
+          for (int dy = -1; dy <= 1; ++dy) {
+            int gy = cy + dy;
+            if (gy < 0 || gy >= ny) continue;
+            for (int dz = -1; dz <= 1; ++dz) {
+              int gz = cz + dz;
+              if (gz < 0 || gz >= nz) continue;
+              for (int j : grid[gx * ny * nz + gy * nz + gz]) {
+                if (i == j) continue;
+                vec3 dd = points[j] - points[i];
+                double dsq = vec3dot(dd, dd);
+                if (dsq < min_dsq) min_dsq = dsq;
+              }
+            }
+          }
+        }
+        sum_nn += std::sqrt(min_dsq);
+      }
+      avg_nn = sum_nn / npts;
     }
-    double avg_nn = sum_nn / npts;
 
     // The alpha multiplier controls how tightly the surface wraps around
     // the point cloud.  A value of 2.5 is conservative enough to produce
