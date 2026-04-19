@@ -237,14 +237,31 @@ void FixGraphicsChunk::end_of_step()
     domain->remap(wrapped.data());
     vec3 offset{center[0] - wrapped[0], center[1] - wrapped[1], center[2] - wrapped[2]};
 
-    // replace atom positions with icosahedron scaled to radius
+    // create list of shifted points
+    int num_points;
     std::vector<vec3> pts;
-    pts.reserve(NUM_POINTS * natoms);
-    for (const auto &ai : iatoms) {
-      for (const auto &ico : icosahedron) {
-        pts.push_back({ai.rad * ico[0] + ai.pos[0] - offset[0],
-                       ai.rad * ico[1] + ai.pos[1] - offset[1],
-                       ai.rad * ico[2] + ai.pos[2] - offset[2]});
+    // if number of atoms in cluster is below 100 we replace the atom positions
+    // with vectices from an icosahedron scaled to radius.
+    if (natoms < 100) {
+      num_points = NUM_POINTS;
+      pts.reserve(num_points * natoms);
+      for (const auto &ai : iatoms) {
+        for (const auto &ico : icosahedron) {
+          pts.push_back({ai.rad * ico[0] + ai.pos[0] - offset[0],
+                         ai.rad * ico[1] + ai.pos[1] - offset[1],
+                         ai.rad * ico[2] + ai.pos[2] - offset[2]});
+        }
+      }
+    } else {
+      num_points = 1;
+      pts.reserve(num_points * natoms);
+      for (const auto &ai : iatoms) {
+        // shift position away from center by radius
+        vec3 extra{ai.pos[0] - center[0], ai.pos[1] - center[1], ai.pos[2] - center[2]};
+        MathExtra::norm3(extra.data());
+        pts.push_back({ai.rad * extra[0] + ai.pos[0] - offset[0],
+                       ai.rad * extra[1] + ai.pos[1] - offset[1],
+                       ai.rad * extra[2] + ai.pos[2] - offset[2]});
       }
     }
 
