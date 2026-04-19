@@ -507,14 +507,14 @@ The general form of the tangential contact force for all models is:
 
 .. math::
 
-   \mathbf{F}_t =  \min(\mu_t F_{n0}, \|\mathbf{F}_{te} + mathbf{F}_\mathrm{t,damp}\|) \mathbf{t}
+   \mathbf{F}_t =  \min(\mu_t F_{n0}, \|\mathbf{F}_{te} + \mathbf{F}_\mathrm{t,damp}\|) \mathbf{t}
 
 where :math:`\mathbf{F}_{te}` and :math:`\mathbf{F}_\mathrm{t,damp}`
 are the elastic and damping components of the tangential force, respectively,
 and :math:`\mathbf{t}` is the direction of the tangential force given by:
 
 .. math::
-   \mathbf{t} = \frac{\mathbf{F}_{te} + mathbf{F}_\mathrm{t,damp})}{\|\mathbf{F}_{te} + mathbf{F}_\mathrm{t,damp}\|)}
+   \mathbf{t} = \frac{\mathbf{F}_{te} + \mathbf{F}_\mathrm{t,damp}}{\|\mathbf{F}_{te} + \mathbf{F}_\mathrm{t,damp}\|}
 
 The normal force value :math:`F_{n0}` used to compute the critical force
 depends on the form of the contact model.  For non-cohesive models (\
@@ -563,19 +563,18 @@ contact is given by :math:`\mathbf{v}_{t, rel} = \mathbf{v}_{t} -
 (R_i\boldsymbol{\Omega}_i + R_j\boldsymbol{\Omega}_j) \times
 \mathbf{n}`, where :math:`\mathbf{v}_{t} = \mathbf{v}_r -
 \mathbf{v}_r\cdot\mathbf{n}\ \mathbf{n}`, :math:`\mathbf{v}_r =
-\mathbf{v}_j - \mathbf{v}_i` . 
+\mathbf{v}_j - \mathbf{v}_i` .
 
 The elastic tangential force :math:`\mathbf{F}_{te}` depends on the tangential
 model and is detailed hereafter for each tangential model.
 
-For *tangential linear_nohistory*, no elastic force is considered,
-:math:`\mathbf{F}_{te} = \mathbf{0}`. This is used to mimic the behavior
-of the *pair gran/hooke* style.  The tangential force :math:`\mathbf{F}_t` is given
-by:
+For *tangential linear_nohistory*, no elastic force is considered:
 
 .. math::
 
-   \mathbf{F}_t =  -\min(\mu_t F_{n0}, \|\mathbf{F}_\mathrm{t,damp}\|) \mathbf{v_{t,rel}}/\|\mathbf{v_{t,rel}}\|
+   \mathbf{F}_{te} = \mathbf{0}
+
+This is used to mimic the behavior of the *pair gran/hooke* style.
 
 The remaining tangential options all use accumulated tangential
 displacement (i.e. contact history), except for the options
@@ -690,7 +689,7 @@ the normal overlap as noted above.  The elastic tangential force is given by:
 
 .. math::
 
-   mathbf{F}_{te} = \int_{t_0}^{t} -k_t a \mathbf{v}_{t,rel} \mathrm{d}\tau
+   \mathbf{F}_{te} = \int_{t_0}^{t} -k_t a \mathbf{v}_{t,rel} \mathrm{d}\tau
 
 The changes in frame of reference of the contacting pair of particles
 during contact are accounted for by the same formula as above, replacing
