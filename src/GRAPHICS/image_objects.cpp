@@ -1062,7 +1062,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
   // the output triangles use the original unperturbed 'points' positions.
 
   {
-    constexpr double PERT_SCALE = 1.0e-10;
+    constexpr double PERT_SCALE = 1.0e-7;
     constexpr double GOLD = 0.6180339887498949;     // golden ratio conjugate
     constexpr double SQRT2 = 1.4142135623730951;
     constexpr double SQRT3 = 1.7320508075688772;
