@@ -1062,7 +1062,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
   // the output triangles use the original unperturbed 'points' positions.
 
   {
-    constexpr double PERT_SCALE = 1.0e-7;
+    constexpr double PERT_SCALE = 1.0e-5;
     constexpr double GOLD = 0.6180339887498949;     // golden ratio conjugate
     constexpr double SQRT2 = 1.4142135623730951;
     constexpr double SQRT3 = 1.7320508075688772;
@@ -1123,6 +1123,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
   // Without tolerance, floating-point arithmetic resolves the ambiguity
   // naturally, producing an O(n) triangulation.
 
+  constexpr double INSPHERE_REL_EPS = 1.0e-7;
   for (int i = 0; i < npts; ++i) {
     const vec3 &p = pts[i];
 
@@ -1132,7 +1133,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
       if (!tets[t].valid) continue;
       vec3 diff = p - tets[t].cc;
       double dist_sq = vec3dot(diff, diff);
-      if (dist_sq < tets[t].cr_sq) { bad.push_back(t); }
+      if (dist_sq < tets[t].cr_sq * (1.0 + INSPHERE_REL_EPS)) { bad.push_back(t); }
     }
 
     if (bad.empty()) continue;    // outside all circumspheres (shouldn't happen with super-tet)
