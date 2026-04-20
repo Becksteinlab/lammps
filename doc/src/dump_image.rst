@@ -1135,7 +1135,7 @@ dump_modify color option.
 
    add support for entering colors in hexadecimal
 
-The *color* keyword allows define new named colors or change the
+The *color* keyword allows defining new named colors or changing the
 definition of the 140-predefined colors (see below).  Three
 red/green/blue RGB values are associated with each color name.  The
 color name can then be used with any other *dump_modify* keyword that

@@ -15,7 +15,10 @@
 #define LMP_IMAGE_H
 
 #include "pointers.h"
+
+#include <array>
 #include <cmath>
+#include <unordered_map>
 
 namespace LAMMPS_NS {
 
@@ -84,6 +87,14 @@ class Image : protected Pointers {
 
   class ColorMap **maps;
   int nmap;
+
+  std::unordered_map<std::string, std::array<double, 3>> rgbcolors;
+
+  struct elementInfo {
+    double rgb[3];
+    double diam;
+  };
+  std::unordered_map<std::string, elementInfo> elementdata;
 
   double *depthBuffer, *surfaceBuffer;
   double *depthcopy, *surfacecopy;
