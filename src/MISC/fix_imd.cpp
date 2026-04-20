@@ -1513,6 +1513,11 @@ void FixIMD::handle_client_input_v3() {
           break;
 
         case IMD_MDCOMM: {
+          /* receiving forces currently not supported in imdv3*/
+          if (screen)
+            fprintf(screen, "IMD client sent forces, but this is not supported in IMDv3 currently.\n");
+          // skip everything below, but still receive the data to clear the socket
+          // do nothing and set imd_forces=0 to avoid application code below
           auto *imd_tags = new int32[length];
           auto *imd_fdat = new float[3*length];
           imd_recv_mdcomm(clientsock, length, imd_tags, imd_fdat);
@@ -1534,6 +1539,7 @@ void FixIMD::handle_client_input_v3() {
           }
           delete[] imd_tags;
           delete[] imd_fdat;
+          imd_forces = 0; // forces not supported in IMDv3
           break;
         }
         case IMD_WAIT: {
