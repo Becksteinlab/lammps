@@ -1768,6 +1768,7 @@ void FixIMD::handle_output_v3() {
           }
         }
       }
+      delete[] recvcoord;
     }
   }
   if (imdsinfo->velocities) {
@@ -1803,6 +1804,7 @@ void FixIMD::handle_output_v3() {
           }
         }
       }
+      delete[] recvvel;
     }
   }
   if (imdsinfo->forces) {
@@ -1838,7 +1840,13 @@ void FixIMD::handle_output_v3() {
           }
         }
       }
+      delete[] recvforce;
     }
+  }
+
+  if (me == 0) {
+    delete[] recvcounts;
+    delete[] displs;
   }
 
 /* done collecting frame data now communicate with IMD client. */
