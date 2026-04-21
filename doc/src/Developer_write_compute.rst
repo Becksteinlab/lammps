@@ -2,22 +2,49 @@ Writing new compute styles
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Compute styles are used to calculate global or per-atom scalar, vector,
-or array quantities from the current state of the simulation.  Examples
-include temperatures, pressures, kinetic energies, and user-defined
-quantities.  All compute styles are derived from the ``Compute`` base
-class, which is defined in ``src/compute.h``.  An overview of the
-available methods and flags is given on the :doc:`Modify_compute` page.
+or array quantities or local or per-chunk or grid based properties from
+the current state of the simulation.  Examples include temperatures,
+pressures, kinetic energies, and user-defined quantities.  All compute
+styles are derived from the ``Compute`` base class, which is defined in
+``src/compute.h``.  An overview of the available methods and flags is
+given on the page for :doc:`modifying or extending compute styles
+<Modify_compute>`.
+
+Computes are executed *on demand* and thus require a "consumer" like
+:doc:`fix ave/time <fix_ave_time>`, :doc:`compute reduce
+<compute_reduce>`, or a :doc:`custom thermo style <thermo_style>` or
+:doc:`custom dump style <dump>`.  This is different from
+:doc:`Developer_write_fix` which are executed at :doc:`pre-determined
+steps during a run <Developer_flow>` and either at every steps or with a
+set frequency.  Some compute instances are also created and used
+internally, e.g. for :doc:`thermo output <thermo>`.  It should be noted
+that some computes do not actually perform computations (e.g.  computes
+for potential energy or virial) but rather suitable flags are set and
+then the corresponding data is collected by the force computation as
+needed and then the compute merely makes that pre-collected data
+available.  Such computes may not be executed between runs but only
+during a run (or minimization).
 
 In general, new compute styles should be added to the
-:ref:`EXTRA-COMPUTE package <PKG-EXTRA-COMPUTE>` unless they are an
-accelerated style, in which case they should be added to the
-corresponding accelerator package (:ref:`GPU <PKG-GPU>`, :ref:`INTEL
-<PKG-INTEL>`, :ref:`KOKKOS <PKG-KOKKOS>`, :ref:`OPENMP <PKG-OPENMP>`).
-If you feel that your contribution should be added to a different
-package, please consult with the :doc:`LAMMPS developers <Intro_authors>`
-first.  The contributed code needs to support the :doc:`traditional GNU
-make build process <Build_make>` **and** the :doc:`CMake build process
+:ref:`EXTRA-COMPUTE package <PKG-EXTRA-COMPUTE>`.  It is usually not
+necessary to create accelerated compute styles except for the
+:ref:`KOKKOS <PKG-KOKKOS>` package where there is a significant benefit
+to avoid time consuming data transfers between GPU and host.  If you
+feel that your contribution should be added to a different package,
+please consult with the :doc:`LAMMPS developers <Intro_authors>` first.
+The contributed code needs to support the :doc:`traditional GNU make
+build process <Build_make>` **and** the :doc:`CMake build process
 <Build_cmake>`.
+
+.. admonition:: AI generated content
+   :class: note
+
+   Please note that this manual page has been created by an AI using
+   similar pages and the LAMMPS source code as reference.  It has not
+   been fully reviewed for correctness.  If you notice any mistakes or
+   inconsistencies, please report them on the `GitHub Issue page
+   <https://github.com/lammps/lammps/issues>`_ as a bug in the
+   documentation.
 
 ----
 
@@ -25,9 +52,9 @@ Case 1: A global scalar compute
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In this section we describe how to implement a compute that produces a
-single global scalar value.  As a concrete example we use
-:doc:`compute temp <compute_temp>`, which computes the kinetic
-temperature of a group of atoms.  The full implementation can be found in
+single global scalar value.  As a concrete example we use :doc:`compute
+temp <compute_temp>`, which computes the kinetic temperature of a group
+of atoms.  The full implementation can be found in
 ``src/compute_temp.cpp`` and ``src/compute_temp.h``.
 
 Header file
@@ -49,9 +76,9 @@ The block between ``#ifdef COMPUTE_CLASS`` and ``#else`` will be
 included by the ``Modify`` class in ``modify.cpp`` to build a map of
 factory functions.  The map connects the style name ``temp`` with the
 class name ``ComputeTemp``.  During compilation, LAMMPS constructs a
-file ``style_compute.h`` that ``#include``\s all installed compute
-style headers.  The ``// clang-format`` comments prevent the formatter
-from inserting spaces inside the macro arguments.
+file ``style_compute.h`` that ``#include``\s all installed compute style
+headers.  The ``// clang-format`` comments prevent the ``clang-format``
+tool from incorrectly inserting spaces inside the macro arguments.
 
 The class definition:
 
@@ -84,7 +111,8 @@ The class definition:
    #endif
 
 The class derives from ``Compute`` and overrides the pure virtual method
-``init()`` (here with an empty inline body) as well as several optional
+``init()`` (here with an empty inline body since there is no
+initialization needed for this example) as well as several optional
 methods.  All overriding methods carry the ``override`` keyword.
 
 Implementation file
@@ -120,9 +148,9 @@ The flags have the following meanings:
 - ``size_vector = 6``: the vector has 6 components (the six components
   of the kinetic energy tensor).
 - ``extscalar = 0``: the scalar is *intensive* (does not scale with the
-  number of atoms; temperature is intensive).
-- ``extvector = 1``: each vector component is *extensive* (scales with
-  the number of atoms).
+  number of atoms since temperature is an intensive property).
+- ``extvector = 1``: each vector component is *extensive* (since kinetic
+  energy scales with the number of atoms).
 - ``tempflag = 1``: marks this compute as providing a temperature, which
   is used by thermostat fixes to find a compatible temperature compute.
 
@@ -130,7 +158,12 @@ The ``vector`` array is allocated in the constructor; the base class
 ``Compute`` provides a pointer ``vector`` that derived classes should
 point to their allocated storage.
 
-The destructor frees the ``vector`` array if ``copymode`` is false:
+The destructor frees the ``vector`` array if ``copymode`` is false. The
+``copymode`` flag is set to ``0`` by default and set to ``1`` by the
+``ComputeTempKokkos`` class.  This class is derived from ``ComputeTemp``
+and replaces the storage assigned to ``vector`` with a Kokkos specific
+storage object to facilitate convenient data transfer between host and
+accelerator devices:
 
 .. code-block:: c++
 
@@ -166,8 +199,8 @@ of freedom:
    }
 
 The ``dynamic`` flag controls whether the number of degrees of freedom
-is recomputed every timestep (needed when atoms enter or leave the
-group).
+is re-computed every timestep (needed when atoms enter or leave the
+group or the simulation).
 
 The compute_scalar() method (optional)
 '''''''''''''''''''''''''''''''''''''''
@@ -212,7 +245,7 @@ There are several important points:
 
 - ``invoked_scalar`` is set to the current timestep number to allow
   other computes and fixes to check whether the result is fresh and
-  avoid redundant recomputation.
+  avoid redundant re-computation.
 - The group membership is checked via ``mask[i] & groupbit``.  The
   ``groupbit`` variable is defined in the base class ``Compute`` and
   corresponds to the group specified in the compute command.

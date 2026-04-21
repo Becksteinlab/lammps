@@ -589,6 +589,7 @@ Coeff
 CoefficientN
 coeffs
 Coeffs
+COH
 cohesionless
 Coker
 Colberg
@@ -602,7 +603,6 @@ colorscale
 Columic
 colvars
 Colvars
-COH
 COLVARS
 comID
 Commun
@@ -634,6 +634,7 @@ coord
 Coord
 CoordN
 coords
+copymode
 coreshell
 cornflowerblue
 cornsilk

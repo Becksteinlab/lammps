@@ -38,8 +38,8 @@ correct restarting and writing and reading of data files.
 
    Please note that this manual page has been created by an AI using
    similar pages and the LAMMPS source code as reference.  It has not
-   yet been fully reviewed for correctness.  If you notice any mistakes
-   or inconsistencies, please report them on the `GitHub Issue page
+   been fully reviewed for correctness.  If you notice any mistakes or
+   inconsistencies, please report them on the `GitHub Issue page
    <https://github.com/lammps/lammps/issues>`_ as a bug in the
    documentation.
 
