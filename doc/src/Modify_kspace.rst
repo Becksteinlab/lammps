@@ -75,7 +75,7 @@ setting.
 +---------------------------------+-------------------------------------------------------------+---------+
 | group_group_enable              | 1 if compute_group_group() is implemented                   | 0       |
 +---------------------------------+-------------------------------------------------------------+---------+
-| centroidstressflag              | CENTROID_SAME/CENTROID_AVAIL/CENTROID_NOTAVAIL               | NOTAV.  |
+| centroidstressflag              | CENTROID_SAME/CENTROID_AVAIL/CENTROID_NOTAVAIL              | NOTAV.  |
 +---------------------------------+-------------------------------------------------------------+---------+
 
 The pair-style flags ``ewaldflag``, ``pppmflag``, ``msmflag``,

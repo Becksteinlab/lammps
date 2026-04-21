@@ -83,7 +83,7 @@ setting.
 +---------------------------------+------------------------------------------------------------------------------+---------+
 | born_matrix_enable              | 1 if born_matrix() is implemented                                            | 0       |
 +---------------------------------+------------------------------------------------------------------------------+---------+
-| centroidstressflag              | CENTROID_AVAIL if centroid stress is different and implemented                | varies  |
+| centroidstressflag              | CENTROID_AVAIL if centroid stress is different and implemented               | varies  |
 +---------------------------------+------------------------------------------------------------------------------+---------+
 
 The default value of ``centroidstressflag`` is ``CENTROID_SAME`` for bond

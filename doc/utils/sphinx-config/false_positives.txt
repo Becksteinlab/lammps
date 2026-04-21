@@ -278,6 +278,7 @@ batoms
 Batra
 Bayly
 bb
+bbox
 bcc
 bcolor
 bdiam
@@ -496,6 +497,7 @@ centerline
 centro
 centroid
 Centroid
+centroidstressflag
 centrosymmetry
 Cercignani
 cercignanilampis
@@ -597,6 +599,7 @@ coleman
 Colliex
 collinear
 collisional
+colname
 colorbar
 colormap
 colorscale
@@ -1302,6 +1305,7 @@ Fn
 fname
 fncychap
 fno
+fnorm
 Fnudge
 foces
 Fock
@@ -1354,6 +1358,7 @@ functionalities
 functionals
 funroll
 Furuholt
+fvec
 fx
 fy
 fz
@@ -2918,6 +2923,7 @@ Onufriev
 OO
 Oord
 opencl
+openfile
 openKIM
 openmp
 OpenMP
@@ -3284,6 +3290,8 @@ qoverride
 qqr
 qqrd
 Qsb
+qsq
+qsum
 qtb
 qtpie
 quadratically
@@ -4434,6 +4442,7 @@ xsu
 xtc
 xu
 Xu
+xvec
 xxt
 xxxxx
 xy

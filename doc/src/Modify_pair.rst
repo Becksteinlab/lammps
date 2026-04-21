@@ -134,5 +134,5 @@ setting.
 +---------------------------------+-------------------------------------------------------------+---------+
 | single_hessian_enable           | 1 if single_hessian() routine exists                        | 0       |
 +---------------------------------+-------------------------------------------------------------+---------+
-| centroidstressflag              | CENTROID_SAME/CENTROID_AVAIL/CENTROID_NOTAVAIL               | SAME    |
+| centroidstressflag              | CENTROID_SAME/CENTROID_AVAIL/CENTROID_NOTAVAIL              | SAME    |
 +---------------------------------+-------------------------------------------------------------+---------+
