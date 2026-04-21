@@ -1,7 +1,10 @@
 .. index:: pair_style e3b
+.. index:: pair_style e3b/omp
 
 pair_style e3b command
 ======================
+
+Accelerator Variants: *e3b/omp*
 
 Syntax
 """"""

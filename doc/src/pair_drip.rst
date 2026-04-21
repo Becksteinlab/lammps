@@ -1,7 +1,10 @@
 .. index:: pair_style drip
+.. index:: pair_style drip/omp
 
 pair_style drip command
 =======================
+
+Accelerator Variants: *drip/omp*
 
 Syntax
 """"""

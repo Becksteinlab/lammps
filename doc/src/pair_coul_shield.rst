@@ -1,7 +1,10 @@
 .. index:: pair_style coul/shield
+.. index:: pair_style coul/shield/omp
 
 pair_style coul/shield command
 ==============================
+
+Accelerator Variants: *coul/shield/omp*
 
 Syntax
 """"""

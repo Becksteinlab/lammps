@@ -57,7 +57,7 @@ OPT.
    * :doc:`colloid (go) <pair_colloid>`
    * :doc:`comb (o) <pair_comb>`
    * :doc:`comb3 <pair_comb>`
-   * :doc:`cosine/squared <pair_cosine_squared>`
+   * :doc:`cosine/squared (o) <pair_cosine_squared>`
    * :doc:`coul/ctip <pair_coul>`
    * :doc:`coul/cut (gko) <pair_coul>`
    * :doc:`coul/cut/dielectric <pair_dielectric>`
@@ -74,8 +74,8 @@ OPT.
    * :doc:`coul/msm (o) <pair_coul>`
    * :doc:`coul/slater/cut <pair_coul_slater>`
    * :doc:`coul/slater/long (g) <pair_coul_slater>`
-   * :doc:`coul/shield <pair_coul_shield>`
-   * :doc:`coul/streitz <pair_coul>`
+   * :doc:`coul/shield (o) <pair_coul_shield>`
+   * :doc:`coul/streitz (o) <pair_coul>`
    * :doc:`coul/tt <pair_coul_tt>`
    * :doc:`coul/wolf (ko) <pair_coul>`
    * :doc:`coul/wolf/cs <pair_cs>`
@@ -88,8 +88,8 @@ OPT.
    * :doc:`dpd/fdt/energy (k) <pair_dpd_fdt>`
    * :doc:`dpd/tstat (gko) <pair_dpd>`
    * :doc:`dsmc <pair_dsmc>`
-   * :doc:`e3b <pair_e3b>`
-   * :doc:`drip <pair_drip>`
+   * :doc:`e3b (o) <pair_e3b>`
+   * :doc:`drip (o) <pair_drip>`
    * :doc:`eam (gikot) <pair_eam>`
    * :doc:`eam/alloy (gikot) <pair_eam>`
    * :doc:`eam/cd <pair_eam>`
@@ -104,7 +104,7 @@ OPT.
    * :doc:`eff/cut <pair_eff>`
    * :doc:`eim (o) <pair_eim>`
    * :doc:`exp6/rx (k) <pair_exp6_rx>`
-   * :doc:`extep <pair_extep>`
+   * :doc:`extep (o) <pair_extep>`
    * :doc:`gauss (go) <pair_gauss>`
    * :doc:`gauss/cut (o) <pair_gauss>`
    * :doc:`gayberne (gio) <pair_gayberne>`
@@ -113,8 +113,8 @@ OPT.
    * :doc:`gran/hooke/history (ko) <pair_gran>`
    * :doc:`granular <pair_granular>`
    * :doc:`granular/superellipsoid <pair_granular_superellipsoid>`
-   * :doc:`gw <pair_gw>`
-   * :doc:`gw/zbl <pair_gw>`
+   * :doc:`gw (o) <pair_gw>`
+   * :doc:`gw/zbl (o) <pair_gw>`
    * :doc:`harmonic/cut (o) <pair_harmonic_cut>`
    * :doc:`hbond/dreiding/lj (o) <pair_hbond_dreiding>`
    * :doc:`hbond/dreiding/lj/angleoffset (o) <pair_hbond_dreiding>`
@@ -131,7 +131,7 @@ OPT.
    * :doc:`lambda/zone/apip <pair_lambda_zone_apip>`
    * :doc:`lcbop <pair_lcbop>`
    * :doc:`lebedeva/z <pair_lebedeva_z>`
-   * :doc:`lennard/mdf <pair_mdf>`
+   * :doc:`lennard/mdf (o) <pair_mdf>`
    * :doc:`lepton (o) <pair_lepton>`
    * :doc:`lepton/coul (o) <pair_lepton>`
    * :doc:`lepton/sphere (o) <pair_lepton>`
@@ -183,7 +183,7 @@ OPT.
    * :doc:`lj/long/coul/long/dielectric <pair_dielectric>`
    * :doc:`lj/long/dipole/long <pair_dipole>`
    * :doc:`lj/long/tip4p/long (o) <pair_lj_long>`
-   * :doc:`lj/mdf <pair_mdf>`
+   * :doc:`lj/mdf (o) <pair_mdf>`
    * :doc:`lj/pirani (o) <pair_lj_pirani>`
    * :doc:`lj/relres (o) <pair_lj_relres>`
    * :doc:`lj/spica (gko) <pair_spica>`

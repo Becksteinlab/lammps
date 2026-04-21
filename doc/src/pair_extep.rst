@@ -1,7 +1,10 @@
 .. index:: pair_style extep
+.. index:: pair_style extep/omp
 
 pair_style extep command
 ========================
+
+Accelerator Variants: *extep/omp*
 
 Syntax
 """"""
