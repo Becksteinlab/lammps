@@ -7,6 +7,9 @@ like kinetic energy and the centro-symmetry parameter are derived from
 the Compute class.  New styles can be created to add new calculations to
 LAMMPS.
 
+:doc:`Developer_write_compute` contains a detailed discussion of writing
+new compute styles from scratch with examples from existing styles.
+
 The ``src/compute_temp.cpp`` file is a simple example of computing a
 scalar temperature. The ``src/compute_ke_atom.cpp`` file is a simple
 example of computing per-atom kinetic energy.

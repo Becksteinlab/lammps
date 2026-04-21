@@ -81,7 +81,7 @@ Case 1: a pairwise additive model
 
 In this section, we will describe the procedure of adding a simple pair
 style to LAMMPS: an empirical model that can be used to model liquid
-mercury.  The pair style shall be called :doc:`bond/gauss
+mercury.  The pair style shall be called :doc:`born/gauss
 <pair_born_gauss>` and the complete implementation can be found in the
 files ``src/EXTRA-PAIR/pair_born_gauss.cpp`` and
 ``src/EXTRA-PAIR/pair_born_gauss.h`` of the LAMMPS source code.
@@ -407,7 +407,7 @@ the memory allocation and initialization are moved to a function
 
    void PairBornGauss::settings(int narg, char **arg)
    {
-     if (narg != 1) error->all(FLERR, "Pair style bond/gauss must have exactly one argument");
+     if (narg != 1) error->all(FLERR, "Pair style born/gauss must have exactly one argument");
      cut_global = utils::numeric(FLERR, arg[0], false, lmp);
 
      // reset per-type pair cutoffs that have been explicitly set previously

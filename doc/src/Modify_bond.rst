@@ -5,6 +5,10 @@ Classes that compute molecular interactions are derived from the Bond,
 Angle, Dihedral, and Improper classes.  New styles can be created to
 add new potentials to LAMMPS.
 
+:doc:`Developer_write_bond` contains a detailed discussion of writing
+new bond, angle, dihedral, and improper styles from scratch with
+examples from the existing harmonic styles.
+
 Bond_harmonic.cpp is the simplest example of a bond style.  Ditto for
 the harmonic forms of the angle, dihedral, and improper style
 commands.

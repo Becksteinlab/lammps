@@ -6,6 +6,9 @@ class.  Regions are used elsewhere in LAMMPS to group atoms, delete
 atoms to create a void, insert atoms in a specified region, etc.  New
 styles can be created to add new region shapes to LAMMPS.
 
+:doc:`Developer_write_region` contains a detailed discussion of writing
+new region styles from scratch using the spherical region as an example.
+
 Region_sphere.cpp is an example of a spherical region.
 
 Here is a brief description of methods you define in your new derived
