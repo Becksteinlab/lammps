@@ -154,6 +154,10 @@ See the examples/PACKAGES/e3b directory for a complete example script.
 
 ----------
 
+.. include:: accel_styles.rst
+
+----------
+
 Mixing, shift, table, tail correction, restart, rRESPA info
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 

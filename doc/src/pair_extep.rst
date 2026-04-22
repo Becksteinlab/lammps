@@ -29,6 +29,10 @@ interactions as described in :ref:`(Los2017) <Los2017>`.
 
 ----------
 
+.. include:: accel_styles.rst
+
+----------
+
 Restrictions
 """"""""""""
 none
