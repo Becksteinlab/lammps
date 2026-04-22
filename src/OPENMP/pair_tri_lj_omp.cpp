@@ -275,7 +275,7 @@ void PairTriLJOMP::eval(int iifrom, int iito, ThrData * const thr)
           ti[0] = dyi*fi[2] - dzi*fi[1];
           ti[1] = dzi*fi[0] - dxi*fi[2];
           ti[2] = dxi*fi[1] - dyi*fi[0];
-          torque[i].z += ti[0];
+          torque[i].x += ti[0];
           torque[i].y += ti[1];
           torque[i].z += ti[2];
 
