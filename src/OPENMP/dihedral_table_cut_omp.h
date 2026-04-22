@@ -11,34 +11,33 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifdef IMPROPER_CLASS
+/* ----------------------------------------------------------------------
+   Contributing author: Axel Kohlmeyer (Temple U)
+------------------------------------------------------------------------- */
+
+#ifdef DIHEDRAL_CLASS
 // clang-format off
-ImproperStyle(distance,ImproperDistance);
+DihedralStyle(table/cut/omp,DihedralTableCutOMP);
 // clang-format on
 #else
 
-#ifndef LMP_IMPROPER_DISTANCE_H
-#define LMP_IMPROPER_DISTANCE_H
+#ifndef LMP_DIHEDRAL_TABLE_CUT_OMP_H
+#define LMP_DIHEDRAL_TABLE_CUT_OMP_H
 
-#include "improper.h"
+#include "dihedral_table_cut.h"
+#include "thr_omp.h"
 
 namespace LAMMPS_NS {
 
-class ImproperDistance : public Improper {
+class DihedralTableCutOMP : public DihedralTableCut, public ThrOMP {
+
  public:
-  ImproperDistance(class LAMMPS *);
-  ~ImproperDistance() override;
+  DihedralTableCutOMP(class LAMMPS *lmp);
   void compute(int, int) override;
-  void coeff(int, char **) override;
-  void write_restart(FILE *) override;
-  void read_restart(FILE *) override;
-  void write_data(FILE *) override;
-  void *extract(const char *, int &) override;
 
- protected:
-  double *k, *chi;
-
-  void allocate();
+ private:
+  template <int EVFLAG, int EFLAG, int NEWTON_BOND>
+  void eval(int ifrom, int ito, ThrData *const thr);
 };
 
 }    // namespace LAMMPS_NS
