@@ -1,7 +1,10 @@
 .. index:: pair_style wf/cut
+.. index:: pair_style wf/cut/omp
 
 pair_style wf/cut command
 ===========================
+
+Accelerator Variants: *wf/cut/omp*
 
 Syntax
 """"""
@@ -115,3 +118,5 @@ Related commands
 .. _Wang2020:
 
 **(Wang2020)** X. Wang, S. Ramirez-Hinestrosa, J. Dobnikar, and D. Frenkel, Phys. Chem. Chem. Phys. 22, 10624 (2020).
+
+.. include:: accel_styles.rst

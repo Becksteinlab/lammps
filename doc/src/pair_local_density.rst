@@ -1,7 +1,10 @@
 .. index:: pair_style local/density
+.. index:: pair_style local/density/omp
 
 pair_style local/density command
 ================================
+
+Accelerator Variants: *local/density/omp*
 
 Syntax
 """"""
@@ -249,3 +252,5 @@ none
 .. _Rosenberger:
 
 **(Rosenberger)** Rosenberger, Sanyal, Shell and van der Vegt,  Journal of Chemical Physics, 2019, 151 (4), 044111.
+
+.. include:: accel_styles.rst

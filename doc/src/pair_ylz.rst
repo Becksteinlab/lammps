@@ -1,7 +1,10 @@
 .. index:: pair_style ylz
+.. index:: pair_style ylz/omp
 
 pair_style ylz command
 ===========================
+
+Accelerator Variants: *ylz/omp*
 
 Syntax
 """"""
@@ -176,3 +179,5 @@ none
 .. _Becton:
 
 **(Becton)** Becton, Averett, Wang, Biomech. Model. Mechanobiology, 18, 425-433(2019).
+
+.. include:: accel_styles.rst

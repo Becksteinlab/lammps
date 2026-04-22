@@ -1,7 +1,10 @@
 .. index:: pair_style tri/lj
+.. index:: pair_style tri/lj/omp
 
 pair_style tri/lj command
 =========================
+
+Accelerator Variants: *tri/lj/omp*
 
 Syntax
 """"""
@@ -118,3 +121,5 @@ Default
 """""""
 
 none
+
+.. include:: accel_styles.rst

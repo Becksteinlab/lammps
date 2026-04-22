@@ -1,8 +1,11 @@
 .. index:: pair_style nb3b/harmonic
+.. index:: pair_style nb3b/harmonic/omp
 .. index:: pair_style nb3b/screened
 
 pair_style nb3b/harmonic command
 ================================
+
+Accelerator Variants: *nb3b/harmonic/omp*
 
 pair_style nb3b/screened command
 ================================
@@ -132,3 +135,5 @@ Default
 """""""
 
 none
+
+.. include:: accel_styles.rst

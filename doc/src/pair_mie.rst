@@ -1,10 +1,11 @@
 .. index:: pair_style mie/cut
 .. index:: pair_style mie/cut/gpu
+.. index:: pair_style mie/cut/omp
 
 pair_style mie/cut command
 ==========================
 
-Accelerator Variants: *mie/cut/gpu*
+Accelerator Variants: *mie/cut/gpu*, *mie/cut/omp*
 
 Syntax
 """"""
@@ -121,3 +122,5 @@ none
 
 **(Avendano)** C. Avendano, T. Lafitte, A. Galindo, C. S. Adjiman,
 G. Jackson, E. Muller, J Phys Chem B, 115, 11154 (2011).
+
+.. include:: accel_styles.rst

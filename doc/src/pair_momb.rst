@@ -1,7 +1,10 @@
 .. index:: pair_style momb
+.. index:: pair_style momb/omp
 
 pair_style momb command
 =======================
+
+Accelerator Variants: *momb/omp*
 
 Syntax
 """"""
@@ -82,3 +85,5 @@ none
 .. _Zhou5:
 
 **(Zhou)** Zhou, Saidi, Fichthorn, J Phys Chem C, 118(6), 3366-3374 (2014).
+
+.. include:: accel_styles.rst
