@@ -1,7 +1,10 @@
 .. index:: pair_style line/lj
+.. index:: pair_style line/lj/omp
 
 pair_style line/lj command
 ==========================
+
+Accelerator Variants: *line/lj/omp*
 
 Syntax
 """"""
@@ -149,3 +152,5 @@ Default
 """""""
 
 none
+
+.. include:: accel_styles.rst

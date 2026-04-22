@@ -11,38 +11,35 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Axel Kohlmeyer (Temple U)
+------------------------------------------------------------------------- */
+
 #ifdef PAIR_CLASS
 // clang-format off
-PairStyle(gw/zbl,PairGWZBL);
+PairStyle(gw/zbl/omp,PairGWZBLOMP);
 // clang-format on
 #else
 
-#ifndef LMP_PAIR_GW_ZBL_H
-#define LMP_PAIR_GW_ZBL_H
+#ifndef LMP_PAIR_GW_ZBL_OMP_H
+#define LMP_PAIR_GW_ZBL_OMP_H
 
-#include "pair_gw.h"
+#include "pair_gw_zbl.h"
+#include "thr_omp.h"
 
 namespace LAMMPS_NS {
 
-class PairGWZBL : public PairGW {
+class PairGWZBLOMP : public PairGWZBL, public ThrOMP {
+
  public:
-  PairGWZBL(class LAMMPS *);
+  PairGWZBLOMP(class LAMMPS *);
 
-  static constexpr int NPARAMS_PER_LINE = 21;
+  void compute(int, int) override;
+  double memory_usage() override;
 
- protected:
-  double global_a_0;          // Bohr radius for Coulomb repulsion
-  double global_epsilon_0;    // permittivity of vacuum for Coulomb repulsion
-  double global_e;            // proton charge (negative of electron charge)
-
-  void read_file(char *) override;
-  void repulsive(Param *, double, double &, int, double &) override;
-
-  double gw_fa(double, Param *) override;
-  double gw_fa_d(double, Param *) override;
-
-  double F_fermi(double, Param *);
-  double F_fermi_d(double, Param *);
+ private:
+  template <int EVFLAG, int EFLAG, int VFLAG_EITHER>
+  void eval(int ifrom, int ito, ThrData *const thr);
 };
 
 }    // namespace LAMMPS_NS

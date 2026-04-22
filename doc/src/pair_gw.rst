@@ -1,11 +1,14 @@
 .. index:: pair_style gw
 .. index:: pair_style gw/zbl
+.. index:: pair_style gw/zbl/omp
 
 pair_style gw command
 =====================
 
 pair_style gw/zbl command
 =========================
+
+Accelerator Variants: *gw/zbl/omp*
 
 Syntax
 """"""
@@ -131,3 +134,5 @@ none
 
 **(Gao)** Gao and Weber, Nuclear Instruments and Methods in Physics
 Research B 191 (2012) 504.
+
+.. include:: accel_styles.rst

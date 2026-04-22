@@ -1,7 +1,10 @@
 .. index:: pair_style threebody/table
+.. index:: pair_style threebody/table/omp
 
 pair_style threebody/table command
 ==================================
+
+Accelerator Variants: *threebody/table/omp*
 
 Syntax
 """"""
@@ -281,3 +284,5 @@ Related commands
 
 **(Scherer2)** C. Scherer, R. Scheid, D. Andrienko, and T. Bereau, J. Chem. Theor. Comp. 16, 3194-3204 (2020).
 
+
+.. include:: accel_styles.rst

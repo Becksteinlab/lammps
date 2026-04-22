@@ -114,7 +114,7 @@ OPT.
    * :doc:`granular <pair_granular>`
    * :doc:`granular/superellipsoid <pair_granular_superellipsoid>`
    * :doc:`gw <pair_gw>`
-   * :doc:`gw/zbl <pair_gw>`
+   * :doc:`gw/zbl (o) <pair_gw>`
    * :doc:`harmonic/cut (o) <pair_harmonic_cut>`
    * :doc:`hbond/dreiding/lj (o) <pair_hbond_dreiding>`
    * :doc:`hbond/dreiding/lj/angleoffset (o) <pair_hbond_dreiding>`
@@ -135,7 +135,7 @@ OPT.
    * :doc:`lepton (o) <pair_lepton>`
    * :doc:`lepton/coul (o) <pair_lepton>`
    * :doc:`lepton/sphere (o) <pair_lepton>`
-   * :doc:`line/lj <pair_line_lj>`
+   * :doc:`line/lj (o) <pair_line_lj>`
    * :doc:`lj/charmm/coul/charmm (giko) <pair_charmm>`
    * :doc:`lj/charmm/coul/charmm/implicit (ko) <pair_charmm>`
    * :doc:`lj/charmm/coul/long (gikot) <pair_charmm>`
@@ -194,7 +194,7 @@ OPT.
    * :doc:`lj/smooth/linear (o) <pair_lj_smooth_linear>`
    * :doc:`lj/switch3/coulgauss/long <pair_lj_switch3_coulgauss_long>`
    * :doc:`lj96/cut (gko) <pair_lj96>`
-   * :doc:`local/density <pair_local_density>`
+   * :doc:`local/density (o) <pair_local_density>`
    * :doc:`lubricate (o) <pair_lubricate>`
    * :doc:`lubricate/poly (o) <pair_lubricate>`
    * :doc:`lubricateU <pair_lubricateU>`
@@ -209,16 +209,16 @@ OPT.
    * :doc:`mesocnt <pair_mesocnt>`
    * :doc:`mesocnt/viscous <pair_mesocnt>`
    * :doc:`mgpt <pair_mgpt>`
-   * :doc:`mie/cut (g) <pair_mie>`
+   * :doc:`mie/cut (go) <pair_mie>`
    * :doc:`mliap (k) <pair_mliap>`
    * :doc:`mm3/switch3/coulgauss/long <pair_lj_switch3_coulgauss_long>`
-   * :doc:`momb <pair_momb>`
+   * :doc:`momb (o) <pair_momb>`
    * :doc:`morse (gkot) <pair_morse>`
    * :doc:`morse/smooth/linear (o) <pair_morse>`
    * :doc:`morse/soft <pair_fep_soft>`
    * :doc:`multi/lucy <pair_multi_lucy>`
    * :doc:`multi/lucy/rx (k) <pair_multi_lucy_rx>`
-   * :doc:`nb3b/harmonic <pair_nb3b>`
+   * :doc:`nb3b/harmonic (o) <pair_nb3b>`
    * :doc:`nb3b/screened <pair_nb3b>`
    * :doc:`nm/cut (o) <pair_nm>`
    * :doc:`nm/cut/coul/cut (o) <pair_nm>`
@@ -301,17 +301,17 @@ OPT.
    * :doc:`tersoff/table (o) <pair_tersoff>`
    * :doc:`tersoff/zbl (gko) <pair_tersoff_zbl>`
    * :doc:`thole <pair_thole>`
-   * :doc:`threebody/table <pair_threebody_table>`
+   * :doc:`threebody/table (o) <pair_threebody_table>`
    * :doc:`tip4p/cut (o) <pair_coul>`
    * :doc:`tip4p/long (o) <pair_coul>`
    * :doc:`tip4p/long/soft (o) <pair_fep_soft>`
-   * :doc:`tri/lj <pair_tri_lj>`
+   * :doc:`tri/lj (o) <pair_tri_lj>`
    * :doc:`ufm (got) <pair_ufm>`
    * :doc:`uf3 (k) <pair_uf3>`
    * :doc:`vashishta (gko) <pair_vashishta>`
    * :doc:`vashishta/table (o) <pair_vashishta>`
-   * :doc:`wf/cut <pair_wf_cut>`
-   * :doc:`ylz <pair_ylz>`
+   * :doc:`wf/cut (o) <pair_wf_cut>`
+   * :doc:`ylz (o) <pair_ylz>`
    * :doc:`yukawa (gko) <pair_yukawa>`
    * :doc:`yukawa/colloid (gko) <pair_yukawa_colloid>`
    * :doc:`zbl (gko) <pair_zbl>`
