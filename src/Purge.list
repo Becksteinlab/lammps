@@ -1034,6 +1034,8 @@ kim_units.cpp
 pair_kim.cpp
 angle_charmm_kokkos.h
 angle_class2_kokkos.h
+angle_class2xe.cpp
+angle_class2xe.h
 angle_cosine_kokkos.h
 angle_harmonic_kokkos.h
 angle_hybrid_kokkos.h
@@ -1074,6 +1076,8 @@ compute_temp_kokkos.h
 dihedral_charmmfsw_kokkos.h
 dihedral_charmm_kokkos.h
 dihedral_class2_kokkos.h
+dihedral_class2xe.cpp
+dihedral_class2xe.h
 dihedral_fourier_kokkos.h
 dihedral_harmonic_kokkos.h
 dihedral_hybrid_kokkos.h
