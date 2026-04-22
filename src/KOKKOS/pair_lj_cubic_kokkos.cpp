@@ -99,11 +99,11 @@ void PairLJCubicKokkos<DeviceType>::compute(int eflag_in, int vflag_in)
   type = atomKK->k_type.view<DeviceType>();
   nlocal = atom->nlocal;
   nall = atom->nlocal + atom->nghost;
-  newton_pair = force->newton_pair;
   special_lj[0] = static_cast<KK_FLOAT>(force->special_lj[0]);
   special_lj[1] = static_cast<KK_FLOAT>(force->special_lj[1]);
   special_lj[2] = static_cast<KK_FLOAT>(force->special_lj[2]);
   special_lj[3] = static_cast<KK_FLOAT>(force->special_lj[3]);
+  newton_pair = force->newton_pair;
 
   // loop over neighbors of my atoms
 
