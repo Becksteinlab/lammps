@@ -30,6 +30,7 @@ class FixGraphicsReplica : public Fix {
   ~FixGraphicsReplica() override;
   int setmask() override;
   void init() override;
+  void min_post_force(int) override;
   void end_of_step() override;
 
   int image(int *&, double **&) override;

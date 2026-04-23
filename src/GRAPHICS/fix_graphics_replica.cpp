@@ -90,13 +90,21 @@ FixGraphicsReplica::~FixGraphicsReplica()
 
 int FixGraphicsReplica::setmask()
 {
-  return END_OF_STEP;
+  return END_OF_STEP | MIN_POST_FORCE;
 }
 
 /* ---------------------------------------------------------------------- */
 
 void FixGraphicsReplica::init()
 {
+  end_of_step();
+}
+
+/* ---------------------------------------------------------------------- */
+
+void FixGraphicsReplica::min_post_force(int)
+{
+  if (update->ntimestep % nevery) return;
   end_of_step();
 }
 
