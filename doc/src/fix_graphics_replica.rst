@@ -79,8 +79,9 @@ shrink the radius that is selected by *dump image* for the atom type.
 Usage example
 """""""""""""
 
-The following lines can be added to the peptide example to run it
-in multi-partition mode so it will have diverging trajectories.
+The following lines can be added to the ``peptide`` example input to run
+it in multi-partition mode with diverging trajectories and then
+visualize the atom positions from the different replica or the spread.
 
 .. code-block:: LAMMPS
 
@@ -104,11 +105,30 @@ in multi-partition mode so it will have diverging trajectories.
                 ftrans sf2 0.5 fcolor sf2 green
 
 .. |replica1| image:: img/replica-all.png
-   :width: 49%
+   :width: 33%
 .. |replica2| image:: img/replica-average.png
-   :width: 49%
+   :width: 33%
 
 |replica1|  |replica2|
+
+
+The following lines can be added to the ``neb.hop1`` example to visualize
+the atom positions across the minimum energy path.  The images below show
+the initial and the final state.
+
+.. code-block:: LAMMPS
+
+   fix  sf1  nebatoms  graphics/replica 10 display 0.8
+   partition yes 1 dump viz all image 10 myimage-*.png type type size 600 600 zoom 1.5 &
+                     shiny 0.2 fsaa yes box no 0.0 axes yes 0.5 0.05 fix sf1 const 0 0
+   partition yes 1 dump_modify viz pad 6 backcolor black backcolor2 white fcolor sf1 yellow
+
+.. |neb1| image:: img/neb-initial.png
+   :width: 33%
+.. |neb2| image:: img/neb-final.png
+   :width: 33%
+
+|neb1|  |neb2|
 
 ----------
 
@@ -119,6 +139,12 @@ No information about this fix is written to :doc:`binary restart files
 <restart>`.
 
 None of the :doc:`fix_modify <fix_modify>` options apply to this fix.
+
+This fix is invoked during an energy minimization when using the
+:doc:`minimize <minimize>` command and other commands the invoke
+minimizations like :doc:`neb <neb>`.
+
+---------
 
 Restrictions
 """"""""""""
