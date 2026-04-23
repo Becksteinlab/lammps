@@ -11,34 +11,33 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
-#ifdef IMPROPER_CLASS
+/* ----------------------------------------------------------------------
+   Contributing author: Axel Kohlmeyer (Temple U)
+------------------------------------------------------------------------- */
+
+#ifdef ANGLE_CLASS
 // clang-format off
-ImproperStyle(distance,ImproperDistance);
+AngleStyle(gaussian/omp,AngleGaussianOMP);
 // clang-format on
 #else
 
-#ifndef LMP_IMPROPER_DISTANCE_H
-#define LMP_IMPROPER_DISTANCE_H
+#ifndef LMP_ANGLE_GAUSSIAN_OMP_H
+#define LMP_ANGLE_GAUSSIAN_OMP_H
 
-#include "improper.h"
+#include "angle_gaussian.h"
+#include "thr_omp.h"
 
 namespace LAMMPS_NS {
 
-class ImproperDistance : public Improper {
+class AngleGaussianOMP : public AngleGaussian, public ThrOMP {
+
  public:
-  ImproperDistance(class LAMMPS *);
-  ~ImproperDistance() override;
+  AngleGaussianOMP(class LAMMPS *lmp);
   void compute(int, int) override;
-  void coeff(int, char **) override;
-  void write_restart(FILE *) override;
-  void read_restart(FILE *) override;
-  void write_data(FILE *) override;
-  void *extract(const char *, int &) override;
 
- protected:
-  double *k, *chi;
-
-  void allocate();
+ private:
+  template <int EVFLAG, int EFLAG, int NEWTON_BOND>
+  void eval(int ifrom, int ito, ThrData *const thr);
 };
 
 }    // namespace LAMMPS_NS
