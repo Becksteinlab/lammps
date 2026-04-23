@@ -15,17 +15,18 @@ Syntax
 * Nevery = update graphics information every this many time steps
 * chunkID = ID of :doc:`compute chunk/atom <compute_chunk_atom>` command
 * zero or more keyword/args pairs may be appended
-* keyword = *alpha* or *clip* or *maxreplace* or *shading* or *radius* or *region*
+* keyword = *alpha* or *clip* or *maxreplace* or *shading* or *radius* or *mindist* or *region*
 
   .. parsed-literal::
 
      *alpha* value = override multiplier for alpha shape extraction (distance units)
-     *clip* value = truncate point cloud to box boundaries if *yes* otherwise use all points
+     *clip* value = truncate point cloud to box boundaries if *yes*, otherwise use all points
      *maxreplace* value = set the largest cluster size up to which atoms are replaced by icosahedra
      *shading* value = *smooth* or *flat*
         *smooth* = compute per-vertex normals for smooth shading (default)
         *flat* = use face normals for flat shading
      *radius* value = override per-atom or per-type radius if > 0.0 (distance units, default 0.0)
+     *mindist* value = override automatic distance cutoff for slitting clusters (distance units)
      *region* value = region-ID
        region-ID = ID of region that atoms must be in to be visualized
 
@@ -60,10 +61,9 @@ The resulting list of graphics objects is passed to :doc:`dump image
 <dump_image>` for rendering via the *fix* keyword.
 
 The positions used for the generation of the graphics are based on
-unwrapped coordinates which are then mapped back into the simulation
-cell based on the position of the center of the cluster.  When a cluster
-will straddle a periodic boundary it should be drawn only on one side of
-the boundary.
+coordinates for local and ghost atoms where then redundant generated
+triangles are not drawn.  When a cluster straddles a periodic boundary
+it should be drawn in parts on both sides of the boundary.
 
 If available, the per-atom radius (e.g. for simulations using :doc:`atom
 style sphere <atom_style>`) is used, otherwise - if available - half of
@@ -100,21 +100,27 @@ The optional *alpha* keyword allows to adjust the alpha shape extraction
 algorithm which determines how closely the generated triangulation
 follows the shape of chunks of atoms.  It should be at least about 3x
 the average distance of closest neighbors.  For larger values, the
-generated shape will become mostly a conventional convex hull. A value
-of 0.0 (the default) triggers an estimation of a suitable value.
+generated shape will become smother and more like a conventional convex
+hull. A value of 0.0 (the default) triggers an estimation of a suitable
+value from the average nearest neighbor distance.
 
-The optional *clip* keyword allows to adjust the behavior for clusters
-that straddle periodic boundaries.  With the default value of *no* all
-points are used in the triangulation after unwrapping and translating
-them back into the simulation cell.  When *clip* is set to *yes* all
-points outside the box boundaries will be removed resulting in surfaces
-that extend along the simulation box walls even though the cluster would
-extend beyond it.
+The optional *clip* keyword allows to adjust the behavior for chunks
+that straddle periodic boundaries.  With the default value of *yes* all
+points are that are outside the simulation box are not used in the
+triangulation.  When *clip* is set to *no* all points of ghost atoms
+that are outside the simulation box will be included in the
+triangulation.  Typically, a value of *yes* would be used with large
+chunks and *no* might be preferred for small chunks.
 
-The optional *maxreplace* keyword allows to set up to which cluster size
-the atoms positions are replaced by those of an icosahedron to produce
-smoother surfaces.  For larger clusters, this step has few advantages
-and can slow down the triangulation significantly.
+The optional *maxreplace* keyword allows to define up to which chunk
+size atoms positions are replaced by those of an icosahedron to
+produce smoother surfaces.  For larger chunks, this step has few
+advantages and can slow down the triangulation significantly.
+
+The optional *mindist* keyword allows to override the heuristics used to
+split larger chunks when parts of it are scattered through the
+simulation box. The default value is 4x the largest radius in the
+system.
 
 The optional *shading* keyword selects how triangle normals are
 determined for rendering surfaces.  The *smooth* setting (the default)
@@ -247,4 +253,6 @@ Related commands
 Defaults
 """"""""
 
-radius = 0.0, alpha = 0.0, shading = smooth, maxreplace = 100, clip = no
+radius = 0.0 (= auto-detect), alpha = 0.0 (= auto-detect), shading =
+smooth, maxreplace = 100, clip = yes, mindist = (automatic: 4x largest
+radius in system)

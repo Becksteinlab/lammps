@@ -2402,6 +2402,7 @@ Milano
 Militzer
 Minary
 mincap
+mindist
 Mindlin
 mingw
 minhbonds

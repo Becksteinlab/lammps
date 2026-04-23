@@ -33,7 +33,11 @@ class FixGraphicsChunk : public Fix {
 
   int setmask() override;
   void init() override;
+  void setup(int) override;
   void end_of_step() override;
+
+  int pack_forward_comm(int, int *, double *, int, int *) override;
+  void unpack_forward_comm(int, int, double *) override;
 
   int image(int *&, double **&) override;
 
@@ -44,6 +48,10 @@ class FixGraphicsChunk : public Fix {
   bool smooth;                 // smooth vs flat shading
   bool clip;                   // clip point cloud to box
   int maxreplace;              // largest cluster size where atoms are replaced by icosahedra
+  int maxchunk;                // size of array to store chunk-IDs for local and ghost atoms
+  int *chunkid;                // copy of chunk-IDs
+  double *atomrad;             // copy of atomradius
+  double mindist;              // minimum distance between positions in chunks
   char *id_chunk;              // compute chunk/atom ID
   ComputeChunkAtom *cchunk;    // pointer to chunk compute
   char *id_region;             // region ID
@@ -52,6 +60,7 @@ class FixGraphicsChunk : public Fix {
   int numobjs;
   int *imgobjs;
   double **imgparms;
+
 };
 }    // namespace LAMMPS_NS
 #endif
