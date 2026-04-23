@@ -100,16 +100,16 @@ void PairCoulCutSoftGapsys::compute(int eflag, int vflag)
 
       if (rsq < cut_inner * cut_inner) {
 
-        double slope = - 2.0 * factor_coul * qqrd2e * qtmp * q[j] / pow(cut_inner, 3);
-        double constant = 3.0 * factor_coul * qqrd2e * qtmp * q[j] / pow(cut_inner, 2);
+        forcecoul = factor_coul * qqrd2e * qtmp * q[j];
+        fpair = (- 2.0 / pow(cut_inner, 3) + 3.0 / (pow(cut_inner, 2) * sqrt(rsq))) * forcecoul;
 
-        f[i][0] += delx*slope + constant;
-        f[i][1] += dely*slope + constant;
-        f[i][2] += delz*slope + constant;
+        f[i][0] += delx*fpair;
+        f[i][1] += dely*fpair;
+        f[i][2] += delz*fpair;
         if (newton_pair || j < nlocal) {
-          f[j][0] -= delx*slope + constant;
-          f[j][1] -= dely*slope + constant;
-          f[j][2] -= delz*slope + constant;
+          f[j][0] -= delx*fpair;
+          f[j][1] -= dely*fpair;
+          f[j][2] -= delz*fpair;
         }
 
         if (eflag)
