@@ -686,9 +686,9 @@ int ComputeChunkAtom::compute_image(int *&objs, double **&parms)
             p1[idim] = p2[idim] = c;
             int other = 1 - idim;
             p1[other] = binlo[other];
-            p1[2] = 0.0;
+            p1[2] = 1.0;
             p2[other] = binhi[other];
-            p2[2] = 0.0;
+            p2[2] = 1.0;
 
             if (scaleflag == REDUCED) {
               domain->lamda2x(p1, p1);
