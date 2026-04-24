@@ -1171,7 +1171,7 @@ double BondBPMRotational::single(int type, double rsq, int i, int j, double &ffo
     flipped = 1;
   }
 
-  double ri_norm, theta, psi;
+  double ri_norm;
   double ri[3], rf[3], bondstore[7];
   for (int n = 0; n < atom->num_bond[i]; n++) {
     if (atom->bond_atom[i][n] == atom->tag[j]) {
@@ -1183,8 +1183,6 @@ double BondBPMRotational::single(int type, double rsq, int i, int j, double &ffo
         bondstore[4] = fix_bond_history->get_atom_value(i, n, 4);
         bondstore[5] = fix_bond_history->get_atom_value(i, n, 5);
         bondstore[6] = fix_bond_history->get_atom_value(i, n, 6);
-      } else {
-        theta = psi = 0.0;
       }
     }
   }
