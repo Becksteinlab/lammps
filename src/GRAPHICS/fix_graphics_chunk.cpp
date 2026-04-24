@@ -96,7 +96,7 @@ struct CellHash {
   }
 };
 
-static double dist2(const vec3 &a, const vec3 &b)
+double dist2(const vec3 &a, const vec3 &b)
 {
   double dx = a[0] - b[0];
   double dy = a[1] - b[1];
@@ -104,7 +104,7 @@ static double dist2(const vec3 &a, const vec3 &b)
   return dx * dx + dy * dy + dz * dz;
 }
 
-static CellKey cellOf(const vec3 &p, double cellSize)
+CellKey cellOf(const vec3 &p, double cellSize)
 {
   return {static_cast<bigint>(std::floor(p[0] / cellSize)),
           static_cast<bigint>(std::floor(p[1] / cellSize)),
@@ -446,15 +446,11 @@ void FixGraphicsChunk::end_of_step()
       center[1] /= double(natoms);
       center[2] /= double(natoms);
 
-      int count_all = 0;
-      int count_add = 0;
       pts.reserve(natoms);
       for (const auto &ai : iatoms) {
         vec3 extra{ai.pos[0] - center[0], ai.pos[1] - center[1], ai.pos[2] - center[2]};
         MathExtra::norm3(extra.data());
         vec3 pos{ai.rad * extra + ai.pos};
-        ++count_all;
-        ++count_add;
         if (!clip || domain->inside(pos.data())) pts.push_back(pos);
       }
     }
@@ -534,8 +530,8 @@ int FixGraphicsChunk::pack_forward_comm(int n, int *list, double *buf, int /*pbc
   int m = 0;
   for (int i = 0; i < n; ++i) {
     int j = list[i];
-    buf[m++] = chunkid[i];
-    buf[m++] = atomrad[i];
+    buf[m++] = chunkid[j];
+    buf[m++] = atomrad[j];
   }
 
   return m;

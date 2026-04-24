@@ -843,8 +843,6 @@ void PlaneObj::draw(Image *img, int flag, const double *color, const double *cen
 
 namespace {
 
-constexpr double MIN_VISIBLE_RADIUS = 0.1;    // minimum visible radius for point particles
-
 // Compute the circumsphere of tetrahedron (p0, p1, p2, p3).
 // Returns true on success, false for degenerate (zero-volume) tetrahedra.
 
@@ -1136,7 +1134,7 @@ void ConvexHullObj::build_hull(const std::vector<vec3> &points, bool smooth, dou
   std::vector<int> ins_order(npts);
   for (int j = 0; j < npts; ++j) ins_order[j] = j;
   for (int j = npts - 1; j > 0; --j) {
-    auto h = static_cast<unsigned int>(j) * 2654435761u;
+    auto h = static_cast<unsigned int>(j) * 2654435761U;
     int k = static_cast<int>(h % static_cast<unsigned int>(j + 1));
     std::swap(ins_order[j], ins_order[k]);
   }

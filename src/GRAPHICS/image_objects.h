@@ -137,9 +137,12 @@ namespace ImageObjects {
     void draw(Image *img, int flag, const double *color, double diameter, double opacity = 1.0);
 
     // get list of triangles and normals for external use
-    const std::vector<triangle> &get_triangles() const { return hull_triangles; }
-    const std::vector<triangle> &get_normals() const { return hull_normals; }
-    const std::vector<std::array<int, 3>> &get_color_indices() const { return hull_color_idx; }
+    [[nodiscard]] const std::vector<triangle> &get_triangles() const { return hull_triangles; }
+    [[nodiscard]] const std::vector<triangle> &get_normals() const { return hull_normals; }
+    [[nodiscard]] const std::vector<std::array<int, 3>> &get_color_indices() const
+    {
+      return hull_color_idx;
+    }
 
    private:
     std::vector<triangle> hull_triangles;
