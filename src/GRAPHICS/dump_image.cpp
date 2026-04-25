@@ -1471,19 +1471,11 @@ void DumpImage::create_image()
         else if (bodyvec[k] == Graphics::LINE)
           image->draw_cylinder(&bodyarray[k][0],&bodyarray[k][3],color,bodyarray[k][6],3,opacity);
         else if (bodyvec[k] == Graphics::TRI) {
-          // brighten flat surfaces somewhat
-          auto saved = reset_lighting(image, 0.3, 0.8, 0.45, 0.8);
           image->draw_triangle(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],color,opacity);
-          // restore previous settings
-          restore_lighting(saved, image);
         } else if (bodyvec[k] == Graphics::TRINORM) {
-          // brighten surfaces a little bit
-          auto saved = reset_lighting(image, 0.6, 0.3, 0.5, 0.7);
           image->draw_trinorm(&bodyarray[k][0],&bodyarray[k][3],&bodyarray[k][6],
                               &bodyarray[k][9],&bodyarray[k][12],&bodyarray[k][15],
                               color,color,color,opacity);
-          // restore previous settings
-          restore_lighting(saved, image);
         }
       }
 
