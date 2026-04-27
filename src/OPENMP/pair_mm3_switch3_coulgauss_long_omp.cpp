@@ -13,31 +13,31 @@
 ------------------------------------------------------------------------- */
 
 /* ----------------------------------------------------------------------
-   Contributing authors: Hendrik Heenen (Technical University of Munich)
-                         and Rochus Schmid (Ruhr-Universitaet Bochum)
-                         (OMP threading by Axel Kohlmeyer, Temple U)
+   Contributing author: Steven Vandenbrande
+                        (OMP threading by Axel Kohlmeyer, Temple U)
 ------------------------------------------------------------------------- */
 
 #include "omp_compat.h"
-#include "pair_buck6d_coul_gauss_long_omp.h"
+#include "pair_mm3_switch3_coulgauss_long_omp.h"
 
 #include "atom.h"
 #include "comm.h"
 #include "ewald_const.h"
 #include "force.h"
-#include "math_special.h"
+#include "math_const.h"
 #include "neigh_list.h"
 #include "suffix.h"
 
 #include <cmath>
 
 using namespace LAMMPS_NS;
+using namespace MathConst;
 using namespace EwaldConst;
 
 /* ---------------------------------------------------------------------- */
 
-PairBuck6dCoulGaussLongOMP::PairBuck6dCoulGaussLongOMP(LAMMPS *lmp) :
-  PairBuck6dCoulGaussLong(lmp), ThrOMP(lmp, THR_PAIR)
+PairMM3Switch3CoulGaussLongOMP::PairMM3Switch3CoulGaussLongOMP(LAMMPS *lmp) :
+  PairMM3Switch3CoulGaussLong(lmp), ThrOMP(lmp, THR_PAIR)
 {
   suffix_flag |= Suffix::OMP;
   respa_enable = 0;
@@ -45,7 +45,7 @@ PairBuck6dCoulGaussLongOMP::PairBuck6dCoulGaussLongOMP(LAMMPS *lmp) :
 
 /* ---------------------------------------------------------------------- */
 
-void PairBuck6dCoulGaussLongOMP::compute(int eflag, int vflag)
+void PairMM3Switch3CoulGaussLongOMP::compute(int eflag, int vflag)
 {
   ev_init(eflag,vflag);
 
@@ -85,15 +85,13 @@ void PairBuck6dCoulGaussLongOMP::compute(int eflag, int vflag)
 /* ---------------------------------------------------------------------- */
 
 template <int EVFLAG, int EFLAG, int NEWTON_PAIR>
-void PairBuck6dCoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
+void PairMM3Switch3CoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
 {
-  int i,j,ii,jj,jnum,itype,jtype;
+  int i,j,ii,jj,jnum,itype,jtype,itable;
   double qtmp,xtmp,ytmp,ztmp,delx,dely,delz,evdwl,ecoul,fpair;
-  double r,rsq,r2inv,r6inv,r14inv,rexp,forcecoul,forcebuck6d,factor_coul,factor_lj;
-  double grij,expm2,erf;
-  double term1,term2,term3,term4,term5;
-  double rcu,rqu,sme,smf,ebuck6d,ealpha;
-  double prefactor,erfa,expa,arg,falpha;
+  double fraction,table;
+  double r,rsq,r2inv,r6inv,forcecoul,forcecoul2,forcelj,factor_coul,factor_lj,tr,ftr,trx;
+  double grij,expm2,prefactor,prefactor2,t,erfc1,erfc2,rrij,expn2,expb;
   int *ilist,*jlist,*numneigh,**firstneigh;
 
   evdwl = ecoul = 0.0;
@@ -103,8 +101,8 @@ void PairBuck6dCoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
   const double * _noalias const q = atom->q;
   const int * _noalias const type = atom->type;
   const int nlocal = atom->nlocal;
-  const double * _noalias const special_lj = force->special_lj;
   const double * _noalias const special_coul = force->special_coul;
+  const double * _noalias const special_lj = force->special_lj;
   const double qqrd2e = force->qqrd2e;
   double fxtmp,fytmp,fztmp;
 
@@ -138,63 +136,89 @@ void PairBuck6dCoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
       jtype = type[j];
 
       if (rsq < cutsq[itype][jtype]) {
+        forcecoul = forcecoul2 = forcelj = 0.0;
         r2inv = 1.0/rsq;
-        r = sqrt(rsq);
-
-        if (rsq < cut_ljsq[itype][jtype]) {
-          r6inv = r2inv*r2inv*r2inv;
-          r14inv = r6inv*r6inv*r2inv;
-          rexp = exp(-r*buck6d2[itype][jtype]);
-          term1 = buck6d3[itype][jtype]*r6inv;
-          term2 = buck6d4[itype][jtype]*r14inv;
-          term3 = term2*term2;
-          term4 = 1.0/(1.0 + term2);
-          term5 = 1.0/(1.0 + 2.0*term2 + term3);
-          forcebuck6d = buck6d1[itype][jtype]*buck6d2[itype][jtype]*r*rexp;
-          forcebuck6d -= term1*(6.0*term4 - term5*14.0*term2);
-          ebuck6d = buck6d1[itype][jtype]*rexp - term1*term4;
-
-          // smoothing term
-          if (rsq > rsmooth_sq[itype][jtype]) {
-            rcu = r*rsq;
-            rqu = rsq*rsq;
-            sme = c5[itype][jtype]*rqu*r + c4[itype][jtype]*rqu + c3[itype][jtype]*rcu +
-                  c2[itype][jtype]*rsq + c1[itype][jtype]*r + c0[itype][jtype];
-            smf = 5.0*c5[itype][jtype]*rqu + 4.0*c4[itype][jtype]*rcu +
-                  3.0*c3[itype][jtype]*rsq + 2.0*c2[itype][jtype]*r + c1[itype][jtype];
-            forcebuck6d = forcebuck6d*sme - ebuck6d*smf*r;
-            ebuck6d *= sme;
-          }
-        } else forcebuck6d = 0.0;
 
         if (rsq < cut_coulsq) {
-          // long range - real space
-          grij = g_ewald * r;
-          expm2 = MathSpecial::expmsq(grij);
-          erf = 1 - (MathSpecial::my_erfcx(grij) * expm2);
-
-          // gaussian for 1/r alpha_ij contribution
-          arg = alpha_ij[itype][jtype]*r;
-          expa = MathSpecial::expmsq(arg);
-          erfa = 1 - (MathSpecial::my_erfcx(arg) * expa);
-
-          prefactor = qqrd2e*qtmp*q[j]/r;
-          falpha = erfa - EWALD_F*arg*expa;
-          forcecoul = prefactor * (falpha - erf + EWALD_F*grij*expm2);
-          if (factor_coul < 1.0) forcecoul -= (1.0-factor_coul)*prefactor*falpha;
-
-          ealpha = prefactor * (erfa-erf);
-          if (rsq > rsmooth_sq_c) {
-            rcu = r*rsq;
-            rqu = rsq*rsq;
-            sme = c5_c*rqu*r + c4_c*rqu + c3_c*rcu + c2_c*rsq + c1_c*r + c0_c;
-            smf = 5.0*c5_c*rqu + 4.0*c4_c*rcu + 3.0*c3_c*rsq + 2.0*c2_c*r + c1_c;
-            forcecoul = forcecoul*sme - ealpha*smf*r;
-            ealpha *= sme;
+          if (!ncoultablebits || rsq <= tabinnersq) {
+            r = sqrt(rsq);
+            grij = g_ewald * r;
+            expm2 = exp(-grij*grij);
+            t = 1.0 / (1.0 + EWALD_P*grij);
+            erfc1 = t * (A1+t*(A2+t*(A3+t*(A4+t*A5)))) * expm2;
+            prefactor = qqrd2e * qtmp*q[j]/r;
+            forcecoul = prefactor * (erfc1 + EWALD_F*grij*expm2);
+            if (factor_coul < 1.0) forcecoul -= (1.0-factor_coul)*prefactor;
+          } else {
+            union_int_float_t rsq_lookup;
+            rsq_lookup.f = rsq;
+            itable = rsq_lookup.i & ncoulmask;
+            itable >>= ncoulshiftbits;
+            fraction = ((double) rsq_lookup.f - rtable[itable]) * drtable[itable];
+            table = ftable[itable] + fraction*dftable[itable];
+            forcecoul = qtmp*q[j] * table;
+            if (factor_coul < 1.0) {
+              table = ctable[itable] + fraction*dctable[itable];
+              prefactor = qtmp*q[j] * table;
+              forcecoul -= (1.0-factor_coul)*prefactor;
+            }
           }
-        } else forcecoul = 0.0;
+        }
 
-        fpair = (forcecoul + factor_lj*forcebuck6d) * r2inv;
+        if (rsq < cut_ljsq[itype][jtype]) {
+          // Repulsive exponential part
+          r = sqrt(rsq);
+          expb = lj3[itype][jtype]*exp(-lj1[itype][jtype]*r);
+          forcelj = expb*lj1[itype][jtype]*r;
+          // Attractive r^-6 part
+          r6inv = r2inv*r2inv*r2inv;
+          forcelj -= 6.0*lj4[itype][jtype]*r6inv;
+          // Correction for Gaussian radii
+          if (lj2[itype][jtype]==0.0) {
+            expn2 = 0.0;
+            erfc2 = 0.0;
+            prefactor2 = 0.0;
+          } else {
+            rrij = lj2[itype][jtype]*r;
+            expn2 = exp(-rrij*rrij);
+            erfc2 = erfc(rrij);
+            prefactor2 = -qqrd2e*qtmp*q[j]/r;
+            forcecoul2 = prefactor2*(erfc2+EWALD_F*rrij*expn2);
+          }
+        }
+
+        if (EFLAG) {
+          if (rsq < cut_coulsq) {
+            if (!ncoultablebits || rsq <= tabinnersq)
+              ecoul = prefactor*erfc1;
+            else {
+              table = etable[itable] + fraction*detable[itable];
+              ecoul = qtmp*q[j] * table;
+            }
+            if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor;
+          } else ecoul = 0.0;
+
+          if (rsq < cut_ljsq[itype][jtype]) {
+            ecoul += prefactor2*erfc2*factor_coul;
+            evdwl = expb-lj4[itype][jtype]*r6inv-offset[itype][jtype];
+          } else evdwl = 0.0;
+        }
+
+        // Truncation, see Yaff Switch3
+        if (truncw>0) {
+          if (rsq < cut_ljsq[itype][jtype]) {
+            if (r>cut_lj[itype][jtype]-truncw) {
+              trx = (cut_lj[itype][jtype]-r)*truncwi;
+              tr = trx*trx*(3.0-2.0*trx);
+              ftr = 6.0*trx*(1.0-trx)*r*truncwi;
+              forcelj = forcelj*tr + evdwl*ftr;
+              evdwl *= tr;
+            }
+          }
+        }
+
+        fpair = (forcecoul + factor_coul*forcecoul2 + factor_lj*forcelj) * r2inv;
+        evdwl *= factor_lj;
 
         fxtmp += delx*fpair;
         fytmp += dely*fpair;
@@ -203,18 +227,6 @@ void PairBuck6dCoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
           f[j].x -= delx*fpair;
           f[j].y -= dely*fpair;
           f[j].z -= delz*fpair;
-        }
-
-        if (EFLAG) {
-          if (rsq < cut_ljsq[itype][jtype]) {
-            evdwl = ebuck6d - offset[itype][jtype];
-            evdwl *= factor_lj;
-          } else evdwl = 0.0;
-
-          if (rsq < cut_coulsq) {
-            ecoul = ealpha;
-            if (factor_coul < 1.0) ecoul -= (1.0-factor_coul)*prefactor*erfa;
-          } else ecoul = 0.0;
         }
 
         if (EVFLAG) ev_tally_thr(this, i,j,nlocal,NEWTON_PAIR,
@@ -229,9 +241,9 @@ void PairBuck6dCoulGaussLongOMP::eval(int iifrom, int iito, ThrData * const thr)
 
 /* ---------------------------------------------------------------------- */
 
-double PairBuck6dCoulGaussLongOMP::memory_usage()
+double PairMM3Switch3CoulGaussLongOMP::memory_usage()
 {
   double bytes = memory_usage_thr();
-  bytes += PairBuck6dCoulGaussLong::memory_usage();
+  bytes += PairMM3Switch3CoulGaussLong::memory_usage();
   return bytes;
 }

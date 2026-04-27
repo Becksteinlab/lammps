@@ -11,6 +11,10 @@
    See the README file in the top-level LAMMPS directory.
 ------------------------------------------------------------------------- */
 
+/* ----------------------------------------------------------------------
+   Contributing author: Axel Kohlmeyer (Temple U)
+------------------------------------------------------------------------- */
+
 #ifdef PAIR_CLASS
 // clang-format off
 PairStyle(buck6d/coul/gauss/dsf/omp,PairBuck6dCoulGaussDSFOMP);
@@ -28,8 +32,10 @@ namespace LAMMPS_NS {
 class PairBuck6dCoulGaussDSFOMP : public PairBuck6dCoulGaussDSF, public ThrOMP {
 
  public:
-  PairBuck6dCoulGaussDSFOMP(class LAMMPS *);
+  PairBuck6dCoulGaussDSFOMP(class LAMMPS *lmp);
+
   void compute(int, int) override;
+  double memory_usage() override;
 
  private:
   template <int EVFLAG, int EFLAG, int NEWTON_PAIR>

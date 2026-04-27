@@ -17,22 +17,22 @@
 
 #ifdef PAIR_CLASS
 // clang-format off
-PairStyle(buck6d/coul/gauss/long/omp,PairBuck6dCoulGaussLongOMP);
+PairStyle(lj/switch3/coulgauss/long/omp,PairLJSwitch3CoulGaussLongOMP);
 // clang-format on
 #else
 
-#ifndef LMP_PAIR_BUCK6D_COUL_GAUSS_LONG_OMP_H
-#define LMP_PAIR_BUCK6D_COUL_GAUSS_LONG_OMP_H
+#ifndef LMP_PAIR_LJ_SWITCH3_COULGAUSS_LONG_OMP_H
+#define LMP_PAIR_LJ_SWITCH3_COULGAUSS_LONG_OMP_H
 
-#include "pair_buck6d_coul_gauss_long.h"
+#include "pair_lj_switch3_coulgauss_long.h"
 #include "thr_omp.h"
 
 namespace LAMMPS_NS {
 
-class PairBuck6dCoulGaussLongOMP : public PairBuck6dCoulGaussLong, public ThrOMP {
+class PairLJSwitch3CoulGaussLongOMP : public PairLJSwitch3CoulGaussLong, public ThrOMP {
 
  public:
-  PairBuck6dCoulGaussLongOMP(class LAMMPS *lmp);
+  PairLJSwitch3CoulGaussLongOMP(class LAMMPS *lmp);
 
   void compute(int, int) override;
   double memory_usage() override;
