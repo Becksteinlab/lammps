@@ -193,7 +193,7 @@ OPT.
    * :doc:`lj/sf/dipole/sf (go) <pair_dipole>`
    * :doc:`lj/smooth (go) <pair_lj_smooth>`
    * :doc:`lj/smooth/linear (o) <pair_lj_smooth_linear>`
-   * :doc:`lj/switch3/coulgauss/long <pair_lj_switch3_coulgauss_long>`
+   * :doc:`lj/switch3/coulgauss/long (o) <pair_lj_switch3_coulgauss_long>`
    * :doc:`lj96/cut (gko) <pair_lj96>`
    * :doc:`local/density (o) <pair_local_density>`
    * :doc:`lubricate (o) <pair_lubricate>`
@@ -212,7 +212,7 @@ OPT.
    * :doc:`mgpt <pair_mgpt>`
    * :doc:`mie/cut (go) <pair_mie>`
    * :doc:`mliap (k) <pair_mliap>`
-   * :doc:`mm3/switch3/coulgauss/long <pair_lj_switch3_coulgauss_long>`
+   * :doc:`mm3/switch3/coulgauss/long (o) <pair_lj_switch3_coulgauss_long>`
    * :doc:`momb (o) <pair_momb>`
    * :doc:`morse (gkot) <pair_morse>`
    * :doc:`morse/smooth/linear (o) <pair_morse>`
