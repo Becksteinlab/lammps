@@ -105,8 +105,9 @@ std::unordered_map<std::string, double> constants = {
 
 // must match enumerator in variable.h
 const std::vector<std::string> Variable::varstyles = {
-    "index",  "loop",  "world", "universe", "uloop",  "string", "getenv",   "file",     "atomfile",
-    "format", "equal", "atom",  "vector",   "python", "timer",  "internal", "(unknown)"};
+    "index",  "loop",   "world",    "universe", "uloop",      "string",
+    "getenv", "file",   "atomfile", "format",   "equal",      "atom",
+    "vector", "python", "timer",    "internal", "unassigned", "(unknown)"};
 // NOLINTEND
 /* ---------------------------------------------------------------------- */
 
@@ -187,7 +188,12 @@ void Variable::set(int narg, char **arg)
 {
   if (narg < 2) utils::missing_cmd_args(FLERR, "variable", error);
 
+  if (!utils::is_id(arg[0]))
+    error->all(FLERR, Error::ARGZERO,
+               "Variable name '{}' must have only letters, numbers, or underscores", arg[0]);
+
   int replaceflag = 0;
+  int ivar = find(arg[0]);
 
   // DELETE
   // doesn't matter if variable no longer exists
@@ -196,7 +202,7 @@ void Variable::set(int narg, char **arg)
     if (narg > 2)
       error->all(FLERR, 2, "Illegal variable delete command: expected 2 arguments but found {}{}",
                  narg, utils::errorurl(3));
-    if (find(arg[0]) >= 0) remove(find(arg[0]));
+    if (ivar >= 0) remove(ivar);
     return;
 
     // INDEX
@@ -204,14 +210,14 @@ void Variable::set(int narg, char **arg)
 
   } else if (strcmp(arg[1], "index") == 0) {
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable index", error);
-    if (find(arg[0]) >= 0) return;
-    if (nvar == maxvar) grow();
-    style[nvar] = INDEX;
-    num[nvar] = narg - 2;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char *[num[nvar]];
-    copy(num[nvar], &arg[2], data[nvar]);
+    if (ivar >= 0) return;
+    ivar = recycle();
+    style[ivar] = INDEX;
+    num[ivar] = narg - 2;
+    which[ivar] = 0;
+    pad[ivar] = 0;
+    data[ivar] = new char *[num[ivar]];
+    copy(num[ivar], &arg[2], data[ivar]);
 
     // LOOP
     // 1 arg + pad: num = N, which = 1st value, data = single string
@@ -219,33 +225,33 @@ void Variable::set(int narg, char **arg)
 
   } else if (strcmp(arg[1], "loop") == 0) {
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable loop", error);
-    if (find(arg[0]) >= 0) return;
-    if (nvar == maxvar) grow();
-    style[nvar] = LOOP;
+    if (ivar >= 0) return;
+    ivar = recycle();
+    style[ivar] = LOOP;
     int nfirst = 0, nlast = 0;
     if (narg == 3 || (narg == 4 && strcmp(arg[3], "pad") == 0)) {
       nfirst = 1;
       nlast = utils::inumeric(FLERR, arg[2], false, lmp);
       if (nlast <= 0) error->all(FLERR, 2, "Invalid variable loop argument: {}", nlast);
       if (narg == 4 && strcmp(arg[3], "pad") == 0) {
-        pad[nvar] = fmt::format("{}", nlast).size();
+        pad[ivar] = fmt::format("{}", nlast).size();
       } else
-        pad[nvar] = 0;
+        pad[ivar] = 0;
     } else if (narg == 4 || (narg == 5 && strcmp(arg[4], "pad") == 0)) {
       nfirst = utils::inumeric(FLERR, arg[2], false, lmp);
       nlast = utils::inumeric(FLERR, arg[3], false, lmp);
       if (nfirst > nlast || nlast < 0)
         error->all(FLERR, 2, "Illegal variable loop command: {} > {}", nfirst, nlast);
       if (narg == 5 && strcmp(arg[4], "pad") == 0) {
-        pad[nvar] = fmt::format("{}", nlast).size();
+        pad[ivar] = fmt::format("{}", nlast).size();
       } else
-        pad[nvar] = 0;
+        pad[ivar] = 0;
     } else
       error->all(FLERR, narg - 1, "Illegal variable loop command: too many arguments");
-    num[nvar] = nlast;
-    which[nvar] = nfirst - 1;
-    data[nvar] = new char *[1];
-    data[nvar][0] = nullptr;
+    num[ivar] = nlast;
+    which[ivar] = nfirst - 1;
+    data[ivar] = new char *[1];
+    data[ivar][0] = nullptr;
 
     // WORLD
     // num = listed args, which = partition this proc is in, data = copied args
@@ -253,17 +259,17 @@ void Variable::set(int narg, char **arg)
 
   } else if (strcmp(arg[1], "world") == 0) {
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable world", error);
-    if (find(arg[0]) >= 0) return;
-    if (nvar == maxvar) grow();
-    style[nvar] = WORLD;
-    num[nvar] = narg - 2;
-    if (num[nvar] != universe->nworlds)
+    if (ivar >= 0) return;
+    ivar = recycle();
+    style[ivar] = WORLD;
+    num[ivar] = narg - 2;
+    if (num[ivar] != universe->nworlds)
       error->all(FLERR, narg - 1, "World variable count {} doesn't match # of partitions {}",
                  narg - 2, universe->nworlds);
-    which[nvar] = universe->iworld;
-    pad[nvar] = 0;
-    data[nvar] = new char *[num[nvar]];
-    copy(num[nvar], &arg[2], data[nvar]);
+    which[ivar] = universe->iworld;
+    pad[ivar] = 0;
+    data[ivar] = new char *[num[ivar]];
+    copy(num[ivar], &arg[2], data[ivar]);
 
     // UNIVERSE and ULOOP
     // for UNIVERSE: num = listed args, data = copied args
@@ -275,35 +281,35 @@ void Variable::set(int narg, char **arg)
   } else if (strcmp(arg[1], "universe") == 0 || strcmp(arg[1], "uloop") == 0) {
     if (strcmp(arg[1], "universe") == 0) {
       if (narg < 3) utils::missing_cmd_args(FLERR, "variable universe", error);
-      if (find(arg[0]) >= 0) return;
-      if (nvar == maxvar) grow();
-      style[nvar] = UNIVERSE;
-      num[nvar] = narg - 2;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      copy(num[nvar], &arg[2], data[nvar]);
+      if (ivar >= 0) return;
+      ivar = recycle();
+      style[ivar] = UNIVERSE;
+      num[ivar] = narg - 2;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      copy(num[ivar], &arg[2], data[ivar]);
     } else if (strcmp(arg[1], "uloop") == 0) {
       if (narg < 3 || narg > 4)
         error->all(FLERR, 1, "Illegal variable command: expected 3 or 4 arguments but found {}{}",
                    narg, utils::errorurl(3));
       if (narg == 4 && strcmp(arg[3], "pad") != 0)
         error->all(FLERR, 3, "Invalid variable uloop argument: {}", arg[3]);
-      if (find(arg[0]) >= 0) return;
-      if (nvar == maxvar) grow();
-      style[nvar] = ULOOP;
-      num[nvar] = utils::inumeric(FLERR, arg[2], false, lmp);
-      data[nvar] = new char *[1];
-      data[nvar][0] = nullptr;
+      if (ivar >= 0) return;
+      ivar = recycle();
+      style[ivar] = ULOOP;
+      num[ivar] = utils::inumeric(FLERR, arg[2], false, lmp);
+      data[ivar] = new char *[1];
+      data[ivar][0] = nullptr;
       if (narg == 4)
-        pad[nvar] = std::to_string(num[nvar]).size();
+        pad[ivar] = std::to_string(num[ivar]).size();
       else
-        pad[nvar] = 0;
+        pad[ivar] = 0;
     }
 
-    if (num[nvar] < universe->nworlds)
-      error->all(FLERR, 2, "Universe/uloop variable count {} < # of partitions {}", num[nvar],
+    if (num[ivar] < universe->nworlds)
+      error->all(FLERR, 2, "Universe/uloop variable count {} < # of partitions {}", num[ivar],
         universe->nworlds);
-    which[nvar] = universe->iworld;
+    which[ivar] = universe->iworld;
 
     if (universe->me == 0) {
       SafeFilePtr fp = fopen("tmp.lammps.variable", "w");
@@ -312,8 +318,8 @@ void Variable::set(int narg, char **arg)
       fprintf(fp, "%d\n", universe->nworlds);
     }
 
-    for (int jvar = 0; jvar < nvar; jvar++)
-      if (num[jvar] && (style[jvar] == UNIVERSE || style[jvar] == ULOOP) && num[nvar] != num[jvar])
+    for (int jvar = 0; jvar < ivar; jvar++)
+      if (num[jvar] && (style[jvar] == UNIVERSE || style[jvar] == ULOOP) && num[ivar] != num[jvar])
         error->all(FLERR, "All universe/uloop variables must have same # of values");
 
     // STRING
@@ -334,7 +340,6 @@ void Variable::set(int narg, char **arg)
     input->substitute(scopy, work, maxcopy, maxwork, 1);
     memory->sfree(work);
 
-    int ivar = find(arg[0]);
     if (ivar >= 0) {
       if (style[ivar] != STRING)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -343,13 +348,13 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = STRING;
-      num[nvar] = 1;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      copy(1, &scopy, data[nvar]);
+      ivar = recycle();
+      style[ivar] = STRING;
+      num[ivar] = 1;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      copy(1, &scopy, data[ivar]);
     }
     memory->sfree(scopy);
 
@@ -362,19 +367,19 @@ void Variable::set(int narg, char **arg)
     if (narg != 3)
       error->all(FLERR, "Illegal variable command: expected 3 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    if (find(arg[0]) >= 0) {
-      if (style[find(arg[0])] != GETENV)
+    if (ivar >= 0) {
+      if (style[ivar] != GETENV)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
-      remove(find(arg[0]));
+      remove(ivar);
     }
-    if (nvar == maxvar) grow();
-    style[nvar] = GETENV;
-    num[nvar] = 2;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char *[num[nvar]];
-    data[nvar][0] = utils::strdup(arg[2]);
-    data[nvar][1] = utils::strdup("(undefined)");
+    ivar = recycle();
+    style[ivar] = GETENV;
+    num[ivar] = 2;
+    which[ivar] = 0;
+    pad[ivar] = 0;
+    data[ivar] = new char *[num[ivar]];
+    data[ivar][0] = utils::strdup(arg[2]);
+    data[ivar][1] = utils::strdup("(undefined)");
 
     // SCALARFILE for strings or numbers
     // which = 1st value
@@ -384,16 +389,16 @@ void Variable::set(int narg, char **arg)
     if (narg != 3)
       error->all(FLERR, "Illegal variable command: expected 3 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    if (find(arg[0]) >= 0) return;
-    if (nvar == maxvar) grow();
-    style[nvar] = SCALARFILE;
-    num[nvar] = 1;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char *[num[nvar]];
-    data[nvar][0] = new char[MAXLINE];
-    reader[nvar] = new VarReader(lmp, arg[0], arg[2], SCALARFILE);
-    int flag = reader[nvar]->read_scalar(data[nvar][0]);
+    if (ivar >= 0) return;
+    ivar = recycle();
+    style[ivar] = SCALARFILE;
+    num[ivar] = 1;
+    which[ivar] = 0;
+    pad[ivar] = 0;
+    data[ivar] = new char *[num[ivar]];
+    data[ivar][0] = new char[MAXLINE];
+    reader[ivar] = new VarReader(lmp, arg[0], arg[2], SCALARFILE);
+    int flag = reader[ivar]->read_scalar(data[ivar][0]);
     if (flag) error->all(FLERR, "File variable {} could not read value from {}", arg[0], arg[2]);
 
     // ATOMFILE for numbers
@@ -404,16 +409,16 @@ void Variable::set(int narg, char **arg)
     if (narg != 3)
       error->all(FLERR, "Illegal variable command: expected 3 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    if (find(arg[0]) >= 0) return;
-    if (nvar == maxvar) grow();
-    style[nvar] = ATOMFILE;
-    num[nvar] = 1;
-    which[nvar] = 0;
-    pad[nvar] = 0;
-    data[nvar] = new char *[num[nvar]];
-    data[nvar][0] = nullptr;
-    reader[nvar] = new VarReader(lmp, arg[0], arg[2], ATOMFILE);
-    int flag = reader[nvar]->read_peratom();
+    if (ivar >= 0) return;
+    ivar = recycle();
+    style[ivar] = ATOMFILE;
+    num[ivar] = 1;
+    which[ivar] = 0;
+    pad[ivar] = 0;
+    data[ivar] = new char *[num[ivar]];
+    data[ivar][0] = nullptr;
+    reader[ivar] = new VarReader(lmp, arg[0], arg[2], ATOMFILE);
+    int flag = reader[ivar]->read_peratom();
     if (flag)
       error->all(FLERR, "Atomfile variable {} could not read values from {}", arg[0], arg[2]);
 
@@ -428,7 +433,6 @@ void Variable::set(int narg, char **arg)
     if (narg != 4)
       error->all(FLERR, "Illegal variable command: expected 4 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    int ivar = find(arg[0]);
     int jvar = find(arg[2]);
     if (jvar < 0)
       error->all(FLERR, "Variable {}: format variable {} does not exist", arg[0], arg[2]);
@@ -446,17 +450,17 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = FORMAT;
-      num[nvar] = 3;
-      which[nvar] = 0;
-      pad[nvar] = 0;
+      ivar =recycle();
+      style[ivar] = FORMAT;
+      num[ivar] = 3;
+      which[ivar] = 0;
+      pad[ivar] = 0;
       if (!utils::strmatch(arg[3], validfmt))
         error->all(FLERR, "Incorrect conversion in format string");
-      data[nvar] = new char *[num[nvar]];
-      copy(2, &arg[2], data[nvar]);
-      data[nvar][2] = new char[VALUELENGTH];
-      strcpy(data[nvar][2], "(undefined)");
+      data[ivar] = new char *[num[ivar]];
+      copy(2, &arg[2], data[ivar]);
+      data[ivar][2] = new char[VALUELENGTH];
+      strcpy(data[ivar][2], "(undefined)");
     }
 
     // EQUAL
@@ -474,7 +478,6 @@ void Variable::set(int narg, char **arg)
       combined += arg[iarg];
     }
 
-    int ivar = find(arg[0]);
     if (ivar >= 0) {
       if (style[ivar] != EQUAL)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -483,15 +486,15 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = EQUAL;
-      num[nvar] = 2;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = utils::strdup(combined);
-      data[nvar][1] = new char[VALUELENGTH];
-      strcpy(data[nvar][1], "(undefined)");
+      ivar = recycle();
+      style[ivar] = EQUAL;
+      num[ivar] = 2;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = utils::strdup(combined);
+      data[ivar][1] = new char[VALUELENGTH];
+      strcpy(data[ivar][1], "(undefined)");
     }
 
     // ATOM
@@ -509,7 +512,6 @@ void Variable::set(int narg, char **arg)
       combined += arg[iarg];
     }
 
-    int ivar = find(arg[0]);
     if (ivar >= 0) {
       if (style[ivar] != ATOM)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -518,13 +520,13 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = ATOM;
-      num[nvar] = 1;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = utils::strdup(combined);
+      ivar = recycle();
+      style[ivar] = ATOM;
+      num[ivar] = 1;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = utils::strdup(combined);
     }
 
     // VECTOR
@@ -544,7 +546,6 @@ void Variable::set(int narg, char **arg)
       combined += arg[iarg];
     }
 
-    int ivar = find(arg[0]);
     if (ivar >= 0) {
       if (style[ivar] != VECTOR)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -562,21 +563,21 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = VECTOR;
-      num[nvar] = 2;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = utils::strdup(combined);
-      if (data[nvar][0][0] != '[') {
-        vecs[nvar].dynamic = 1;
-        data[nvar][1] = nullptr;
+      ivar = recycle();
+      style[ivar] = VECTOR;
+      num[ivar] = 2;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = utils::strdup(combined);
+      if (data[ivar][0][0] != '[') {
+        vecs[ivar].dynamic = 1;
+        data[ivar][1] = nullptr;
       } else {
-        vecs[nvar].dynamic = 0;
-        parse_vector(nvar, data[nvar][0]);
-        std::vector<double> vec(vecs[nvar].values, vecs[nvar].values + vecs[nvar].n);
-        data[nvar][1] = utils::strdup(fmt::format("[{}]", utils::join(vec, ",")));
+        vecs[ivar].dynamic = 0;
+        parse_vector(ivar, data[ivar][0]);
+        std::vector<double> vec(vecs[ivar].values, vecs[ivar].values + vecs[ivar].n);
+        data[ivar][1] = utils::strdup(fmt::format("[{}]", utils::join(vec, ",")));
       }
     }
 
@@ -590,7 +591,7 @@ void Variable::set(int narg, char **arg)
       error->all(FLERR, "Illegal variable command: expected 3 arguments but found {}{}", narg,
                  utils::errorurl(3));
     if (!python->is_enabled()) error->all(FLERR, "LAMMPS is not built with Python embedded");
-    int ivar = find(arg[0]);
+
     if (ivar >= 0) {
       if (style[ivar] != PYTHON)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -599,16 +600,16 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = PYTHON;
-      num[nvar] = 2;
-      which[nvar] = 1;
-      pad[nvar] = 0;
-      pyindex[nvar] = -1;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = utils::strdup(arg[2]);
-      data[nvar][1] = new char[VALUELENGTH];
-      strcpy(data[nvar][1], "(undefined)");
+      ivar = recycle();
+      style[ivar] = PYTHON;
+      num[ivar] = 2;
+      which[ivar] = 1;
+      pad[ivar] = 0;
+      pyindex[ivar] = -1;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = utils::strdup(arg[2]);
+      data[ivar][1] = new char[VALUELENGTH];
+      strcpy(data[ivar][1], "(undefined)");
     }
 
     // TIMER
@@ -621,7 +622,7 @@ void Variable::set(int narg, char **arg)
     if (narg != 2)
       error->all(FLERR, "Illegal variable command: expected 2 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    int ivar = find(arg[0]);
+
     if (ivar >= 0) {
       if (style[ivar] != TIMER)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -629,14 +630,14 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = TIMER;
-      num[nvar] = 1;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = new char[VALUELENGTH];
-      dvalue[nvar] = platform::walltime();
+      ivar = recycle();
+      style[ivar] = TIMER;
+      num[ivar] = 1;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = new char[VALUELENGTH];
+      dvalue[ivar] = platform::walltime();
     }
 
     // INTERNAL
@@ -648,7 +649,7 @@ void Variable::set(int narg, char **arg)
     if (narg != 3)
       error->all(FLERR, "Illegal variable command: expected 3 arguments but found {}{}", narg,
                  utils::errorurl(3));
-    int ivar = find(arg[0]);
+
     if (ivar >= 0) {
       if (style[ivar] != INTERNAL)
         error->all(FLERR, 1, "Cannot redefine variable {} with a different style", arg[0]);
@@ -656,14 +657,14 @@ void Variable::set(int narg, char **arg)
       eval_in_progress[ivar] = 0;
       replaceflag = 1;
     } else {
-      if (nvar == maxvar) grow();
-      style[nvar] = INTERNAL;
-      num[nvar] = 1;
-      which[nvar] = 0;
-      pad[nvar] = 0;
-      data[nvar] = new char *[num[nvar]];
-      data[nvar][0] = new char[VALUELENGTH];
-      dvalue[nvar] = utils::numeric(FLERR, arg[2], false, lmp);
+      ivar = recycle();
+      style[ivar] = INTERNAL;
+      num[ivar] = 1;
+      which[ivar] = 0;
+      pad[ivar] = 0;
+      data[ivar] = new char *[num[ivar]];
+      data[ivar][0] = new char[VALUELENGTH];
+      dvalue[ivar] = utils::numeric(FLERR, arg[2], false, lmp);
     }
 
     // unrecognized variable style
@@ -676,11 +677,8 @@ void Variable::set(int narg, char **arg)
 
   if (replaceflag) return;
 
-  if (!utils::is_id(arg[0]))
-    error->all(FLERR, "Variable name '{}' must have only letters, numbers, or underscores", arg[0]);
-  names[nvar] = utils::strdup(arg[0]);
-  eval_in_progress[nvar] = 0;
-  nvar++;
+  names[ivar] = utils::strdup(arg[0]);
+  eval_in_progress[ivar] = 0;
 }
 
 /* ----------------------------------------------------------------------
@@ -911,8 +909,10 @@ int Variable::next(int narg, char **arg)
 int Variable::find(const char *name)
 {
   if (name == nullptr) return -1;
-  for (int i = 0; i < nvar; i++)
+  for (int i = 0; i < nvar; i++) {
+    if (style[i] == UNASSIGNED) continue;
     if (strcmp(name,names[i]) == 0) return i;
+  }
   return -1;
 }
 
@@ -1147,8 +1147,8 @@ char *Variable::retrieve(const char *name)
 
 double Variable::compute_equal(int ivar)
 {
-  // do nothing for out of range index
-  if ((ivar < 0) || (ivar >= nvar)) return 0.0;
+  // do nothing for out of range index or unassigned. just return 0
+  if ((ivar < 0) || (ivar >= nvar) || (style[ivar] == UNASSIGNED)) return 0.0;
 
   if (eval_in_progress[ivar]) print_var_error(FLERR,"has a circular dependency",ivar);
 
@@ -1267,9 +1267,9 @@ int Variable::compute_vector(int ivar, double **result)
 {
   Tree *tree = nullptr;
 
-  // index is out-of-range. do nothing
+  // index is out-of-range or variable has been deleted. do nothing
 
-  if ((ivar < 0) || (ivar >= nvar)) return 0;
+  if ((ivar < 0) || (ivar >= nvar) || (style[ivar] == UNASSIGNED)) return 0;
 
   // if vector is not dynamic, just return stored values
 
@@ -1334,27 +1334,30 @@ void Variable::internal_set(int ivar, double value)
 
 int Variable::internal_create(char *name, double value)
 {
-  if (find(name) >= 0)
-    error->all(FLERR,"Creation of internal-style variable {} which already exists", name);
-
-  if (nvar == maxvar) grow();
-  style[nvar] = INTERNAL;
-  num[nvar] = 1;
-  which[nvar] = 0;
-  pad[nvar] = 0;
-  data[nvar] = new char *[num[nvar]];
-  data[nvar][0] = new char[VALUELENGTH];
-  dvalue[nvar] = value;
-
   if (!utils::is_id(name))
-    error->all(FLERR, "Variable name '{}' must have only letters, numbers, or underscores", name);
-  names[nvar] = utils::strdup(name);
-  nvar++;
-  return nvar - 1;
+    error->all(FLERR, Error::NOLASTLINE,
+               "Variable name '{}' must have only letters, numbers, or underscores", name);
+
+  int ivar = find(name);
+  if (ivar >= 0)
+    error->all(FLERR, Error::NOLASTLINE,
+               "Creation of internal-style variable {} which already exists", name);
+
+  ivar = recycle();
+  style[ivar] = INTERNAL;
+  num[ivar] = 1;
+  which[ivar] = 0;
+  pad[ivar] = 0;
+  data[ivar] = new char *[num[ivar]];
+  data[ivar][0] = new char[VALUELENGTH];
+  dvalue[ivar] = value;
+
+  names[ivar] = utils::strdup(name);
+  return ivar;
 }
 
 /* ----------------------------------------------------------------------
-   remove Nth variable from list and compact list
+   clear Nth variable from list and flag as UNASSIGNED so it can be recycled
    delete reader explicitly if it exists
 ------------------------------------------------------------------------- */
 
@@ -1365,27 +1368,28 @@ void Variable::remove(int n)
   else for (int i = 0; i < num[n]; i++) delete[] data[n][i];
   delete[] data[n];
   delete reader[n];
+  names[n] = nullptr;
+  data[n] = nullptr;
+  reader[n] = nullptr;
+  num[n] = 0;
+  style[n] = UNASSIGNED;
+  eval_in_progress[n] = 0;
+}
 
-  for (int i = n+1; i < nvar; i++) {
-    names[i-1] = names[i];
-    style[i-1] = style[i];
-    num[i-1] = num[i];
-    which[i-1] = which[i];
-    pad[i-1] = pad[i];
-    reader[i-1] = reader[i];
-    data[i-1] = data[i];
-    dvalue[i-1] = dvalue[i];
-    eval_in_progress[i-1] = eval_in_progress[i];
+/* ----------------------------------------------------------------------
+   return index of an available unassigned variable slot, if available
+   otherwise return the next slot at the end. Grow arrays if needed.
+------------------------------------------------------------------------- */
 
-    // copy VecVar struct from vecs[i] to vecs[i-1]
+int Variable::recycle()
+{
+  for (int n = 0; n < nvar; ++n)
+    if (style[n] == UNASSIGNED) return n;
 
-    memcpy(&vecs[i-1],&vecs[i],sizeof(VecVar));
-  }
+  if (nvar == maxvar) grow();
+  ++nvar;
 
-  nvar--;
-  data[nvar] = nullptr;
-  reader[nvar] = nullptr;
-  names[nvar] = nullptr;
+  return nvar - 1;
 }
 
 /* ----------------------------------------------------------------------
