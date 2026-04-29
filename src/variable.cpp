@@ -154,7 +154,7 @@ Variable::Variable(LAMMPS *lmp) : Pointers(lmp)
 Variable::~Variable()
 {
   for (int i = 0; i < nvar; i++) {
-    if (style == UNASSIGNED) continue;
+    if (style[i] == UNASSIGNED) continue;
     delete[] names[i];
     delete reader[i];
     if (style[i] == LOOP || style[i] == ULOOP)
