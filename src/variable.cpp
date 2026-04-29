@@ -157,13 +157,10 @@ Variable::~Variable()
     if (style == UNASSIGNED) continue;
     delete[] names[i];
     delete reader[i];
-    if (style[i] == LOOP || style[i] == ULOOP) {
+    if (style[i] == LOOP || style[i] == ULOOP)
       delete[] data[i][0];
-    } else {
-      for (int j = 0; j < num[i]; j++)
-        delete[] data[i][j];
-      }
-    }
+    else
+      for (int j = 0; j < num[i]; j++) delete[] data[i][j];
     delete[] data[i];
     if (style[i] == VECTOR) memory->destroy(vecs[i].values);
   }
