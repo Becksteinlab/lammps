@@ -53,13 +53,8 @@ KSpace::KSpace(LAMMPS *lmp) :
   overlap_allowed = 1;
   fftbench = 0;
 
-  // default to using MPI collectives for FFT/remap only on IBM BlueGene
-
-#ifdef __bg__
-  collective_flag = 1;
-#else
+  // by default, we use point-to-point comms
   collective_flag = 0;
-#endif
   nonblocking_flag = 0;
   selfcopy_flag = 2;
 
