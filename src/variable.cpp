@@ -194,6 +194,7 @@ void Variable::set(int narg, char **arg)
 
   int replaceflag = 0;
   int ivar = find(arg[0]);
+  int mystyle = UNASSIGNED;
 
   // DELETE
   // doesn't matter if variable no longer exists
@@ -212,7 +213,7 @@ void Variable::set(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable index", error);
     if (ivar >= 0) return;
     ivar = recycle();
-    style[ivar] = INDEX;
+    mystyle = INDEX;
     num[ivar] = narg - 2;
     which[ivar] = 0;
     pad[ivar] = 0;
@@ -227,7 +228,7 @@ void Variable::set(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable loop", error);
     if (ivar >= 0) return;
     ivar = recycle();
-    style[ivar] = LOOP;
+    mystyle = LOOP;
     int nfirst = 0, nlast = 0;
     if (narg == 3 || (narg == 4 && strcmp(arg[3], "pad") == 0)) {
       nfirst = 1;
@@ -261,7 +262,7 @@ void Variable::set(int narg, char **arg)
     if (narg < 3) utils::missing_cmd_args(FLERR, "variable world", error);
     if (ivar >= 0) return;
     ivar = recycle();
-    style[ivar] = WORLD;
+    mystyle = WORLD;
     num[ivar] = narg - 2;
     if (num[ivar] != universe->nworlds)
       error->all(FLERR, narg - 1, "World variable count {} doesn't match # of partitions {}",
@@ -283,7 +284,7 @@ void Variable::set(int narg, char **arg)
       if (narg < 3) utils::missing_cmd_args(FLERR, "variable universe", error);
       if (ivar >= 0) return;
       ivar = recycle();
-      style[ivar] = UNIVERSE;
+      mystyle = UNIVERSE;
       num[ivar] = narg - 2;
       pad[ivar] = 0;
       data[ivar] = new char *[num[ivar]];
@@ -296,7 +297,7 @@ void Variable::set(int narg, char **arg)
         error->all(FLERR, 3, "Invalid variable uloop argument: {}", arg[3]);
       if (ivar >= 0) return;
       ivar = recycle();
-      style[ivar] = ULOOP;
+      mystyle = ULOOP;
       num[ivar] = utils::inumeric(FLERR, arg[2], false, lmp);
       data[ivar] = new char *[1];
       data[ivar][0] = nullptr;
@@ -349,7 +350,7 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = STRING;
+      mystyle = STRING;
       num[ivar] = 1;
       which[ivar] = 0;
       pad[ivar] = 0;
@@ -373,7 +374,7 @@ void Variable::set(int narg, char **arg)
       remove(ivar);
     }
     ivar = recycle();
-    style[ivar] = GETENV;
+    mystyle = GETENV;
     num[ivar] = 2;
     which[ivar] = 0;
     pad[ivar] = 0;
@@ -391,7 +392,7 @@ void Variable::set(int narg, char **arg)
                  utils::errorurl(3));
     if (ivar >= 0) return;
     ivar = recycle();
-    style[ivar] = SCALARFILE;
+    mystyle = SCALARFILE;
     num[ivar] = 1;
     which[ivar] = 0;
     pad[ivar] = 0;
@@ -411,7 +412,7 @@ void Variable::set(int narg, char **arg)
                  utils::errorurl(3));
     if (ivar >= 0) return;
     ivar = recycle();
-    style[ivar] = ATOMFILE;
+    mystyle = ATOMFILE;
     num[ivar] = 1;
     which[ivar] = 0;
     pad[ivar] = 0;
@@ -451,7 +452,7 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar =recycle();
-      style[ivar] = FORMAT;
+      mystyle = FORMAT;
       num[ivar] = 3;
       which[ivar] = 0;
       pad[ivar] = 0;
@@ -487,7 +488,7 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = EQUAL;
+      mystyle = EQUAL;
       num[ivar] = 2;
       which[ivar] = 0;
       pad[ivar] = 0;
@@ -521,7 +522,7 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = ATOM;
+      mystyle = ATOM;
       num[ivar] = 1;
       which[ivar] = 0;
       pad[ivar] = 0;
@@ -564,7 +565,7 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = VECTOR;
+      mystyle = VECTOR;
       num[ivar] = 2;
       which[ivar] = 0;
       pad[ivar] = 0;
@@ -579,6 +580,7 @@ void Variable::set(int narg, char **arg)
         std::vector<double> vec(vecs[ivar].values, vecs[ivar].values + vecs[ivar].n);
         data[ivar][1] = utils::strdup(fmt::format("[{}]", utils::join(vec, ",")));
       }
+      mystyle = VECTOR;
     }
 
     // PYTHON
@@ -601,7 +603,6 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = PYTHON;
       num[ivar] = 2;
       which[ivar] = 1;
       pad[ivar] = 0;
@@ -610,6 +611,7 @@ void Variable::set(int narg, char **arg)
       data[ivar][0] = utils::strdup(arg[2]);
       data[ivar][1] = new char[VALUELENGTH];
       strcpy(data[ivar][1], "(undefined)");
+      mystyle = PYTHON;
     }
 
     // TIMER
@@ -631,13 +633,13 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = TIMER;
       num[ivar] = 1;
       which[ivar] = 0;
       pad[ivar] = 0;
       data[ivar] = new char *[num[ivar]];
       data[ivar][0] = new char[VALUELENGTH];
       dvalue[ivar] = platform::walltime();
+      mystyle = TIMER;
     }
 
     // INTERNAL
@@ -658,13 +660,13 @@ void Variable::set(int narg, char **arg)
       replaceflag = 1;
     } else {
       ivar = recycle();
-      style[ivar] = INTERNAL;
       num[ivar] = 1;
       which[ivar] = 0;
       pad[ivar] = 0;
       data[ivar] = new char *[num[ivar]];
       data[ivar][0] = new char[VALUELENGTH];
       dvalue[ivar] = utils::numeric(FLERR, arg[2], false, lmp);
+      mystyle = INTERNAL;
     }
 
     // unrecognized variable style
@@ -677,6 +679,7 @@ void Variable::set(int narg, char **arg)
 
   if (replaceflag) return;
 
+  style[ivar] = mystyle;
   names[ivar] = utils::strdup(arg[0]);
   eval_in_progress[ivar] = 0;
 }
