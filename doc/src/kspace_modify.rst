@@ -79,12 +79,11 @@ relevant to all kspace styles.
 ----------
 
 The *collective* keyword applies only to PPPM.  It is set to *no* by
-default, except on IBM BlueGene machines.  If this option is set to
-*yes*, LAMMPS will use MPI collective operations to remap data for
-3d-FFT operations instead of the default point-to-point communication.
-This is faster on IBM BlueGene machines, and may also be faster on
-other machines if they have an efficient implementation of MPI
-collective operations and adequate hardware.
+default, If this option is set to *yes*, LAMMPS will use MPI collective
+operations to remap data for 3d-FFT operations instead of the default
+point-to-point communication.  This is faster on machines that have an
+efficient implementation of MPI collective operations *and* adequate
+hardware.
 
 ----------
 
