@@ -24,6 +24,8 @@
 #if defined(__SSE3__)
 #define x86_SIMD
 #define restrict __restrict__
+#else
+#define restrict
 #endif
 
 
