@@ -846,7 +846,7 @@ remap_plan_3d::remap_plan_3d(int _usecollective, int _usenonblocking) :
 {
   usecollective = _usecollective;
   usenonblocking = _usenonblocking;
-  nrecv = nsend = self = memory = usecollective = usenonblocking = commringlen = 0;
+  nrecv = nsend = self = memory = commringlen = 0;
   selfcommringloc = selfnsendloc = selfnrecvloc = -1;
   comm = MPI_COMM_NULL;
 }
