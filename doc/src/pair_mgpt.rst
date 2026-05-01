@@ -103,12 +103,10 @@ to a given calculated property.
 The *mgpt* pair style makes extensive use of matrix algebra and includes
 optimized kernels the Intel/AMD (x86) architecture.  When compiled with
 the appropriate compiler and compiler switches (e.g. ``-msse3``) these
-optimized routines are used automatically.  For BG/Q machines, building
-with the default Makefile for that architecture (e.g., "make bgq")
-should enable the optimized algebra routines.  For x-86 machines, there
+optimized routines are used automatically.  For x86 machines, there
 is a provided Makefile.mgptfast which enables the fast algebra routines,
 i.e. build LAMMPS with "make mgptfast".  The user will be informed in
-the output files of the matrix kernels in use. To further improve speed,
+the output files of the matrix kernels in use.  To further improve speed,
 on x86 the option *precision single* can be added to the
 :doc:`pair_coeff <pair_coeff>` command, which improves speed (up to a
 factor of two) at the cost of doing matrix calculations with 7 digit
