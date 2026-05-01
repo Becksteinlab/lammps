@@ -100,22 +100,20 @@ well described without v_3 and v_4.  The nbody option can also be used
 to test or analyze the contribution of any of the four terms in E_tot
 to a given calculated property.
 
-The *mgpt* pair style makes extensive use of matrix algebra and
-includes optimized kernels for the BlueGene/Q architecture and the
-Intel/AMD (x86) architectures.  When compiled with the appropriate
-compiler and compiler switches (-msse3 on x86, and using the IBM XL
-compiler on BG/Q), these optimized routines are used automatically.
-For BG/Q machines, building with the default Makefile for that
-architecture (e.g., "make bgq") should enable the optimized algebra
-routines.  For x-86 machines, there is a provided Makefile.mgptfast
-which enables the fast algebra routines, i.e. build LAMMPS with "make
-mgptfast".  The user will be informed in the output files of the
-matrix kernels in use. To further improve speed, on x86 the option
-*precision single* can be added to the :doc:`pair_coeff <pair_coeff>`
-command, which improves speed (up to a factor of two) at the cost
-of doing matrix calculations with 7 digit precision instead of the
-default 16. For consistency the default option can be specified
-explicitly by the option precision double.
+The *mgpt* pair style makes extensive use of matrix algebra and includes
+optimized kernels the Intel/AMD (x86) architecture.  When compiled with
+the appropriate compiler and compiler switches (e.g. ``-msse3``) these
+optimized routines are used automatically.  For BG/Q machines, building
+with the default Makefile for that architecture (e.g., "make bgq")
+should enable the optimized algebra routines.  For x-86 machines, there
+is a provided Makefile.mgptfast which enables the fast algebra routines,
+i.e. build LAMMPS with "make mgptfast".  The user will be informed in
+the output files of the matrix kernels in use. To further improve speed,
+on x86 the option *precision single* can be added to the
+:doc:`pair_coeff <pair_coeff>` command, which improves speed (up to a
+factor of two) at the cost of doing matrix calculations with 7 digit
+precision instead of the default 15. For consistency the default option
+can be specified explicitly by the option precision double.
 
 All remaining potential and control data are contained with the parmin
 and potin files, including cutoffs, atomic mass, and other basic MGPT
