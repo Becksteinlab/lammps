@@ -304,6 +304,7 @@ $(VENV):
 
 $(MATHJAX):
 	@git clone -b $(MATHJAXTAG) -c advice.detachedHead=0 --depth 1 https://github.com/mathjax/MathJax.git $@
+	@ln -sf . es5
 
 $(ANCHORCHECK): $(VENV)
 	@( \
