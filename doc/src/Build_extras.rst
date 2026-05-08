@@ -883,7 +883,7 @@ use RAM on the host to supplement the memory used on the GPU (with some
 performance penalty) and thus enables running larger problems that would
 otherwise not fit into the RAM on the GPU.
 
-..versionadded:: 10Sep2025
+.. versionadded:: 10Sep2025
 
 The CMake option ``-D KOKKOS_PREC=value`` sets the floating point
 precision of the calculations, where ``value`` can be one of: ``double``
@@ -893,11 +893,11 @@ precision (single or mixed), the simulation and its results should be
 carefully checked to ensure it is stable and that, for example, energy
 is sufficiently well conserved.  Using a lower floating point precision
 works best when simulating homogeneous bulk systems because those have
-the best error cancellation.  Using ``mixed`` precison provides most of
-the performance advantages of using single precsion while performing
+the best error cancellation.  Using ``mixed`` precision provides most of
+the performance advantages of using single precision while performing
 the steps most relevant for accuracy in double precision.
 
-..versionadded:: 10Sep2025
+.. versionadded:: 10Sep2025
 
 The CMake option ``-D KOKKOS_LAYOUT=value`` sets the array layout of
 Kokkos views (e.g. forces, velocities, etc.) on GPUs, where ``value``
