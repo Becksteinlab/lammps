@@ -54,10 +54,10 @@ Make to CMake quick-start guide
      - ``rm -rf build``
    * - Enable or disable MPI
      - Use ``make mpi`` or ``make serial``
-     - Auto-detected, override with ``-D BUILD_MPI=no`` (or ``yes``)
+     - Auto-detected, override with ``-D BUILD_MPI=no``
    * - Enable or disable OpenMP
      - Edit ``Makefile.<machine>``
-     - Auto-detected, override with ``-D BUILD_OMP=no`` (or ``yes``)
+     - Auto-detected, override with ``-D BUILD_OMP=no``
    * - Build LAMMPS shared library
      - ``make mode=shared <machine>``
      - Use ``-D BUILD_SHARED_LIBS=yes``
